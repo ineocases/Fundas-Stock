@@ -10,9 +10,20 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+document.addEventListener("DOMContentLoaded", () => {
 
-// LOGIN
-document.getElementById("btnLogin").onclick = async () => {
+  document.getElementById("btnLogin").onclick = login;
+
+  document.getElementById("btnNuevaFunda").onclick = () => {
+    document.getElementById("agregar").style.display = "block";
+  };
+
+  document.getElementById("guardarFunda").onclick = guardarFunda;
+
+});
+
+
+async function login() {
 
   try {
 
@@ -28,18 +39,16 @@ document.getElementById("btnLogin").onclick = async () => {
 
   }
 
-  catch (error) {
+  catch(error){
 
     alert(error.message);
     console.log(error);
 
   }
 
-};
+}
 
 
-
-// CARGAR FUNDAS
 async function cargarFundas() {
 
   const querySnapshot = await getDocs(
@@ -53,25 +62,23 @@ async function cargarFundas() {
     const f = doc.data();
 
     html += `
+      <div class="card">
 
-<div class="card">
+      <h2>${f.nombre}</h2>
 
-<h2>${f.nombre}</h2>
+      <p>📦 Stock: ${f.stock}</p>
 
-<p>📦 Stock: ${f.stock}</p>
+      <p>📱 Compatibles:
+      ${f.compatibles.join(", ")}</p>
 
-<p>📱 Compatibles:
-${f.compatibles.join(", ")}</p>
+      <p>💵 Costo:
+      $${f.costo}</p>
 
-<p>💵 Costo:
-$${f.costo}</p>
+      <p>💰 Venta:
+      $${f.venta}</p>
 
-<p>💰 Venta:
-$${f.venta}</p>
-
-</div>
-
-`;
+      </div>
+    `;
 
   });
 
@@ -81,66 +88,34 @@ $${f.venta}</p>
 
 
 
-// MOSTRAR FORMULARIO
-document.getElementById("btnNuevaFunda").onclick = () => {
+async function guardarFunda(){
 
-  document.getElementById("agregar").style.display = "block";
-
-};
-
-
-
-
-// GUARDAR FUNDA
-document.getElementById("guardarFunda").onclick = async () => {
-
-  try {
+  try{
 
     await addDoc(
 
-      collection(db, "fundas"),
+      collection(db,"fundas"),
 
       {
 
         nombre:
-
-          document.getElementById("nombre").value,
-
-
+        document.getElementById("nombre").value,
 
         stock:
-
-          Number(
-            document.getElementById("stock").value
-          ),
-
-
+        Number(document.getElementById("stock").value),
 
         compatibles:
-
-          document
-            .getElementById("compatibles")
-            .value
-            .split(","),
-
-
+        document.getElementById("compatibles")
+        .value
+        .split(","),
 
         costo:
-
-          Number(
-            document.getElementById("costo").value
-          ),
-
-
+        Number(document.getElementById("costo").value),
 
         venta:
+        Number(document.getElementById("venta").value),
 
-          Number(
-            document.getElementById("venta").value
-          ),
-
-
-        foto: ""
+        foto:""
 
       }
 
@@ -149,16 +124,13 @@ document.getElementById("guardarFunda").onclick = async () => {
 
     alert("Funda guardada");
 
-
     document.getElementById("agregar").style.display = "none";
-
 
     cargarFundas();
 
-
   }
 
-  catch (error) {
+  catch(error){
 
     alert(error.message);
 
@@ -166,4 +138,4 @@ document.getElementById("guardarFunda").onclick = async () => {
 
   }
 
-};
+}
