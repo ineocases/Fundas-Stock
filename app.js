@@ -10,20 +10,10 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-
-  document.getElementById("btnLogin").onclick = login;
-
-  document.getElementById("btnNuevaFunda").onclick = () => {
-    document.getElementById("agregar").style.display = "block";
-  };
-
-  document.getElementById("guardarFunda").onclick = guardarFunda;
-
-});
 
 
-async function login() {
+// LOGIN
+document.getElementById("btnLogin").onclick = async () => {
 
   try {
 
@@ -37,18 +27,19 @@ async function login() {
 
     cargarFundas();
 
-  }
-
-  catch(error){
+  } catch (error) {
 
     alert(error.message);
     console.log(error);
 
   }
 
-}
+};
 
 
+
+
+// CARGAR FUNDAS
 async function cargarFundas() {
 
   const querySnapshot = await getDocs(
@@ -57,27 +48,29 @@ async function cargarFundas() {
 
   let html = "";
 
-  querySnapshot.forEach(doc => {
+  querySnapshot.forEach((doc) => {
 
     const f = doc.data();
 
     html += `
+
       <div class="card">
 
-      <h2>${f.nombre}</h2>
+        <h2>${f.nombre}</h2>
 
-      <p>📦 Stock: ${f.stock}</p>
+        <p>📦 Stock: ${f.stock}</p>
 
-      <p>📱 Compatibles:
-      ${f.compatibles.join(", ")}</p>
+        <p>📱 Compatibles:
+        ${f.compatibles.join(", ")}</p>
 
-      <p>💵 Costo:
-      $${f.costo}</p>
+        <p>💵 Costo:
+        $${f.costo}</p>
 
-      <p>💰 Venta:
-      $${f.venta}</p>
+        <p>💰 Venta:
+        $${f.venta}</p>
 
       </div>
+
     `;
 
   });
@@ -88,34 +81,60 @@ async function cargarFundas() {
 
 
 
-async function guardarFunda(){
 
-  try{
+// MOSTRAR FORMULARIO
+document.getElementById("btnNuevaFunda").onclick = () => {
+
+  document.getElementById("agregar").style.display = "block";
+
+};
+
+
+
+
+// GUARDAR FUNDA
+document.getElementById("guardarFunda").onclick = async () => {
+
+  try {
+
+    const nombre = document.getElementById("nombre").value;
+
+    const stock = Number(
+      document.getElementById("stock").value
+    );
+
+    const compatibles =
+      document.getElementById("compatibles")
+      .value
+      .split(",")
+      .map(x => x.trim());
+
+    const costo = Number(
+      document.getElementById("costo").value
+    );
+
+    const venta = Number(
+      document.getElementById("venta").value
+    );
+
 
     await addDoc(
 
-      collection(db,"fundas"),
+      collection(db, "fundas"),
 
       {
 
-        nombre:
-        document.getElementById("nombre").value,
+        nombre: nombre,
 
-        stock:
-        Number(document.getElementById("stock").value),
+        stock: stock,
 
-        compatibles:
-        document.getElementById("compatibles")
-        .value
-        .split(","),
+        compatibles: compatibles,
 
-        costo:
-        Number(document.getElementById("costo").value),
+        costo: costo,
 
-        venta:
-        Number(document.getElementById("venta").value),
+        venta: venta,
 
-        foto:""
+        foto: ""
 
       }
 
@@ -124,13 +143,23 @@ async function guardarFunda(){
 
     alert("Funda guardada");
 
+
     document.getElementById("agregar").style.display = "none";
+
+
+    document.getElementById("nombre").value = "";
+    document.getElementById("stock").value = "";
+    document.getElementById("compatibles").value = "";
+    document.getElementById("costo").value = "";
+    document.getElementById("venta").value = "";
+
 
     cargarFundas();
 
+
   }
 
-  catch(error){
+  catch (error) {
 
     alert(error.message);
 
@@ -138,4 +167,4 @@ async function guardarFunda(){
 
   }
 
-}
+};
