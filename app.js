@@ -47,15 +47,13 @@ document
 
 
 
-await signInWithEmailAndPassword(
+const email = document.getElementById("email").value.trim();
+const password = document.getElementById("password").value;
 
-auth,
+console.log("EMAIL:", email);
+console.log("PASSWORD:", password);
 
-email,
-
-password
-
-);
+await signInWithEmailAndPassword(auth, email, password);
 
 
 document
