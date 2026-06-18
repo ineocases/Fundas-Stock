@@ -10,17 +10,6 @@ const firebaseConfig = {
   messagingSenderId: "904152906036",
   appId: "1:904152906036:web:85e24721ef7cddbc230d61"
 };
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-  }
-}
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
