@@ -22,7 +22,14 @@ getDocs
 
 from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
+import {
 
+collection,
+addDoc
+
+}
+
+from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 
 document
