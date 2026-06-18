@@ -1,20 +1,51 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock de Fundas</title>
+
+<title>IneoCases Stock</title>
+
 <link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
 
-<h1>📱 Stock de Fundas</h1>
+<div id="login">
 
-<input id="buscar" placeholder="Buscar iPhone 12, 13PM..." onkeyup="buscarFundas()">
+<h2>IneoCases Stock</h2>
 
-<div id="resultados"></div>
+<input id="email" placeholder="Email">
 
-<script src="script.js"></script>
+<input id="password" type="password" placeholder="Contraseña">
+
+<button id="btnLogin">
+Ingresar
+</button>
+
+</div>
+
+
+<div id="app" style="display:none;">
+
+<h1>📱 IneoCases Stock</h1>
+
+<input
+id="buscar"
+placeholder="Buscar iPhone 12">
+
+
+<div id="fundas"></div>
+
+
+</div>
+
+
+<script type="module" src="app.js"></script>
 
 </body>
+
 </html>
