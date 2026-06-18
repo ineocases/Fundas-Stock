@@ -1,243 +1,169 @@
-import { auth, db }
-
-from "./firebase.js";
-
+import { auth, db } from "./firebase.js";
 
 import {
-
-signInWithEmailAndPassword
-
-}
-
-from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 import {
-
-collection,
-
-getDocs
-
-}
-
-from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
-import {
-
-collection,
-addDoc
-
-}
-
-from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+  collection,
+  getDocs,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 
-document
-.getElementById("btnLogin")
+// LOGIN
+document.getElementById("btnLogin").onclick = async () => {
 
-.onclick = async ()=>{
+  try {
 
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-const email =
+    await signInWithEmailAndPassword(auth, email, password);
 
-document
-.getElementById("email")
-.value;
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
 
+    cargarFundas();
 
+  }
 
-const password =
+  catch (error) {
 
-document
-.getElementById("password")
-.value;
+    alert(error.message);
+    console.log(error);
 
-
-
-const email = document.getElementById("email").value.trim();
-const password = document.getElementById("password").value;
-
-console.log("EMAIL:", email);
-console.log("PASSWORD:", password);
-
-await signInWithEmailAndPassword(auth, email, password);
-
-
-document
-.getElementById("login")
-
-.style.display="none";
-
-
-
-document
-.getElementById("app")
-
-.style.display="block";
-
-
-
-cargarFundas();
-
+  }
 
 };
 
 
 
-async function cargarFundas(){
+// CARGAR FUNDAS
+async function cargarFundas() {
 
+  const querySnapshot = await getDocs(
+    collection(db, "fundas")
+  );
 
-const querySnapshot =
+  let html = "";
 
-await getDocs(
+  querySnapshot.forEach(doc => {
 
-collection(db,"fundas")
+    const f = doc.data();
 
-);
-
-
-let html="";
-
-
-querySnapshot.forEach(doc=>{
-
-
-const f = doc.data();
-
-
-
-html+=`
+    html += `
 
 <div class="card">
 
 <h2>${f.nombre}</h2>
 
-<p>
+<p>📦 Stock: ${f.stock}</p>
 
-📦 Stock:
-${f.stock}
+<p>📱 Compatibles:
+${f.compatibles.join(", ")}</p>
 
-</p>
+<p>💵 Costo:
+$${f.costo}</p>
 
-
-<p>
-
-📱 Compatibles:
-
-${f.compatibles.join(", ")}
-
-</p>
-
-
-<p>
-
-💰 Venta:
-
-$${f.venta}
-
-</p>
+<p>💰 Venta:
+$${f.venta}</p>
 
 </div>
 
 `;
 
+  });
 
-
-});
-
-
-document
-.getElementById("fundas")
-
-.innerHTML=html;
-
-
-
-}
-document.getElementById("btnNuevaFunda").onclick = ()=>{
-
-document.getElementById("agregar")
-
-.style.display="block";
+  document.getElementById("fundas").innerHTML = html;
 
 }
 
 
 
-document.getElementById("guardarFunda")
+// MOSTRAR FORMULARIO
+document.getElementById("btnNuevaFunda").onclick = () => {
 
-.onclick = async()=>{
+  document.getElementById("agregar").style.display = "block";
 
-
-await addDoc(
-
-collection(db,"fundas"),
-
-{
-
-nombre:
-
-document.getElementById("nombre")
-
-.value,
-
-
-
-stock:Number(
-
-document.getElementById("stock")
-
-.value),
+};
 
 
 
 
-compatibles:
+// GUARDAR FUNDA
+document.getElementById("guardarFunda").onclick = async () => {
 
-document
+  try {
 
-.getElementById("compatibles")
+    await addDoc(
 
-.value
+      collection(db, "fundas"),
 
-.split(","),
+      {
 
+        nombre:
 
-
-
-costo:Number(
-
-document.getElementById("costo")
-
-.value),
+          document.getElementById("nombre").value,
 
 
 
+        stock:
 
-venta:Number(
-
-document.getElementById("venta")
-
-.value),
-
+          Number(
+            document.getElementById("stock").value
+          ),
 
 
 
-foto:""
+        compatibles:
+
+          document
+            .getElementById("compatibles")
+            .value
+            .split(","),
 
 
 
-}
+        costo:
 
-
-);
-
-
-alert("Funda guardada");
-
-
-location.reload();
+          Number(
+            document.getElementById("costo").value
+          ),
 
 
 
-}
+        venta:
+
+          Number(
+            document.getElementById("venta").value
+          ),
+
+
+        foto: ""
+
+      }
+
+    );
+
+
+    alert("Funda guardada");
+
+
+    document.getElementById("agregar").style.display = "none";
+
+
+    cargarFundas();
+
+
+  }
+
+  catch (error) {
+
+    alert(error.message);
+
+    console.log(error);
+
+  }
+
+};
