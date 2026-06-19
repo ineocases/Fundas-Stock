@@ -67,7 +67,7 @@ button:hover {
     background: #0077ed;
 }
 
-/* --- LOGO Y ENCABEZADO (Logo 60px, texto fijo) --- */
+/* --- LOGO Y ENCABEZADO --- */
 .header-logo {
     display: flex;
     align-items: center;
@@ -75,30 +75,23 @@ button:hover {
     margin-bottom: 30px;
 }
 
-.header-logo h1, .header-logo h2 {
+.header-logo h1 {
     margin: 0;
-    font-size: 26px; /* Texto fijo, no cambia con el logo */
+    font-size: 26px;
     font-weight: 700;
     letter-spacing: -0.5px;
     line-height: 1;
 }
 
 .app-logo {
-    width: 60px;  /* Logo agrandado */
+    width: 60px;
     height: 60px;
     display: block;
     object-fit: contain;
-    /* Suavizado avanzado */
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     shape-rendering: geometricPrecision;
     flex-shrink: 0;
-}
-
-#login .header-logo {
-    justify-content: center;
-    margin-top: 50px;
-    margin-bottom: 40px;
 }
 
 /* --- BOTÓN FLOTANTE (FAB) --- */
@@ -123,7 +116,7 @@ button:hover {
     transform: translateY(-2px);
 }
 
-/* --- MODALES (Full Screen) --- */
+/* --- MODALES GENERALES (Full Screen) --- */
 #agregar, #modalAsistente, #modalReservar {
     position: fixed;
     top: 0;
@@ -160,7 +153,6 @@ button:hover {
     margin-top: 25px;
 }
 
-/* Estilo para que el botón de la IA combine perfectamente con tu interfaz */
 #btnCrearFoto:hover {
     background: #4341b7;
     transform: scale(1.02);
@@ -206,9 +198,7 @@ button:hover {
     padding: 20px;
 }
 
-/* =======================================================
-   🆕 MENÚ HAMBURGUESA Y PANEL LATERAL (ESTILO APPLE/iOS)
-   ======================================================= */
+/* --- MENÚ HAMBURGUESA Y SIDEBAR --- */
 .menu-hamburguesa {
     display: flex;
     flex-direction: column;
@@ -220,27 +210,26 @@ button:hover {
     cursor: pointer;
     padding: 0;
     z-index: 1001;
-    align-self: center; /* Alineación perfecta en la top-bar */
+    align-self: center;
 }
 
 .menu-hamburguesa span {
     width: 100%;
     height: 2px;
-    background-color: #0071e3; /* Azul Apple */
+    background-color: #0071e3;
     border-radius: 2px;
     transition: all 0.3s ease;
 }
 
-/* Panel Lateral (Se despliega de derecha a izquierda) */
 .sidebar {
     position: fixed;
     top: 0;
-    right: -280px; /* Escondido por defecto */
+    right: -280px;
     width: 280px;
     height: 100%;
     background-color: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px); /* Soporte para Safari */
+    -webkit-backdrop-filter: blur(20px);
     box-shadow: -5px 0 25px rgba(0,0,0,0.08);
     transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 1000;
@@ -252,10 +241,9 @@ button:hover {
 }
 
 .sidebar.active {
-    right: 0; /* Se muestra */
+    right: 0;
 }
 
-/* Botones dentro del menú lateral */
 .sidebar-btn {
     background: transparent;
     color: #1d1d1f;
@@ -275,7 +263,6 @@ button:hover {
     background: rgba(0, 0, 0, 0.04);
 }
 
-/* Fondo oscuro translúcido cuando el menú está abierto */
 .sidebar-overlay {
     position: fixed;
     top: 0;
@@ -290,4 +277,183 @@ button:hover {
 
 .sidebar-overlay.active {
     display: block;
+}
+
+/* =======================================================
+   🆕 REDISEÑO DE LOGIN CON DISEÑO IA Y GLASSMORPHISM
+   ======================================================= */
+#login {
+    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=80') no-repeat center center;
+    background-size: cover;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Capa degradada IA sobre el fondo */
+#login::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(10, 10, 12, 0.4) 0%, rgba(0, 113, 227, 0.2) 100%);
+    z-index: 1;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    min-height: 520px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 28px;
+    padding: 40px 30px;
+    box-sizing: border-box;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 2; /* Arriba del fondo */
+    animation: loginFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes loginFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.header-logo-welcome {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.app-logo-welcome {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 15px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.08));
+}
+
+.header-logo-welcome h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+    color: #1d1d1f;
+    margin: 0 0 10px 0;
+}
+
+.header-logo-welcome .subtitle {
+    font-size: 15px;
+    color: #515154;
+    line-height: 1.4;
+    font-weight: 500;
+    max-width: 260px;
+    margin: 0 auto;
+}
+
+.btn-principal-welcome {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 14px;
+    background: #0071e3;
+    box-shadow: 0 4px 18px rgba(0, 113, 227, 0.25);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-principal-welcome:hover {
+    background: #0077ed;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(0, 113, 227, 0.35);
+}
+
+.admin-trigger-zone {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.btn-link-admin {
+    background: rgba(0, 0, 0, 0.04);
+    color: #515154;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+}
+
+.btn-link-admin:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #1d1d1f;
+}
+
+/* MODAL DE LOGIN ADMIN (DISEÑO VIDRIO ESMERILADO) */
+.modal-admin-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10, 10, 12, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal-admin-content {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 24px;
+    padding: 35px 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-sizing: border-box;
+    animation: ventanaEmergente 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ventanaEmergente {
+    from { transform: scale(0.9) opacity: 0; }
+    to { transform: scale(1) opacity: 1; }
+}
+
+.modal-admin-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modal-admin-header h3 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+.modal-admin-header p {
+    margin: 0;
+    font-size: 14px;
+    color: #6e6e73;
+}
+
+.btn-admin-submit {
+    width: 100%;
+    padding: 14px;
+    font-weight: 600;
+    background: #1d1d1f;
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-admin-submit:hover {
+    background: #000000;
 }
