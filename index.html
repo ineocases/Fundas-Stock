@@ -1,72 +1,38 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>IneoCases Stock</title>
-
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IneoCases Stock</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<div id="login">
+  <div id="login">
+    <h2>IneoCases Stock</h2>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Contraseña">
+    <button id="btnLogin">Ingresar</button>
+  </div>
 
-<h2>IneoCases Stock</h2>
+  <div id="app" style="display:none;">
+    <h1>📱 IneoCases Stock</h1>
+    <input id="buscar" placeholder="Buscar iPhone 12">
+    <button id="btnNuevaFunda">➕ Nueva funda</button>
 
-<input id="email" placeholder="Email">
+    <div id="agregar" style="display:none">
+      <input id="nombre" placeholder="Nombre">
+      <input id="stock" type="number" placeholder="Stock">
+      <input id="compatibles" placeholder="11,12,13,15">
+      <input id="costo" type="number" placeholder="Costo">
+      <input id="venta" type="number" placeholder="Precio de venta">
+      <button id="guardarFunda">Guardar</button>
+    </div>  
+    
+    <div id="fundas"></div>
+  </div>
 
-<input id="password" type="password" placeholder="Contraseña">
-
-<button id="btnLogin">
-Ingresar
-</button>
-
-</div>
-
-
-<div id="app" style="display:none;">
-
-<h1>📱 IneoCases Stock</h1>
-
-<input
-id="buscar"
-placeholder="Buscar iPhone 12">
-
-
-<button id="btnNuevaFunda">➕ Nueva funda</button>
-
-<div id="agregar" style="display:none">
-
-<input id="nombre" placeholder="Nombre">
-
-<input id="stock" type="number" placeholder="Stock">
-
-<input id="compatibles" placeholder="11,12,13,15">
-
-<input id="costo" type="number" placeholder="Costo">
-
-<input id="venta" type="number" placeholder="Precio de venta">
-
-<button id="guardarFunda">
-
-Guardar
-
-</button>
-
-</div>  
-<div id="fundas"></div>
-
-
-</div>
-
-
-<script type="module" src="app.js"></script>
+  <script type="module" src="app.js"></script>
 
 </body>
-
 </html>
