@@ -2,7 +2,8 @@ import { auth, db } from "./firebase.js";
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signInAnonymously
+  signInAnonymously,
+  signOut
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
   collection,
@@ -17,7 +18,7 @@ console.log("DB conectada con éxito:", db);
 
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
-const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- Tu API Key integrada
+const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -25,9 +26,9 @@ let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
 let fundaReservando = null; 
-let imagenRecortadaTemporal = null; // Guarda temporalmente el PNG transparente de Remove.bg
-let porcentajeEscala = 0.72; // Controla el tamaño (72% por defecto)
-let anguloRotacion = 0; // Controla la rotación en grados (0 por defecto)
+let imagenRecortadaTemporal = null; 
+let porcentajeEscala = 0.72; 
+let anguloRotacion = 0; 
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -41,6 +42,36 @@ document.getElementById("fotoInput").onchange = procesarImagen;
 document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
+// Eventos para el Menú Lateral (Hamburguesa)
+document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
+document.getElementById("sidebarOverlay").onclick = toggleSidebar;
+document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
+
+// Control de apertura y cierre del menú lateral
+function toggleSidebar() {
+  document.getElementById("sidebarMenu").classList.toggle("active");
+  document.getElementById("sidebarOverlay").classList.toggle("active");
+}
+
+// Lógica de cambio de rol dinámico desde el Sidebar
+async function ejecutarCambioRol() {
+  toggleSidebar(); // Cerramos el menú primero
+  
+  // Forzamos el deslogueo actual para limpiar estados en Firebase
+  await signOut(auth);
+  
+  if (esAdmin) {
+    // Si era admin, lo pasamos automáticamente a modo cliente (Anónimo)
+    loginCliente();
+  } else {
+    // Si era cliente, lo mandamos al panel de Login para que ponga sus credenciales admin
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login").style.display = "block";
+    document.getElementById("email").value = "";
+    document.getElementById("password").value = "";
+  }
+}
+
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
 onAuthStateChanged(auth, (user) => {
   document.getElementById("cargando").style.display = "none";
@@ -50,16 +81,21 @@ onAuthStateChanged(auth, (user) => {
     
     esAdmin = !user.isAnonymous;
     
+    // Cambiar dinámicamente el texto del menú de 3 rayas según el rol actual
+    const btnCambiarRol = document.getElementById("btnCambiarRol");
     if (esAdmin) {
+      btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
       document.getElementById("btnNuevaFunda").style.display = "inline-block";
       document.getElementById("btnAsistente").style.display = "flex";
     } else {
+      btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
       document.getElementById("btnNuevaFunda").style.display = "none";
       document.getElementById("btnAsistente").style.display = "none";
     }
     
     cargarFundas(); 
   } else {
+    // Si no hay sesión iniciada de ningún tipo, mostramos login base
     document.getElementById("login").style.display = "block";
     document.getElementById("app").style.display = "none";
   }
@@ -126,7 +162,6 @@ async function procesarImagenPro() {
     preview.src = urlImagenRecortada;
     preview.style.display = "block";
 
-    // Inicializar y resetear sliders del panel dinámico
     const contenedorSliders = document.getElementById("controlCamposPro");
     if (contenedorSliders) {
       contenedorSliders.style.display = "block";
@@ -141,14 +176,12 @@ async function procesarImagenPro() {
       anguloRotacion = 0;
       document.getElementById("valorRotacion").innerText = "0°";
       
-      // Evento para cambio de Tamaño en vivo
       sliderEscala.oninput = function() {
         porcentajeEscala = Number(this.value) / 100;
         document.getElementById("valorEscala").innerText = this.value + "%";
         aplicarMontajeFinal(false); 
       };
 
-      // Evento para cambio de Rotación en vivo
       sliderRotacion.oninput = function() {
         anguloRotacion = Number(this.value);
         document.getElementById("valorRotacion").innerText = this.value + "°";
@@ -202,7 +235,7 @@ function crearBotonesConfirmacion() {
   btnRestaurar.target = "_blank";
   btnRestaurar.style.cssText = "background: #ff9500; color: white; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; text-align: center; margin-top: 5px;";
   btnRestaurar.onclick = () => {
-    alert("Te abrimos la herramienta oficial de Remove.bg. Subí tu foto ahí, tocá 'Edit', usá el pincel 'Restore' para recuperar las esquinas borradas, descargá el PNG corregido y cargalo usando el selector de archivos normal de la app.");
+    alert("Te abrimos la herramienta oficial de Remove.bg...");
   };
 
   contenedor.appendChild(filaAcciones);
@@ -230,52 +263,35 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     canvasFinal.height = 1000;
     const ctxFinal = canvasFinal.getContext("2d");
 
-    // 1. Fondo de estudio base
     ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
 
-    // 2. Cálculos geométricos proporcionales
     const limitePixel = 1000 * porcentajeEscala;
     const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
     const anchoFinal = imagenRecortadaTemporal.width * escala;
     const altoFinal = imagenRecortadaTemporal.height * escala;
 
-    // Ángulo en radianes
     const radianes = (anguloRotacion * Math.PI) / 180;
 
-    // ==========================================
-    // 3. PASADA A: GENERACIÓN DE LA SOMBRA REAL (Flotante y visible)
-    // ==========================================
+    // Sombra
     ctxFinal.save();
-    
-    // Desplazamos el centro de la sombra levemente en X e Y para que no quede totalmente tapada
     ctxFinal.translate((1000 / 2) + 15, (1000 / 2) + 25); 
     ctxFinal.rotate(radianes);
-    
-    // Configuramos una sombra oscura y bien difuminada
     ctxFinal.shadowColor = "rgba(0, 0, 0, 0.45)"; 
     ctxFinal.shadowBlur = 40; 
     ctxFinal.shadowOffsetX = 0;
     ctxFinal.shadowOffsetY = 0;
-
-    // Dibujamos la silueta que proyectará la sombra de fondo
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // ==========================================
-    // 4. PASADA B: DIBUJO DE LA FUNDA LIMPIA (Encima)
-    // ==========================================
+    // Funda nítida
     ctxFinal.save();
     ctxFinal.translate(1000 / 2, 1000 / 2);
     ctxFinal.rotate(radianes);
-    
-    // Forzamos transparencia en la sombra para este renderizado limpísimo
     ctxFinal.shadowColor = "transparent";
     ctxFinal.shadowBlur = 0;
-    
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // Exportar el resultado consolidado
     fotoBase64 = canvasFinal.toDataURL("image/png");
     document.getElementById("previewFoto").src = fotoBase64;
 
@@ -373,7 +389,6 @@ function mostrarFormulario() {
   
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
-  
   document.getElementById("agregar").style.display = "flex";
 }
 
@@ -385,7 +400,6 @@ function ocultarFormulario() {
   document.getElementById("agregar").style.display = "none";
 }
 
-// ASISTENTE DE VENTAS
 function mostrarAsistente() {
   if (!esAdmin) return;
   document.getElementById("asistenteProducto").value = "";
@@ -444,7 +458,6 @@ async function cargarFundas() {
     snapshot.forEach((doc) => {
       todasLasFundas.push({ id: doc.id, ...doc.data() });
     });
-    
     actualizarDatalistAsistente();
     renderizarFundas(todasLasFundas);
   } catch (error) {
@@ -496,7 +509,6 @@ async function guardarFunda() {
       await addDoc(collection(db, "fundas"), datosFunda);
       alert("Funda guardada con éxito 🎉");
     }
-
     ocultarFormulario();
     cargarFundas();
   } catch (error) {
@@ -511,7 +523,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda HIPAA eliminada correctamente");
+      alert("Funda eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -552,7 +564,6 @@ function abrirEditarFunda(id) {
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
-
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
   document.getElementById("agregar").style.display = "flex";
 }
@@ -628,7 +639,6 @@ function renderizarFundas(arrayDeFundas) {
     }
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-
     let bloqueAcciones = "";
     
     if (esAdmin) {
