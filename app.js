@@ -101,7 +101,7 @@ window.venderFunda = async (fJson) => {
     const cliente = prompt("Nombre del cliente:");
     if (!cliente) return;
     
-    const modelo = prompt("Modelo de iPhone:", f.compatibles.split(',')[0]);
+    const modelo = prompt("Modelo (ej: 11):", f.compatibles.split(',')[0]);
     if (!modelo) return;
     
     const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
@@ -112,7 +112,7 @@ window.venderFunda = async (fJson) => {
     
     if (isNaN(precioTotal)) return;
     
-    // Guardar venta
+    // Guardar venta detallada
     await addDoc(collection(db, "ventas"), { 
         producto: f.nombre,
         cliente: cliente, 
@@ -126,11 +126,10 @@ window.venderFunda = async (fJson) => {
         fechaCompleta: new Date().toISOString() 
     });
     
-    // Actualizar stock restando unidades
-    const nuevoStock = Number(f.stock) - Number(unidades);
-    await updateDoc(doc(db, "fundas", f.id), { stock: nuevoStock });
+    // Actualizar Stock
+    await updateDoc(doc(db, "fundas", f.id), { stock: Number(f.stock) - unidades });
     
-    alert("Venta registrada y stock actualizado.");
+    alert("Venta registrada con éxito");
     cargarDatos();
 };
 
@@ -157,10 +156,19 @@ async function actualizarDashboard() {
 async function cargarHistorial() {
     const snap = await getDocs(query(collection(db, "ventas"), orderBy("fechaCompleta", "desc")));
     let t = `<table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>Unid.</th><th>Ganancia</th></tr>`;
+        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>Unid.</th><th>P. Compra</th><th>P. Venta</th><th>Envío</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente || '-'}</td><td>${v.producto}</td><td>${v.modelo || '-'}</td><td>${v.unidades}</td><td>$${(v.ganancia || 0).toFixed(2)}</td></tr>`;
+        t += `<tr>
+            <td>${v.cliente || '-'}</td>
+            <td>${v.producto || '-'}</td>
+            <td>${v.modelo || '-'}</td>
+            <td>${v.unidades || 0}</td>
+            <td>$${(v.costoUnitario || 0).toFixed(2)}</td>
+            <td>$${(v.precioVenta || 0).toFixed(2)}</td>
+            <td>$${(v.envio || 0).toFixed(2)}</td>
+            <td>$${(v.ganancia || 0).toFixed(2)}</td>
+        </tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
