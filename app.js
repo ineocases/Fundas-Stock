@@ -15,10 +15,10 @@ import {
 
 console.log("DB conectada con éxito:", db);
 
-// 📱 TU NÚMERO CONFIGURADO NATIVAMENTE
+// 📱 NÚMERO DE WHATSAPP CONFIGURADO EXACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
 
-// Variables globales de la app
+// Variables globales de control
 let todasLasFundas = [];
 let idFundaEditando = null;
 let fotoBase64 = ""; 
@@ -36,7 +36,7 @@ document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
-// OBSERVADOR DE SESIÓN (Control de Roles Automático)
+// OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
 onAuthStateChanged(auth, (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
@@ -75,12 +75,12 @@ async function loginCliente() {
   try {
     await signInAnonymously(auth);
   } catch (error) {
-    alert("Error al ingresar en modo cliente. Activa el acceso Anónimo en Firebase.");
+    alert("Error al ingresar en modo cliente. Verifica si el acceso Anónimo está activo en Firebase.");
     console.error(error);
   }
 }
 
-// LOGICA INTEGRADA DEL MENÚ DE RESERVA PARA WHATSAPP
+// RESERVAS DIRECTAS A TU WHATSAPP
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
@@ -376,7 +376,7 @@ async function procesarVentaAsistente() {
   }
 }
 
-// Inyección de variables en scope global de eventos HTML
+// Inyección global de funciones para llamadas 'onclick' desde HTML
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
