@@ -134,9 +134,19 @@ window.eliminarVenta = async (id) => { if(confirm("¿Eliminar registro?")) { awa
 window.editarVenta = async (vJson) => {
     const v = JSON.parse(decodeURIComponent(vJson));
     const nuevoCliente = prompt("Editar cliente:", v.cliente);
-    const nuevaGanancia = parseFloat(prompt("Editar ganancia:", v.ganancia));
-    if (nuevoCliente && !isNaN(nuevaGanancia)) {
-        await updateDoc(doc(db, "ventas", v.id), { cliente: nuevoCliente, ganancia: nuevaGanancia });
+    const nuevasUnidades = parseInt(prompt("Editar unidades:", v.unidades));
+    const nuevoPrecioVenta = parseFloat(prompt("Editar precio venta:", v.precioVenta));
+    const nuevoEnvio = parseFloat(prompt("Editar envío:", v.envio));
+    
+    if (nuevoCliente && !isNaN(nuevasUnidades) && !isNaN(nuevoPrecioVenta)) {
+        const nuevaGanancia = (nuevoPrecioVenta * nuevasUnidades) - (v.costoUnitario * nuevasUnidades) - (nuevoEnvio || 0);
+        await updateDoc(doc(db, "ventas", v.id), { 
+            cliente: nuevoCliente, 
+            unidades: nuevasUnidades, 
+            precioVenta: nuevoPrecioVenta, 
+            envio: Number(nuevoEnvio),
+            ganancia: nuevaGanancia 
+        });
         cargarDatos();
     }
 };
@@ -164,13 +174,15 @@ async function actualizarDashboard() {
 async function cargarHistorial() {
     const snap = await getDocs(query(collection(db, "ventas"), orderBy("fechaCompleta", "desc")));
     let t = `<table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>U.</th><th>G.</th><th>Acciones</th></tr>`;
+        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>U.</th><th>P.Compra</th><th>P.Venta</th><th>Envío</th><th>G.</th><th>Acciones</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
         const vJson = encodeURIComponent(JSON.stringify({id: d.id, ...v}));
         t += `<tr>
             <td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
-            <td>${v.unidades || 0}</td><td>$${(v.ganancia || 0).toFixed(2)}</td>
+            <td>${v.unidades || 0}</td><td>$${(v.costoUnitario || 0).toFixed(2)}</td>
+            <td>$${(v.precioVenta || 0).toFixed(2)}</td><td>$${(v.envio || 0).toFixed(2)}</td>
+            <td>$${(v.ganancia || 0).toFixed(2)}</td>
             <td><button onclick="window.editarVenta('${vJson}')">✏️</button><button onclick="window.eliminarVenta('${d.id}')">🗑️</button></td>
         </tr>`;
     });
