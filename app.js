@@ -5,7 +5,7 @@ import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from "https://
 let todasLasFundas = [];
 let idEdicion = null;
 
-// Persistencia de sesión
+// --- PERSISTENCIA DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
@@ -17,10 +17,11 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+// --- FUNCIONES DE LÓGICA ---
 async function login() {
     try {
         await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value);
-    } catch (e) { alert("Error al entrar"); }
+    } catch (e) { alert("Error al entrar: " + e.message); }
 }
 
 function mostrarFormulario() {
@@ -32,6 +33,7 @@ function mostrarFormulario() {
 
 window.editarFunda = (id) => {
     const f = todasLasFundas.find(f => f.id === id);
+    if (!f) return;
     document.getElementById("nombre").value = f.nombre;
     document.getElementById("stock").value = f.stock;
     document.getElementById("compatibles").value = Array.isArray(f.compatibles) ? f.compatibles.join(", ") : f.compatibles;
@@ -50,13 +52,15 @@ async function guardarFunda() {
         costo: Number(document.getElementById("costo").value),
         venta: Number(document.getElementById("venta").value)
     };
-    if (idEdicion) {
-        await updateDoc(doc(db, "fundas", idEdicion), data);
-    } else {
-        await addDoc(collection(db, "fundas"), data);
-    }
-    document.getElementById("agregar").style.display = "none";
-    cargarFundas();
+    try {
+        if (idEdicion) {
+            await updateDoc(doc(db, "fundas", idEdicion), data);
+        } else {
+            await addDoc(collection(db, "fundas"), data);
+        }
+        document.getElementById("agregar").style.display = "none";
+        cargarFundas();
+    } catch (e) { alert("Error al guardar: " + e.message); }
 }
 
 async function cargarFundas() {
@@ -72,26 +76,8 @@ function renderizarFundas(lista) {
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
-            <h2>${f.nombre}</h2>
-            <p>📦 Stock: ${f.stock}</p>
-            <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
-            <p>💵 Costo: $${f.costo}</p>
-            <p>💰 Venta: $${f.venta}</p>
-            <button onclick="editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
-            <button class="btn-eliminar">🗑️ Eliminar</button>
-        `;
-        card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
-        contenedor.appendChild(card);
-    });
-}
-
-async function eliminarFunda(id) {
-    if (confirm("¿Seguro?")) {
-        await deleteDoc(doc(db, "fundas", id));
-        cargarFundas();
-    }
-}
-
-document.getElementById("btnLogin").onclick = login;
-document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
-document.getElementById("guardarFunda").onclick = guardarFunda;
+            <h2>${f.nombre || "Sin nombre"}</h2>
+            <p>📦 Stock: ${f.stock || 0}</p>
+            <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : (f.compatibles || "N/A")}</p>
+            <p>💵 Costo: $${f.costo || 0}</p>
+            <p>💰 Venta: $${f.
