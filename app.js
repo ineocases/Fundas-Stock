@@ -45,7 +45,7 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// Botones de acción
+// Botones y Acciones
 document.getElementById("btnNuevaFunda").onclick = () => {
     const form = document.getElementById("agregar");
     form.style.display = form.style.display === "none" ? "block" : "none";
@@ -61,6 +61,7 @@ document.getElementById("guardarFunda").onclick = async () => {
     };
     await addDoc(collection(db, "fundas"), d);
     document.getElementById("agregar").style.display = "none";
+    alert("Guardado correctamente");
     cargarDatos();
 };
 
@@ -100,7 +101,7 @@ async function cargarHistorial() {
     let t = `<table><tr><th>Cliente</th><th>Producto</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente}</td><td>${v.producto} (${v.unidades})</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
+        t += `<tr><td>${v.cliente}</td><td>${v.producto}</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
@@ -112,5 +113,11 @@ document.getElementById("buscar").addEventListener("input", (e) => {
 
 document.getElementById("btnLogin").onclick = async () => {
     try { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); } 
-    catch(e) { alert("Error"); }
+    catch(e) { alert("Error al ingresar"); }
 };
+
+// Funciones globales necesarias para los botones de las tarjetas
+window.eliminarFunda = async (id) => { 
+    if(confirm("¿Seguro que deseas eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } 
+};
+window.editarFunda = (id) => { alert("Para editar, recarga y usa la lógica de actualización."); };
