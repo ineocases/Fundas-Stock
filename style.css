@@ -89,39 +89,40 @@ button:hover {
     transform: translateY(-2px);
 }
 
-/* ALINEACIÓN DEL LOGO Y TEXTO DE iNEOCASES (COMPACTO) */
+/* ALINEACIÓN DEL LOGO ICONO Y TEXTO NATIVO (MÁXIMA NITIDEZ) */
 .header-logo {
     display: flex;
-    align-items: center; /* Alinea verticalmente al centro el logo y el texto */
-    gap: 10px;          /* Espacio controlado entre el logo y el texto */
+    align-items: center;
+    gap: 8px;
     margin-bottom: 20px;
 }
 
 .header-logo h1, .header-logo h2 {
     margin: 0;
-    font-size: 22px;    /* Achicamos el texto para que haga juego */
+    font-size: 24px;
     font-weight: 700;
+    color: #1d1d1f;
     letter-spacing: -0.5px;
-    line-height: 1;     /* Evita que el texto empuje hacia abajo */
+    line-height: 1;
 }
 
 .app-logo {
-    width: 32px;        /* Logo más chico y delicado */
-    height: 32px;
-    object-fit: cover;
-    border-radius: 50%; /* Mantiene el círculo perfecto */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;     /* Evita que el logo se aplaste en pantallas chicas */
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    transform: translateZ(0);
 }
 
-/* Ajuste exclusivo para la pantalla de Login (Mantiene la coherencia horizontal) */
 #login .header-logo {
-    justify-content: center; /* Lo centra en el login, pero manteniendo el texto al lado */
+    justify-content: center;
     margin-top: 25px;
     margin-bottom: 30px;
 }
 
-/* MODALES EN MODO PANTALLA COMPLETA TOTAL (Full Screen Takeover estilo iOS) */
+/* MODALES EN MODO PANTALLA COMPLETA TOTAL (Full Screen Takeover) */
 #agregar, #modalAsistente, #modalReservar {
     position: fixed;
     top: 0;
