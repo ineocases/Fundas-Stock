@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gsta
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 let todasLasFundas = [];
+let idEdicion = null; // Variable para saber si estamos editando
 
 // --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
@@ -42,7 +43,6 @@ window.aplicarFiltros = () => {
 
     const filtradas = todasLasFundas.filter(f => {
         const nombre = (f.nombre || "").toLowerCase();
-        // Convertimos a string forzosamente para evitar el error de .split()
         const rawModelos = f.compatibles ? String(f.compatibles) : "";
         const modelos = rawModelos.toLowerCase().split(',').map(m => m.trim());
         
@@ -69,6 +69,7 @@ function renderizarFundas(lista) {
             <p>💵 <b>Costo:</b> $${f.costo || 0}</p>
             <p>💰 <b>Venta:</b> $${f.venta || 0}</p>
             <button onclick="window.venderFunda('${fJson}')" class="btn-vender">🛒 Vender</button>
+            <button onclick="window.editarFunda('${f.id}')" class="btn-editar" style="background:#ffc107; color:black;">✏️ Editar</button>
             <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Eliminar</button>
         `;
         contenedor.appendChild(card);
@@ -81,17 +82,37 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// --- 4. ACCIONES (Venta, Alta, Baja) ---
+// --- 4. ACCIONES (Venta, Alta, Edición, Baja) ---
 document.getElementById("guardarFunda").onclick = async () => {
-    await addDoc(collection(db, "fundas"), { 
+    const data = { 
         nombre: document.getElementById("nombre").value, 
         stock: Number(document.getElementById("stock").value),
         compatibles: document.getElementById("compatibles").value,
         costo: Number(document.getElementById("costo").value), 
         venta: Number(document.getElementById("venta").value) 
-    });
+    };
+
+    if (idEdicion) {
+        await updateDoc(doc(db, "fundas", idEdicion), data);
+        idEdicion = null;
+    } else {
+        await addDoc(collection(db, "fundas"), data);
+    }
+    
     document.getElementById("agregar").style.display = "none";
     cargarDatos();
+};
+
+window.editarFunda = (id) => {
+    const f = todasLasFundas.find(x => x.id === id);
+    if (!f) return;
+    idEdicion = id;
+    document.getElementById("nombre").value = f.nombre;
+    document.getElementById("stock").value = f.stock;
+    document.getElementById("compatibles").value = f.compatibles;
+    document.getElementById("costo").value = f.costo;
+    document.getElementById("venta").value = f.venta;
+    document.getElementById("agregar").style.display = "block";
 };
 
 window.venderFunda = async (fJson) => {
@@ -103,12 +124,9 @@ window.venderFunda = async (fJson) => {
     if (!u || isNaN(precioFinal)) return;
     
     await addDoc(collection(db, "ventas"), { 
-        producto: f.nombre, 
-        cliente: "Cliente", 
-        unidades: u, 
+        producto: f.nombre, cliente: "Cliente", unidades: u, 
         ganancia: (precioFinal - (f.costo * u) - envio), 
-        fecha: new Date().toLocaleDateString(), 
-        fechaCompleta: new Date().toISOString() 
+        fecha: new Date().toLocaleDateString(), fechaCompleta: new Date().toISOString() 
     });
     await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - u });
     cargarDatos();
@@ -122,6 +140,7 @@ window.eliminarFunda = async (id) => {
 };
 
 document.getElementById("btnNuevaFunda").onclick = () => { 
+    idEdicion = null; // Reset para nueva funda
     const a = document.getElementById("agregar");
     a.style.display = a.style.display === "none" ? "block" : "none";
 };
