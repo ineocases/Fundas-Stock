@@ -1,16 +1,93 @@
-/* Botón de editar para que combine con tu diseño */
-.btn-editar {
-  background-color: #ff9500; /* Naranja estilo iOS */
-  margin-top: 10px;
+/* --- Estilos Generales --- */
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+/* --- Formulario e Inputs --- */
+input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+#agregar {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* --- Botones --- */
+button {
+  padding: 10px 15px;
   border: none;
   border-radius: 10px;
+  cursor: pointer;
+  background: #007AFF;
   color: white;
   font-weight: bold;
-  cursor: pointer;
+  width: 100%;
+  margin-top: 5px;
+}
+
+button:hover {
+  background: #005bb5;
+}
+
+.btn-eliminar {
+  background-color: #ff3b30;
+  margin-top: 10px;
+}
+
+.btn-eliminar:hover {
+  background-color: #cc2f26;
+}
+
+.btn-editar {
+  background-color: #ff9500;
+  margin-top: 10px;
 }
 
 .btn-editar:hover {
   background-color: #e08400;
+}
+
+/* --- Grilla de Tarjetas --- */
+#fundas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 25px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.4rem;
+}
+
+.card p {
+  margin: 5px 0;
+  font-size: 1rem;
+  color: #333;
 }
