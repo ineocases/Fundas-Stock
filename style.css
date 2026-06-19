@@ -4,8 +4,9 @@ input { padding: 10px; width: 100%; margin: 5px 0; border: 1px solid #ccc; box-s
 .search-container { display: flex; gap: 10px; margin-bottom: 20px; }
 #fundas { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
 .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-button { padding: 10px; cursor: pointer; border: none; color: white; width: 100%; margin-top: 5px; border-radius: 5px; }
-#btnNuevaFunda { background: #007bff; }
-.btn-editar { background: #ffc107; color: black; }
-.btn-eliminar { background: #dc3545; }
+button { padding: 10px; cursor: pointer; border: none; color: white; border-radius: 5px; }
+#btnNuevaFunda { background: #007bff; width: 100%; }
+.btn-editar { background: #ffc107; color: black; width: 48%; }
+.btn-eliminar { background: #dc3545; width: 48%; margin-top: 10px; }
+.btn-stock { width: 45px; height: 45px; font-size: 1.2rem; }
 @media (max-width: 600px) { .search-container { flex-direction: column; } }
