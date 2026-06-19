@@ -4,7 +4,7 @@ import { collection, getDocs, addDoc, doc, deleteDoc } from "https://www.gstatic
 
 let todasLasFundas = [];
 
-// 1. DEFINIMOS LAS FUNCIONES PRIMERO
+// --- FUNCIONES DE LÓGICA ---
 async function login() {
     try {
         await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value);
@@ -27,17 +27,25 @@ async function cargarFundas() {
 
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
-    contenedor.innerHTML = "";
+    contenedor.innerHTML = ""; 
+    
     lista.forEach((f) => {
         const card = document.createElement("div");
         card.className = "card";
+        
+        // Aquí agregamos TODOS los campos que pediste
         card.innerHTML = `
             <h2>${f.nombre}</h2>
             <p>📦 Stock: ${f.stock}</p>
             <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
-            <button class="btn-eliminar">🗑️ Eliminar</button>
+            <p>💵 Costo: $${f.costo || 0}</p>
+            <p>💰 Venta: $${f.venta || 0}</p>
+            <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
         `;
+        
+        // Conexión del botón
         card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
+        
         contenedor.appendChild(card);
     });
 }
@@ -46,7 +54,6 @@ async function eliminarFunda(id) {
     if (confirm("¿Borrar esta funda?")) {
         try {
             await deleteDoc(doc(db, "fundas", id));
-            alert("Eliminado");
             cargarFundas();
         } catch (e) { alert("Error al borrar"); }
     }
@@ -64,16 +71,9 @@ async function guardarFunda() {
     cargarFundas();
 }
 
-// 2. ASIGNAMOS LOS EVENTOS AL FINAL (Cuando las funciones ya existen)
+// --- EVENTOS ---
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-document.getElementById("buscar").addEventListener("input", (e) => {
-    const texto = e.target.value.toLowerCase();
-    const filtradas = todasLasFundas.filter(f => 
-        (f.nombre || "").toLowerCase().includes(texto) || 
-        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
-    );
-    renderizarFundas(filtradas);
-});
+document.getElementById("buscar
