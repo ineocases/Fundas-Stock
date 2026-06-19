@@ -18,10 +18,12 @@ h1 {
     display: flex;
     gap: 15px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 #buscar {
     flex: 1;
+    min-width: 200px;
     margin-bottom: 0;
 }
 
@@ -65,6 +67,12 @@ button {
 
 button:hover {
     background: #0077ed;
+}
+
+/* NUEVO: Botón de Importar Excel */
+#btnImportarExcel:hover {
+    background: #218838 !important;
+    transform: translateY(-1px);
 }
 
 /* --- ELEMENTOS DE LA LISTA DE CATEGORÍAS GESTIONABLES --- */
