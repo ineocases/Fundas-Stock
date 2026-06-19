@@ -74,7 +74,7 @@ async function guardarFunda() {
     } catch (e) { alert("Error al guardar"); }
 }
 
-// --- EVENTOS (Al final del archivo) ---
+// --- EVENTOS ---
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
