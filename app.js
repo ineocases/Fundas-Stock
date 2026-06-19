@@ -47,15 +47,29 @@ async function cargarFundas() {
 
     const f = doc.data();
 
-    html += `
-      <div class="card">
+html += `
 
-      <h2>${f.nombre}</h2>
+<div class="card">
 
-      <p>📦 ${f.stock}</p>
+<h2>${f.nombre}</h2>
 
-      </div>
-    `;
+<p>📦 Stock: ${f.stock}</p>
+
+<p>📱 Compatibles: ${f.compatibles.join(" • ")}</p>
+
+<p>💵 Costo: $${f.costo}</p>
+
+<p>💰 Venta: $${f.venta}</p>
+
+<button>🛒 Vender</button>
+
+<button>✏️ Editar</button>
+
+<button>🗑️ Eliminar</button>
+
+</div>
+
+`;
 
   });
 
