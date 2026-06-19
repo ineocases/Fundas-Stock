@@ -4,33 +4,80 @@ import { collection, getDocs, addDoc, doc, deleteDoc } from "https://www.gstatic
 
 let todasLasFundas = [];
 
-// Eventos básicos
+// Eventos iniciales
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-// EVENTO DELEGADO (EL QUE ELIMINA)
-document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("btn-eliminar")) {
-        const id = e.target.getAttribute("data-id");
-        console.log("Intentando eliminar ID:", id); // DEBERÍA SALIR ESTO EN CONSOLA
-        eliminarFunda(id);
-    }
+// Buscador
+document.getElementById("buscar").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase();
+    const filtradas = todasLasFundas.filter(f => 
+        (f.nombre || "").toLowerCase().includes(texto) || 
+        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
+    );
+    renderizarFundas(filtradas);
 });
 
-// ... (El resto de tus funciones como login, cargarFundas, etc, son iguales a la versión anterior)
+async function login() {
+    try {
+        await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value);
+        document.getElementById("login").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        cargarFundas();
+    } catch (e) { alert("Error al entrar"); }
+}
+
+function mostrarFormulario() {
+    const div = document.getElementById("agregar");
+    div.style.display = div.style.display === "none" ? "block" : "none";
+}
+
+async function cargarFundas() {
+    const snapshot = await getDocs(collection(db, "fundas"));
+    todasLasFundas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderizarFundas(todasLasFundas);
+}
+
+function renderizarFundas(lista) {
+    const contenedor = document.getElementById("fundas");
+    contenedor.innerHTML = ""; // Limpiar
+    
+    lista.forEach((f) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+            <h2>${f.nombre}</h2>
+            <p>📦 Stock: ${f.stock}</p>
+            <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
+            <button class="btn-eliminar">🗑️ Eliminar</button>
+        `;
+        
+        // AQUÍ ESTÁ EL TRUCO: Conectamos el botón apenas se crea
+        card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
+        
+        contenedor.appendChild(card);
+    });
+}
 
 async function eliminarFunda(id) {
-    if (!id) return;
-    if (confirm("¿Seguro que quieres borrar?")) {
+    if (confirm("¿Borrar esta funda?")) {
         try {
             await deleteDoc(doc(db, "fundas", id));
             alert("Eliminado");
-            cargarFundas(); // Recargamos la lista completa desde Firebase
-        } catch (error) {
-            alert("Error al borrar: " + error.message);
-        }
+            cargarFundas();
+        } catch (e) { alert("Error al borrar"); }
     }
 }
 
-// ... (renderizarFundas igual, asegurándote que el botón tenga class="btn-eliminar" y data-id="${f.id}")
+async function guardarFunda() {
+    await addDoc(collection(db, "fundas"), {
+        nombre: document.getElementById("nombre").value,
+        stock: Number(document.getElementById("stock").value),
+        compatibles: document.getElementById("compatibles").value.split(",").map(i => i.trim()),
+        costo: Number(document.getElementById("costo").value),
+        venta: Number(document.getElementById("venta").value)
+    });
+    document.getElementById("agregar").style.display = "none";
+    cargarFundas();
+}
