@@ -34,14 +34,12 @@
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
         
-        <label>Nombre del modelo</label>
-        <input id="nombre" placeholder="Ej: Clear Case con MagSafe">
+        <label>Nombre del modelo/diseño</label>
+        <input id="nombre" placeholder="Ej: Funda Silicona Púrpura">
         
-        <label>Stock disponible</label>
-        <input id="stock" type="number" placeholder="0">
-        
-        <label>Modelos compatibles (separados por coma)</label>
-        <input id="compatibles" placeholder="11, 12, 13, 14 Pro">
+        <!-- CAMBIO: Unificamos modelo y stock en un solo input explicativo -->
+        <label>Modelos y Stock (Formato: modelo:cantidad)</label>
+        <input id="stockPorModelo" placeholder="Ej: 11:3, 12:1, 14:4">
         
         <label>Costo de lista ($)</label>
         <input id="costo" type="number" placeholder="0">
@@ -50,7 +48,6 @@
         <input id="venta" type="number" placeholder="0">
         
         <div class="modal-buttons">
-          <!-- MODIFICADO: Ahora llama directamente a la función global -->
           <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
           <button id="guardarFunda">Guardar</button>
         </div>
