@@ -107,3 +107,19 @@ button:hover {
   background-color: #f0f0f0;
   color: #000;
 }
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.card button {
+    margin-right: 5px;
+    margin-top: 10px;
+    width: 100%;
+}
