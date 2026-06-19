@@ -56,6 +56,12 @@ document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
 document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
 document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
 
+// NUEVO: Evento para activar importación por Excel
+document.getElementById("btnImportarExcel").onclick = () => {
+  document.getElementById("inputExcel").click();
+};
+document.getElementById("inputExcel").onchange = procesarImportacionExcel;
+
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
   document.getElementById("sidebarOverlay").classList.toggle("active");
@@ -99,15 +105,18 @@ onAuthStateChanged(auth, async (user) => {
     
     const btnCambiarRol = document.getElementById("btnCambiarRol");
     const btnGestorCategorias = document.getElementById("btnGestorCategorias");
+    const btnImportarExcel = document.getElementById("btnImportarExcel");
 
     if (esAdmin) {
       btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
       document.getElementById("btnNuevaFunda").style.display = "inline-block";
+      btnImportarExcel.style.display = "inline-block"; // Mostrar botón de Excel al administrador
       document.getElementById("btnAsistente").style.display = "flex";
-      btnGestorCategorias.style.display = "block"; // Mostrar gestor solo al admin
+      btnGestorCategorias.style.display = "block";
     } else {
       btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
       document.getElementById("btnNuevaFunda").style.display = "none";
+      btnImportarExcel.style.display = "none"; // Ocultar botón de Excel a clientes
       document.getElementById("btnAsistente").style.display = "none";
       btnGestorCategorias.style.display = "none";
     }
@@ -187,7 +196,6 @@ function actualizarSelectFormulario() {
   select.innerHTML = listaCategorias.map(cat => `<option value="${cat.nombre}">${cat.nombre}</option>`).join("");
 }
 
-// Ventana del gestor de categorías
 function abrirModalCategorias() {
   toggleSidebar();
   document.getElementById("nuevoNombreCategoria").value = "";
@@ -198,14 +206,12 @@ function cerrarModalCategorias() {
   document.getElementById("modalCategorias").style.display = "none";
 }
 
-// Función para crear la categoría que vos quieras escribir
 async function crearNuevaCategoria() {
   const input = document.getElementById("nuevoNombreCategoria");
   const nombre = input.value.trim();
 
   if (!nombre) return alert("Escribí un nombre para la categoría.");
 
-  // Evitar duplicados
   const existe = listaCategorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase());
   if (existe) return alert("Esa categoría ya existe.");
 
@@ -218,7 +224,6 @@ async function crearNuevaCategoria() {
   }
 }
 
-// Función para eliminar una categoría creada
 async function eliminarCategoria(id, nombre) {
   if (confirm(`¿Estás seguro que quieres eliminar la categoría "${nombre}"?`)) {
     try {
@@ -255,6 +260,66 @@ function renderizarListaCrudCategorias() {
       eliminarCategoria(this.getAttribute("data-id"), this.getAttribute("data-nombre"));
     };
   });
+}
+
+// 📥 NUEVO: PROCESADOR LECTOR DE EXCEL A FIRESTORE
+function procesarImportacionExcel(evento) {
+  const archivo = evento.target.files[0];
+  if (!archivo) return;
+
+  const lector = new FileReader();
+  lector.onload = async function(e) {
+    try {
+      const datos = new Uint8Array(e.target.result);
+      const libro = XLSX.read(datos, { type: 'array' });
+      
+      const nombreHoja = libro.SheetNames[0];
+      const hoja = libro.Sheets[nombreHoja];
+      const filas = XLSX.utils.sheet_to_json(hoja);
+      
+      if (filas.length === 0) return alert("El archivo de Excel se encuentra vacío.");
+
+      if (confirm(`Se detectaron ${filas.length} artículos en el archivo. ¿Proceder a importarlos masivamente?`)) {
+        let importados = 0;
+
+        for (const fila of filas) {
+          let stockPorModeloArray = [];
+          
+          if (fila.StockPorModelo) {
+            stockPorModeloArray = String(fila.StockPorModelo).split(",")
+              .map(item => {
+                const [modelo, cantidad] = item.split(":");
+                return {
+                  modelo: modelo ? modelo.trim() : "Único",
+                  stock: cantidad ? Number(cantidad.trim()) : 0
+                };
+              })
+              .filter(item => item.modelo !== "");
+          }
+
+          const nuevoProducto = {
+            nombre: fila.Nombre || "Artículo Sin Nombre",
+            categoria: fila.Categoria || "Varios",
+            costo: Number(fila.Costo || 0),
+            venta: Number(fila.Venta || 0),
+            stockPorModelo: stockPorModeloArray,
+            foto: "" 
+          };
+
+          await addDoc(collection(db, "fundas"), nuevoProducto);
+          importados++;
+        }
+
+        alert(`¡Listo! Se añadieron ${importados} productos correctamente. 🎉`);
+        document.getElementById("inputExcel").value = ""; 
+        cargarFundas(); 
+      }
+    } catch (error) {
+      console.error("Error al importar:", error);
+      alert("Hubo problemas al procesar las celdas del Excel. Valida los nombres de columnas.");
+    }
+  };
+  lector.readAsArrayBuffer(archivo);
 }
 
 // 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
