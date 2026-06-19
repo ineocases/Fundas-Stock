@@ -4,7 +4,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy 
 
 let todasLasFundas = [];
 let idEdicion = null;
-let ventaEnCurso = false; // Bloqueo para evitar que los prompts se tilden
+let ventaEnCurso = false;
 
 // --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
@@ -95,7 +95,7 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
-// --- 4. LÓGICA DE VENTAS (CONTROLADA) ---
+// --- 4. LÓGICA DE VENTAS (ACTUALIZADA) ---
 window.venderFunda = async (fJson) => {
     if (ventaEnCurso) return; 
     ventaEnCurso = true;
@@ -105,32 +105,38 @@ window.venderFunda = async (fJson) => {
         const cliente = prompt("Nombre del cliente:");
         if (!cliente) return;
         
-        const modelo = prompt("Modelo (ej: 11):", f.compatibles.split(',')[0]);
-        if (!modelo) return;
+        const modeloVendido = prompt("Modelo que se lleva (ej: 11):", f.compatibles.split(',')[0]);
+        if (!modeloVendido) return;
         
         const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
         if (isNaN(unidades) || unidades <= 0) return;
         
         const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
         const envio = parseFloat(prompt("Costo de envío:", "0"));
-        
         if (isNaN(precioTotal)) return;
 
+        // Limpiar lista de compatibles
+        let listaModelos = String(f.compatibles).split(',').map(m => m.trim());
+        const indice = listaModelos.indexOf(modeloVendido);
+        if (indice > -1) listaModelos.splice(indice, 1);
+        const nuevosCompatibles = listaModelos.join(',');
+
+        // Guardar venta
         await addDoc(collection(db, "ventas"), { 
-            producto: f.nombre,
-            cliente: cliente, 
-            modelo: modelo,
-            unidades: unidades, 
-            costoUnitario: Number(f.costo),
-            precioVenta: precioTotal / unidades, 
-            envio: Number(envio), 
+            producto: f.nombre, cliente: cliente, modelo: modeloVendido,
+            unidades: unidades, costoUnitario: Number(f.costo),
+            precioVenta: precioTotal / unidades, envio: Number(envio), 
             ganancia: (Number(precioTotal) - (Number(f.costo) * unidades) - Number(envio)),
-            fecha: new Date().toLocaleDateString(), 
-            fechaCompleta: new Date().toISOString() 
+            fecha: new Date().toLocaleDateString(), fechaCompleta: new Date().toISOString() 
         });
         
-        await updateDoc(doc(db, "fundas", f.id), { stock: Number(f.stock) - unidades });
-        alert("Venta registrada correctamente.");
+        // Actualizar funda
+        await updateDoc(doc(db, "fundas", f.id), { 
+            stock: Number(f.stock) - unidades,
+            compatibles: nuevosCompatibles 
+        });
+        
+        alert("Venta registrada y modelo removido de stock.");
         await cargarDatos();
     } catch (e) { console.error(e); } finally { ventaEnCurso = false; }
 };
@@ -161,11 +167,9 @@ async function cargarHistorial() {
         <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>Unid.</th><th>P. Compra</th><th>P. Venta</th><th>Envío</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr>
-            <td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
+        t += `<tr><td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
             <td>${v.unidades || 0}</td><td>$${(v.costoUnitario || 0).toFixed(2)}</td>
-            <td>$${(v.precioVenta || 0).toFixed(2)}</td><td>$${(v.envio || 0).toFixed(2)}</td><td>$${(v.ganancia || 0).toFixed(2)}</td>
-        </tr>`;
+            <td>$${(v.precioVenta || 0).toFixed(2)}</td><td>$${(v.envio || 0).toFixed(2)}</td><td>$${(v.ganancia || 0).toFixed(2)}</td></tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
