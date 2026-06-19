@@ -12,6 +12,7 @@ import {
   deleteDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
 console.log("DB conectada con éxito:", db);
 
@@ -24,6 +25,25 @@ let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
 let fundaReservando = null; 
+let imageSegmenter; // Instancia global para la IA de MediaPipe
+
+// Inicialización de la IA de MediaPipe al cargar la app
+async function iniciarIA() {
+  try {
+    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
+    imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+      baseOptions: { 
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite" 
+      },
+      runningMode: "IMAGE"
+    });
+    // Una vez que la IA está lista, permitimos que se oculte la pantalla de carga principal mediante Auth
+    console.log("IA de MediaPipe inicializada correctamente.");
+  } catch (error) {
+    console.error("Error al inicializar MediaPipe:", error);
+  }
+}
+iniciarIA();
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -34,6 +54,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
+document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // NUEVO EVENTO PARA RECORTE IA
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
@@ -145,6 +166,8 @@ function mostrarFormulario() {
   document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
   document.getElementById("guardarFunda").innerText = "Guardar";
   document.getElementById("guardarFunda").disabled = false;
+  document.getElementById("btnCrearFoto").innerText = "🪄 Crear foto Pro";
+  document.getElementById("btnCrearFoto").disabled = false;
   
   document.getElementById("nombre").value = "";
   document.getElementById("stockPorModelo").value = "";
@@ -177,6 +200,7 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
+// Procesamiento estándar de imágenes (Mapeo cuadrado 1:1)
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -211,6 +235,99 @@ function procesarImagen(evento) {
     img.src = e.target.result;
   };
   lector.readAsDataURL(archivo);
+}
+
+// NUEVA FUNCIÓN: Eliminación de fondo mediante IA local y adición de Sombra Pro
+async function procesarImagenPro() {
+  const fileInput = document.getElementById("fotoInput");
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert("Por favor, selecciona un archivo primero utilizando el selector.");
+    return;
+  }
+
+  if (!imageSegmenter) {
+    alert("La IA aún se está inicializando. Por favor espera un segundo.");
+    return;
+  }
+
+  const btnCrear = document.getElementById("btnCrearFoto");
+  const btnGuardar = document.getElementById("guardarFunda");
+
+  btnCrear.disabled = true;
+  btnCrear.innerText = "⏳ IA procesando...";
+
+  const file = fileInput.files[0];
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = async () => {
+    try {
+      await img.decode();
+
+      // Ejecutar segmentación de MediaPipe
+      const segmentation = await imageSegmenter.segment(img);
+      
+      // Crear canvas intermedio para aislar el recorte transparente
+      const canvasRecorte = document.createElement("canvas");
+      canvasRecorte.width = img.width;
+      canvasRecorte.height = img.height;
+      const ctxRecorte = canvasRecorte.getContext("2d");
+
+      ctxRecorte.drawImage(img, 0, 0);
+      const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
+      const mask = segmentation.categoryMask.getAsUint8Array();
+
+      // Todo píxel que pertenezca al fondo (categoría 0) se vuelve transparente
+      for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 0) {
+          imageData.data[i * 4 + 3] = 0; 
+        }
+      }
+      ctxRecorte.putImageData(imageData, 0, 0);
+
+      // Canvas final: Redimensionar en formato 1:1 (600x600) con fondo blanco y sombra
+      const canvasFinal = document.createElement("canvas");
+      canvasFinal.width = 600;
+      canvasFinal.height = 600;
+      const ctxFinal = canvasFinal.getContext("2d");
+
+      // Pintar fondo blanco para mantener el estándar Apple de catálogo limpio
+      ctxFinal.fillStyle = "#ffffff";
+      ctxFinal.fillRect(0, 0, 600, 600);
+
+      // Configuración de sombra nativa de alta definición
+      ctxFinal.shadowColor = "rgba(0, 0, 0, 0.16)";
+      ctxFinal.shadowBlur = 24;
+      ctxFinal.shadowOffsetX = 0;
+      ctxFinal.shadowOffsetY = 12;
+
+      // Calcular proporciones para ajustar y centrar la funda recortada (contain)
+      const escala = Math.min(500 / canvasRecorte.width, 500 / canvasRecorte.height);
+      const anchoFinal = canvasRecorte.width * escala;
+      const altoFinal = canvasRecorte.height * escala;
+      const dx = (600 - anchoFinal) / 2;
+      const dy = (600 - altoFinal) / 2;
+
+      // Dibujar la imagen recortada aplicando la sombra
+      ctxFinal.drawImage(canvasRecorte, dx, dy, anchoFinal, altoFinal);
+
+      // Guardamos el resultado en PNG para preservar canales nítidos y actualizamos la preview
+      fotoBase64 = canvasFinal.toDataURL("image/png");
+
+      const preview = document.getElementById("previewFoto");
+      preview.src = fotoBase64;
+      preview.style.display = "block";
+      
+      alert("¡Fondo removido y sombra Pro agregada con éxito! ✨");
+    } catch (err) {
+      console.error("Error al procesar la imagen con IA:", err);
+      alert("Hubo un problema al procesar los bordes de la imagen con IA.");
+    } finally {
+      btnCrear.disabled = false;
+      btnCrear.innerText = "🪄 Crear foto Pro";
+      btnGuardar.disabled = false;
+    }
+  };
 }
 
 async function cargarFundas() {
@@ -287,7 +404,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda eliminada correctamente");
+      alert("Funda正式mente eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
