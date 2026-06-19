@@ -30,9 +30,20 @@
       <h1>iNeo Cases</h1>
     </div>
     
-    <div class="top-bar">
-      <input id="buscar" placeholder="Buscar iPhone 12, 13...">
-      <button id="btnNuevaFunda">➕ Nueva funda</button>
+    <div class="top-bar" style="display: flex; align-items: center; gap: 10px;">
+      <input id="buscar" placeholder="Buscar iPhone 12, 13..." style="flex: 1;">
+      <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nueva</button>
+      
+      <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <div id="sidebarMenu" class="sidebar">
+      <button id="btnCambiarRol" class="sidebar-btn">🔄 Cambiar de modo</button>
     </div>
 
     <div id="agregar" style="display:none">
@@ -54,12 +65,9 @@
         <label>Foto del producto</label>
         <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
         
-        <!-- Vista previa de la imagen original o procesada -->
         <img id="previewFoto" src="" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
-        <!-- Panel de control Pro: Deslizadores interactivos de tamaño y rotación -->
         <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
-          <!-- Slider de Tamaño -->
           <div style="text-align: center; margin-bottom: 12px;">
             <label for="sliderEscala" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
               📏 Tamaño de la funda: <span id="valorEscala">72%</span>
@@ -67,7 +75,6 @@
             <input type="range" id="sliderEscala" min="40" max="95" value="72" style="width: 80%; max-width: 300px; accent-color: #0071e3;">
           </div>
 
-          <!-- Slider de Rotación -->
           <div style="text-align: center;">
             <label for="sliderRotacion" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
               🔄 Rotación de la funda: <span id="valorRotacion">0°</span>
@@ -109,7 +116,7 @@
     <div id="modalReservar" style="display:none;">
       <div class="modal-content">
         <h3>🛍️ Menú de Reserva</h3>
-        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
+        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f("></p>
         
         <label>Seleccioná tu modelo de iPhone</label>
         <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
