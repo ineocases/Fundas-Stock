@@ -5,12 +5,14 @@ body { font-family: sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
 #panel, .card, #historial, #agregar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
 
 /* Botones */
-button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top: 5px; width: 100%; transition: 0.2s; }
-button:hover { opacity: 0.8; }
+button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top: 5px; width: 100%; }
+button:hover { opacity: 0.9; }
+
+/* Colores específicos */
 .btn-vender { background-color: #28a745 !important; }
 .btn-editar { background-color: #ffc107 !important; color: black !important; }
 .btn-eliminar { background-color: #dc3545 !important; }
-#btnNuevaFunda { background-color: #007bff !important; margin-bottom: 20px; }
+#btnNuevaFunda { background-color: #007AFF !important; margin-bottom: 20px; }
 
 /* Grilla */
 #fundas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
