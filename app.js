@@ -37,7 +37,6 @@ async function iniciarIA() {
       },
       runningMode: "IMAGE"
     });
-    // Una vez que la IA está lista, permitimos que se oculte la pantalla de carga principal mediante Auth
     console.log("IA de MediaPipe inicializada correctamente.");
   } catch (error) {
     console.error("Error al inicializar MediaPipe:", error);
@@ -54,7 +53,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // NUEVO EVENTO PARA RECORTE IA
+document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // EVENTO RECORTE IA CON FONDO PRO
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
@@ -237,7 +236,7 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
-// NUEVA FUNCIÓN: Eliminación de fondo mediante IA local y adición de Sombra Pro
+// FUNCIÓN PARA 1000x1000 CON TU IMAGEN DE FONDO PERSONALIZADA EN PNG
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -257,77 +256,93 @@ async function procesarImagenPro() {
   btnCrear.innerText = "⏳ IA procesando...";
 
   const file = fileInput.files[0];
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
+  const lector = new FileReader();
 
-  img.onload = async () => {
-    try {
-      await img.decode();
+  lector.onload = function (e) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    img.onload = async () => {
+      try {
+        await img.decode();
 
-      // Ejecutar segmentación de MediaPipe
-      const segmentation = await imageSegmenter.segment(img);
-      
-      // Crear canvas intermedio para aislar el recorte transparente
-      const canvasRecorte = document.createElement("canvas");
-      canvasRecorte.width = img.width;
-      canvasRecorte.height = img.height;
-      const ctxRecorte = canvasRecorte.getContext("2d");
+        // 1. Cargar e inicializar tu Imagen de Fondo Personalizada en .png
+        const imgFondo = new Image();
+        imgFondo.src = "fondo-estudio.png"; 
+        
+        // Esperamos a que tu fondo .png cargue por completo
+        await new Promise((resolve, reject) => {
+          imgFondo.onload = resolve;
+          imgFondo.onerror = () => reject(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Verifica que esté en la misma carpeta y bien escrito."));
+        });
 
-      ctxRecorte.drawImage(img, 0, 0);
-      const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
-      const mask = segmentation.categoryMask.getAsUint8Array();
+        // 2. Segmentación con MediaPipe (Recorte automático de la funda)
+        const segmentation = await imageSegmenter.segment(img);
+        
+        // Canvas intermedio para aislar la funda con transparencia
+        const canvasRecorte = document.createElement("canvas");
+        canvasRecorte.width = img.width;
+        canvasRecorte.height = img.height;
+        const ctxRecorte = canvasRecorte.getContext("2d");
 
-      // Todo píxel que pertenezca al fondo (categoría 0) se vuelve transparente
-      for (let i = 0; i < mask.length; i++) {
-        if (mask[i] === 0) {
-          imageData.data[i * 4 + 3] = 0; 
+        ctxRecorte.drawImage(img, 0, 0);
+        const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
+        const mask = segmentation.categoryMask.getAsUint8Array();
+
+        for (let i = 0; i < mask.length; i++) {
+          if (mask[i] === 0) {
+            imageData.data[i * 4 + 3] = 0; // Remueve el fondo original de la funda
+          }
         }
+        ctxRecorte.putImageData(imageData, 0, 0);
+
+        // 3. Canvas Final: DEFINIDO EXACTO EN EL ESTÁNDAR 1000x1000
+        const canvasFinal = document.createElement("canvas");
+        canvasFinal.width = 1000;
+        canvasFinal.height = 1000;
+        const ctxFinal = canvasFinal.getContext("2d");
+
+        // 4. Estampar tu imagen de fondo unificada a la resolución de 1000x1000 píxeles
+        ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
+
+        // 5. Configuración de Sombra Pro de alta fidelidad para superficies o texturas
+        ctxFinal.shadowColor = "rgba(0, 0, 0, 0.22)"; 
+        ctxFinal.shadowBlur = 35;        
+        ctxFinal.shadowOffsetX = 0;
+        ctxFinal.shadowOffsetY = 22;      // Efecto de elevación flotante sobre tu fondo
+
+        // 6. Ajustar escala de la funda para que ocupe máximo 750px (márgenes visuales limpios)
+        const escala = Math.min(750 / canvasRecorte.width, 750 / canvasRecorte.height);
+        const anchoFinal = canvasRecorte.width * escala;
+        const altoFinal = canvasRecorte.height * escala;
+        
+        // Centrado matemático perfecto dentro del lienzo
+        const dx = (1000 - anchoFinal) / 2;
+        const dy = (1000 - altoFinal) / 2;
+
+        // 7. Dibujar la funda recortada sobre tu fondo aplicando la sombra configurada
+        ctxFinal.drawImage(canvasRecorte, dx, dy, anchoFinal, altoFinal);
+
+        // Guardar resultado final en formato PNG nítido
+        fotoBase64 = canvasFinal.toDataURL("image/png");
+
+        const preview = document.getElementById("previewFoto");
+        preview.src = fotoBase64;
+        preview.style.display = "block";
+        
+        alert("¡Fondo unificado y sombra Pro aplicados con éxito! ✨");
+      } catch (err) {
+        console.error("Error detallado en el procesamiento:", err);
+        alert(err.message || "Hubo un problema al procesar la imagen con la IA.");
+      } finally {
+        btnCrear.disabled = false;
+        btnCrear.innerText = "🪄 Crear foto Pro";
+        btnGuardar.disabled = false;
       }
-      ctxRecorte.putImageData(imageData, 0, 0);
-
-      // Canvas final: Redimensionar en formato 1:1 (600x600) con fondo blanco y sombra
-      const canvasFinal = document.createElement("canvas");
-      canvasFinal.width = 600;
-      canvasFinal.height = 600;
-      const ctxFinal = canvasFinal.getContext("2d");
-
-      // Pintar fondo blanco para mantener el estándar Apple de catálogo limpio
-      ctxFinal.fillStyle = "#ffffff";
-      ctxFinal.fillRect(0, 0, 600, 600);
-
-      // Configuración de sombra nativa de alta definición
-      ctxFinal.shadowColor = "rgba(0, 0, 0, 0.16)";
-      ctxFinal.shadowBlur = 24;
-      ctxFinal.shadowOffsetX = 0;
-      ctxFinal.shadowOffsetY = 12;
-
-      // Calcular proporciones para ajustar y centrar la funda recortada (contain)
-      const escala = Math.min(500 / canvasRecorte.width, 500 / canvasRecorte.height);
-      const anchoFinal = canvasRecorte.width * escala;
-      const altoFinal = canvasRecorte.height * escala;
-      const dx = (600 - anchoFinal) / 2;
-      const dy = (600 - altoFinal) / 2;
-
-      // Dibujar la imagen recortada aplicando la sombra
-      ctxFinal.drawImage(canvasRecorte, dx, dy, anchoFinal, altoFinal);
-
-      // Guardamos el resultado en PNG para preservar canales nítidos y actualizamos la preview
-      fotoBase64 = canvasFinal.toDataURL("image/png");
-
-      const preview = document.getElementById("previewFoto");
-      preview.src = fotoBase64;
-      preview.style.display = "block";
-      
-      alert("¡Fondo removido y sombra Pro agregada con éxito! ✨");
-    } catch (err) {
-      console.error("Error al procesar la imagen con IA:", err);
-      alert("Hubo un problema al procesar los bordes de la imagen con IA.");
-    } finally {
-      btnCrear.disabled = false;
-      btnCrear.innerText = "🪄 Crear foto Pro";
-      btnGuardar.disabled = false;
-    }
+    };
+    img.src = e.target.result;
   };
+  lector.readAsDataURL(file);
 }
 
 async function cargarFundas() {
@@ -404,7 +419,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda正式mente eliminada correctamente");
+      alert("Funda eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
