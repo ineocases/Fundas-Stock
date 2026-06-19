@@ -31,6 +31,18 @@ function renderizar(lista) {
     });
 }
 
+function aplicarFiltros() {
+    const n = document.getElementById("buscarNombre").value.toLowerCase();
+    const m = document.getElementById("buscarModelo").value.toLowerCase();
+    renderizar(todasLasFundas.filter(f => 
+        f.nombre.toLowerCase().includes(n) && 
+        String(f.compatibles).toLowerCase().includes(m)
+    ));
+}
+
+document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
+document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
+
 document.getElementById("guardarFunda").onclick = async () => {
     const data = { nombre: document.getElementById("nombre").value, stock: Number(document.getElementById("stock").value), compatibles: document.getElementById("compatibles").value, fotoUrl: document.getElementById("fotoUrl").value };
     if (idEdicion) await updateDoc(doc(db, "fundas", idEdicion), data);
@@ -49,5 +61,4 @@ window.editarFunda = (id) => {
 
 window.eliminarFunda = async (id) => { if(confirm("¿Borrar?")) { await deleteDoc(doc(db, "fundas", id)); cargarFundas(); } };
 document.getElementById("btnNuevaFunda").onclick = () => { idEdicion = null; document.getElementById("agregar").style.display = "block"; };
-document.getElementById("buscarNombre").oninput = (e) => renderizar(todasLasFundas.filter(f => f.nombre.toLowerCase().includes(e.target.value.toLowerCase())));
 document.getElementById("btnLogin").onclick = async () => { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); };
