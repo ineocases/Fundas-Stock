@@ -12,12 +12,12 @@ import {
   deleteDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-import { ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
 console.log("DB conectada con éxito:", db);
 
-// 📱 NÚMERO DE WHATSAPP CONFIGURADO EXACTO
+// 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
+const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -25,24 +25,6 @@ let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
 let fundaReservando = null; 
-let imageSegmenter; // Instancia global para la IA de MediaPipe
-
-// 🚀 NUEVA CONFIGURACIÓN DE IA: Modelo optimizado para siluetas definidas y bordes limpios
-async function iniciarIA() {
-  try {
-    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
-    imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
-      baseOptions: { 
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite" 
-      },
-      runningMode: "IMAGE"
-    });
-    console.log("IA de MediaPipe optimizada para bordes inicializada correctamente.");
-  } catch (error) {
-    console.error("Error al inicializar MediaPipe:", error);
-  }
-}
-iniciarIA();
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -53,7 +35,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
+document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // AHORA CON REMOVE.BG
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
@@ -76,7 +58,7 @@ onAuthStateChanged(auth, (user) => {
     cargarFundas(); 
   } else {
     document.getElementById("login").style.display = "block";
-    document.getElementById("app").style.display = "none";
+    document.getElementById("app").style.none;
   }
 });
 
@@ -97,6 +79,113 @@ async function loginCliente() {
   } catch (error) {
     alert("Error al ingresar en modo cliente. Verifica si el acceso Anónimo está activo en Firebase.");
     console.error(error);
+  }
+}
+
+// 🪄 RECORTE PROFESIONAL CON REMOVE.BG + RENDERIZADO DE SOMBRA Y FONDO
+async function procesarImagenPro() {
+  const fileInput = document.getElementById("fotoInput");
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert("Por favor, selecciona un archivo primero utilizando el selector.");
+    return;
+  }
+
+  if (REMOVE_BG_API_KEY === "TU_API_KEY_AQUI") {
+    alert("Por favor, primero configura tu API Key de remove.bg en la línea 17 de app.js");
+    return;
+  }
+
+  const btnCrear = document.getElementById("btnCrearFoto");
+  const btnGuardar = document.getElementById("guardarFunda");
+
+  btnCrear.disabled = true;
+  btnCrear.innerText = "🚀 Recortando con Remove.bg...";
+
+  const file = fileInput.files[0];
+
+  try {
+    // 1. Enviar imagen a la API de Remove.bg usando FormData
+    const formData = new FormData();
+    formData.append("image_file", file);
+    formData.append("size", "auto"); // Auto detecta la resolución óptima
+
+    const respuestaAPI = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: {
+        "X-Api-Key": REMOVE_BG_API_KEY
+      },
+      body: formData
+    });
+
+    if (!respuestaAPI.ok) {
+      throw new Error("Error en la API de Remove.bg. Verifica si te quedan créditos o si la API Key es correcta.");
+    }
+
+    // El resultado de remove.bg es un Blob binario (una imagen PNG transparente)
+    const blobImagenRecortada = await respuestaAPI.blob();
+    const urlImagenRecortada = URL.createObjectURL(blobImagenRecortada);
+
+    // 2. Cargar en paralelo la imagen recortada y tu fondo personalizado
+    const imgRecortada = new Image();
+    imgRecortada.src = urlImagenRecortada;
+
+    const imgFondo = new Image();
+    imgFondo.src = "fondo-estudio.png";
+
+    await Promise.all([
+      new Promise((res) => imgRecortada.onload = res),
+      new Promise((res, rej) => {
+        imgFondo.onload = res;
+        imgFondo.onerror = () => rej(new Error("No se pudo cargar 'fondo-estudio.png'. Asegúrate de tenerlo en la misma carpeta."));
+      })
+    ]);
+
+    // 3. Crear el lienzo final premium de 1000x1000 píxeles
+    const canvasFinal = document.createElement("canvas");
+    canvasFinal.width = 1000;
+    canvasFinal.height = 1000;
+    const ctxFinal = canvasFinal.getContext("2d");
+
+    // 4. Estampar fondo de estudio limpio
+    ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
+
+    // 5. Configurar Sombra de Alta Fidelidad (Efecto estudio fotográfico flotante)
+    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.28)"; 
+    ctxFinal.shadowBlur = 40;        
+    ctxFinal.shadowOffsetX = 0;
+    ctxFinal.shadowOffsetY = 28;      
+
+    // 6. Calcular escala y centrado exacto (El producto ocupará máximo 720px para dejar márgenes limpios)
+    const escala = Math.min(720 / imgRecortada.width, 720 / imgRecortada.height);
+    const anchoFinal = imgRecortada.width * escala;
+    const altoFinal = imgRecortada.height * escala;
+    
+    const dx = (1000 - anchoFinal) / 2;
+    const dy = (1000 - altoFinal) / 2;
+
+    // 7. Estampar producto sobre el fondo aplicando automáticamente la sombra configurada
+    ctxFinal.drawImage(imgRecortada, dx, dy, anchoFinal, altoFinal);
+
+    // Guardar el resultado en base64 (PNG para conservar la nitidez extrema del borde)
+    fotoBase64 = canvasFinal.toDataURL("image/png");
+
+    // Mostrar vista previa en tu formulario
+    const preview = document.getElementById("previewFoto");
+    preview.src = fotoBase64;
+    preview.style.display = "block";
+    
+    // Limpiar objeto URL de memoria
+    URL.revokeObjectURL(urlImagenRecortada);
+
+    alert("¡Remoción de fondo perfecta y montaje Pro aplicados! ✨");
+
+  } catch (err) {
+    console.error("Error en proceso Pro:", err);
+    alert(err.message || "Hubo un problema al conectar con el servidor de remove.bg.");
+  } finally {
+    btnCrear.disabled = false;
+    btnCrear.innerText = "🪄 Crear foto Pro";
+    btnGuardar.disabled = false;
   }
 }
 
@@ -199,7 +288,7 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-// Procesamiento estándar de imágenes (Mapeo cuadrado 1:1)
+// Procesamiento estándar de imágenes (Mapeo cuadrado secundario 1:1)
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -236,121 +325,6 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
-// 🪄 FUNCIÓN PRO: Segmentación ultra precisa por confianza con umbral estricto (0.75)
-async function procesarImagenPro() {
-  const fileInput = document.getElementById("fotoInput");
-  if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Por favor, selecciona un archivo primero utilizando el selector.");
-    return;
-  }
-
-  if (!imageSegmenter) {
-    alert("La IA aún se está inicializando. Por favor espera un segundo.");
-    return;
-  }
-
-  const btnCrear = document.getElementById("btnCrearFoto");
-  const btnGuardar = document.getElementById("guardarFunda");
-
-  btnCrear.disabled = true;
-  btnCrear.innerText = "⏳ IA procesando...";
-
-  const file = fileInput.files[0];
-  const lector = new FileReader();
-
-  lector.onload = function (e) {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    
-    img.onload = async () => {
-      try {
-        await img.decode();
-
-        // 1. Cargar e inicializar tu Imagen de Fondo Personalizada en .png
-        const imgFondo = new Image();
-        imgFondo.src = "fondo-estudio.png"; 
-        
-        await new Promise((resolve, reject) => {
-          imgFondo.onload = resolve;
-          imgFondo.onerror = () => reject(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Asegúrate de que esté en la misma carpeta."));
-        });
-
-        // 2. Ejecutar segmentación de MediaPipe
-        const segmentation = await imageSegmenter.segment(img);
-        
-        if (!segmentation || (!segmentation.confidenceMasks || segmentation.confidenceMasks.length === 0)) {
-          throw new Error("La IA no pudo distinguir los bordes del producto. Intenta sacar la foto sobre un fondo de otro color que contraste.");
-        }
-        
-        // Canvas intermedio para aislar el producto con transparencia limpia
-        const canvasRecorte = document.createElement("canvas");
-        canvasRecorte.width = img.width;
-        canvasRecorte.height = img.height;
-        const ctxRecorte = canvasRecorte.getContext("2d");
-
-        ctxRecorte.drawImage(img, 0, 0);
-        const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
-        
-        // Extraemos la máscara de confianza (valores de 0.0 a 1.0)
-        const mask = segmentation.confidenceMasks[0].getAsFloat32Array();
-        
-        for (let i = 0; i < mask.length; i++) {
-          // UMBRAL ESTRICTO (0.75): Si la certeza de que pertenece al objeto es baja, se vuelve 100% transparente
-          if (mask[i] < 0.75) { 
-            imageData.data[i * 4 + 3] = 0; // Canal Alpha en 0 (Transparente)
-          }
-        }
-        
-        ctxRecorte.putImageData(imageData, 0, 0);
-
-        // 3. Canvas Final: Formato Cuadrado Apple Store (1000x1000)
-        const canvasFinal = document.createElement("canvas");
-        canvasFinal.width = 1000;
-        canvasFinal.height = 1000;
-        const ctxFinal = canvasFinal.getContext("2d");
-
-        // 4. Dibujar tu fondo de estudio
-        ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
-
-        // 5. Configuración de Sombra Inteligente Flotante
-        ctxFinal.shadowColor = "rgba(0, 0, 0, 0.25)"; 
-        ctxFinal.shadowBlur = 40;        
-        ctxFinal.shadowOffsetX = 0;
-        ctxFinal.shadowOffsetY = 25;      
-
-        // 6. Escalar el producto recortado para mantenerlo centrado (Max 750px)
-        const escala = Math.min(750 / canvasRecorte.width, 750 / canvasRecorte.height);
-        const anchoFinal = canvasRecorte.width * escala;
-        const altoFinal = canvasRecorte.height * escala;
-        
-        const dx = (1000 - anchoFinal) / 2;
-        const dy = (1000 - altoFinal) / 2;
-
-        // 7. Estampar la funda con la sombra aplicada
-        ctxFinal.drawImage(canvasRecorte, dx, dy, anchoFinal, altoFinal);
-
-        // Guardar resultado final en formato PNG de alta calidad sin pérdidas
-        fotoBase64 = canvasFinal.toDataURL("image/png");
-
-        const preview = document.getElementById("previewFoto");
-        preview.src = fotoBase64;
-        preview.style.display = "block";
-        
-        alert("¡Fondo unificado y sombra Pro aplicados con éxito! ✨");
-      } catch (err) {
-        console.error("Error detallado en el procesamiento:", err);
-        alert(err.message || "Hubo un problema al procesar la imagen con la IA.");
-      } finally {
-        btnCrear.disabled = false;
-        btnCrear.innerText = "🪄 Crear foto Pro";
-        btnGuardar.disabled = false;
-      }
-    };
-    img.src = e.target.result;
-  };
-  lector.readAsDataURL(file);
-}
-
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -385,7 +359,7 @@ async function guardarFunda() {
       const [modelo, cantidad] = item.split(":");
       return {
         modelo: modelo ? modelo.trim() : "",
-        stock: quantity = cantidad ? Number(cantidad.trim()) : 0
+        stock: cantidad ? Number(cantidad.trim()) : 0
       };
     })
     .filter(item => item.modelo !== "");
