@@ -59,22 +59,45 @@ button {
     color: white;
     font-size: 15px;
     font-weight: 500;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 button:hover {
     background: #0077ed;
 }
 
-/* ESTILOS DEL MODAL (POPUP FLOTANTE) */
-#agregar {
+/* BOTÓN FLOTANTE (FAB) DEL ASISTENTE */
+.fab-asistente {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #1d1d1f;
+    color: white;
+    border-radius: 30px;
+    padding: 15px 25px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 999;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fab-asistente:hover {
+    background: #0071e3;
+    transform: translateY(-2px);
+}
+
+/* ESTILOS DE LOS MODALES (POPUP FLOTANTE) */
+#agregar, #modalAsistente {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px); /* Efecto borroso de fondo premium */
+    backdrop-filter: blur(5px);
     display: flex;
     justify-content: center;
     align-items: center;
