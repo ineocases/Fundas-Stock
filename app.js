@@ -1,6 +1,7 @@
 import { auth, db } from "./firebase.js";
 import {
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
   collection,
@@ -19,16 +20,37 @@ document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 document.getElementById("buscar").addEventListener("input", filtrarFundas);
 
+// ==========================================
+// OBSERVADOR DE SESIÓN (Persistencia automática)
+// ==========================================
+// Firebase ejecuta esto automáticamente al cargar la página.
+// Si detecta una sesión activa del pasado, te ingresa directo sin pedir contraseña.
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Si el usuario ya está logueado:
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    cargarFundas(); // Cargamos el stock directamente
+  } else {
+    // Si no está logueado (o cerró sesión):
+    document.getElementById("login").style.display = "block";
+    document.getElementById("app").style.display = "none";
+  }
+});
+
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  await signInWithEmailAndPassword(auth, email, password);
-
-  document.getElementById("login").style.display = "none";
-  document.getElementById("app").style.display = "block";
-
-  cargarFundas();
+  try {
+    // Intentamos ingresar. Si tiene éxito, 'onAuthStateChanged' se activará solo
+    // y se encargará de cambiar la pantalla automáticamente.
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    // Si la contraseña o el email están mal, ahora te avisará con un cartel
+    alert("Error al ingresar: Verifique su email y contraseña.");
+    console.error(error);
+  }
 }
 
 function mostrarFormulario() {
