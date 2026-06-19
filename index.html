@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>InoCases | Control de Stock</title>
+    <title>InoCases | Stock</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,13 +23,26 @@
         <div id="fundas"></div>
     </div>
 
-    <div id="agregar" style="display:none; background: #fff; padding: 20px; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); width: 300px; border: 1px solid #ccc; border-radius: 10px; z-index: 1000;">
+    <!-- Botón Flotante -->
+    <button id="btnFlotante">±</button>
+
+    <!-- Selector de Stock Flotante -->
+    <div id="selectorStock" class="modal">
+        <h3>Ajustar Stock</h3>
+        <select id="selectFunda"></select>
+        <input type="number" id="inputCantidad" placeholder="Cantidad (+ para sumar, - para restar)">
+        <button id="ejecutarAjuste" style="background:#28a745;">Aplicar</button>
+        <button onclick="document.getElementById('selectorStock').style.display='none'" style="background:gray;">Cancelar</button>
+    </div>
+
+    <!-- Formulario Agregar/Editar -->
+    <div id="agregar" class="modal">
         <input type="text" id="nombre" placeholder="Nombre">
         <input type="text" id="fotoUrl" placeholder="URL Foto">
         <input type="number" id="stock" placeholder="Stock">
         <input type="text" id="compatibles" placeholder="Modelos (ej: 11,13,15)">
-        <button id="guardarFunda" style="background:green; color:white; border:none; padding:10px; width:100%; margin-top:10px;">Guardar</button>
-        <button onclick="document.getElementById('agregar').style.display='none'" style="background:gray; color:white; border:none; padding:10px; width:100%; margin-top:5px;">Cancelar</button>
+        <button id="guardarFunda" style="background:green;">Guardar</button>
+        <button onclick="document.getElementById('agregar').style.display='none'" style="background:gray;">Cancelar</button>
     </div>
 
     <script type="module" src="app.js"></script>
