@@ -4,10 +4,36 @@ import { collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/
 
 console.log("DB:", db);
 
+// 1. Variable global para guardar las fundas en memoria y optimizar búsquedas
+let todasLasFundas = [];
+
+// Asignamos los eventos a los botones
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
+// 2. Evento para el buscador en tiempo real
+document.getElementById("buscar").addEventListener("input", (e) => {
+  const textoBuscado = e.target.value.toLowerCase();
+  
+  // Filtramos la lista guardada en memoria
+  const fundasFiltradas = todasLasFundas.filter((funda) => {
+    const nombreFunda = funda.nombre.toLowerCase();
+    
+    // Convertimos los compatibles a texto
+    const modelosCompatibles = Array.isArray(funda.compatibles) 
+      ? funda.compatibles.join(" ").toLowerCase() 
+      : "";
+    
+    // Si coincide con el nombre o algún modelo compatible
+    return nombreFunda.includes(textoBuscado) || modelosCompatibles.includes(textoBuscado);
+  });
+
+  // Renderizamos solo las que cumplen la condición
+  renderizarFundas(fundasFiltradas);
+});
+
+// 3. Función de Login
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -23,9 +49,9 @@ async function login() {
   }
 }
 
+// 4. Mostrar/Ocultar el formulario
 function mostrarFormulario() {
   const formAgregar = document.getElementById("agregar");
-  // Alterna entre mostrar y ocultar el formulario
   if (formAgregar.style.display === "none") {
     formAgregar.style.display = "block";
   } else {
@@ -33,14 +59,25 @@ function mostrarFormulario() {
   }
 }
 
+// 5. Cargar fundas desde Firebase
 async function cargarFundas() {
   const snapshot = await getDocs(collection(db, "fundas"));
-  let html = "";
+  todasLasFundas = []; // Vaciamos la lista por si estamos recargando
 
   snapshot.forEach((doc) => {
-    const f = doc.data();
-    
-    // Nos aseguramos de que compatibles se una con el punto
+    // Agregamos el ID del documento y sus datos al array
+    todasLasFundas.push({ id: doc.id, ...doc.data() });
+  });
+
+  // Mandamos a dibujar las tarjetas a la pantalla
+  renderizarFundas(todasLasFundas);
+}
+
+// 6. Generar el HTML de las tarjetas
+function renderizarFundas(arregloDeFundas) {
+  let html = "";
+
+  arregloDeFundas.forEach((f) => {
     const compatiblesStr = Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles;
 
     html += `
@@ -66,14 +103,13 @@ async function cargarFundas() {
   document.getElementById("fundas").innerHTML = html;
 }
 
+// 7. Guardar una nueva funda en Firebase
 async function guardarFunda() {
-  console.log("DB antes de guardar:", db);
-
   try {
     await addDoc(collection(db, "fundas"), {
       nombre: document.getElementById("nombre").value,
       stock: Number(document.getElementById("stock").value),
-      // El map(item => item.trim()) quita los espacios extra si escribes "11, 12, 13"
+      // Separa por comas y quita espacios en blanco extra
       compatibles: document.getElementById("compatibles").value.split(",").map(item => item.trim()),
       costo: Number(document.getElementById("costo").value),
       venta: Number(document.getElementById("venta").value),
