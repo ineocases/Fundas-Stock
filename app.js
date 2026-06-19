@@ -17,16 +17,18 @@ console.log("DB conectada con éxito:", db);
 // Variables globales
 let todasLasFundas = [];
 let idFundaEditando = null;
+let fotoBase64 = ""; // Variable global para almacenar el texto comprimido de la imagen
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 document.getElementById("buscar").addEventListener("input", filtrarFundas);
-
-// NUEVOS EVENTOS PARA EL ASISTENTE
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
+
+// NUEVO: Capturar y procesar imagen a 1000x1000 automáticamente
+document.getElementById("fotoInput").onchange = procesarImagen;
 
 // OBSERVADOR DE SESIÓN
 onAuthStateChanged(auth, (user) => {
@@ -54,6 +56,7 @@ async function login() {
 
 function mostrarFormulario() {
   idFundaEditando = null;
+  fotoBase64 = ""; // Limpiar foto
   document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
   document.getElementById("guardarFunda").innerText = "Guardar";
   
@@ -61,16 +64,22 @@ function mostrarFormulario() {
   document.getElementById("stockPorModelo").value = "";
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
+  document.getElementById("fotoInput").value = "";
+  
+  // Ocultar preview
+  const preview = document.getElementById("previewFoto");
+  preview.src = "";
+  preview.style.display = "none";
   
   document.getElementById("agregar").style.display = "flex";
 }
 
 function ocultarFormulario() {
   idFundaEditando = null;
+  fotoBase64 = "";
   document.getElementById("agregar").style.display = "none";
 }
 
-// FUNCIONES DEL MODAL ASISTENTE VIRTUAL
 function mostrarAsistente() {
   document.getElementById("asistenteProducto").value = "";
   document.getElementById("asistenteModelo").value = "";
@@ -82,6 +91,41 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
+// NUEVA FUNCIÓN: Redimensiona y recorta fotos a 1000x1000 sin perder calidad en Base64
+function procesarImagen(evento) {
+  const archivo = evento.target.files[0];
+  if (!archivo) return;
+
+  const lector = new FileReader();
+  lector.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1000;
+      canvas.height = 1000;
+      const ctx = canvas.getContext("2d");
+
+      // Calcular recorte estilo 'object-fit: cover' para que quede cuadrado perfecto
+      const ladoMenor = Math.min(img.width, img.height);
+      const sx = (img.width - ladoMenor) / 2;
+      const sy = (img.height - ladoMenor) / 2;
+
+      // Dibujar en el canvas forzando las dimensiones 1000x1000
+      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 1000, 1000);
+
+      // Convertir a texto comprimido JPEG al 70% de calidad (Excelente peso/estética)
+      fotoBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+      // Mostrar vista previa en el modal
+      const preview = document.getElementById("previewFoto");
+      preview.src = fotoBase64;
+      preview.style.display = "block";
+    };
+    img.src = e.target.result;
+  };
+  lector.readAsDataURL(archivo);
+}
+
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -90,7 +134,6 @@ async function cargarFundas() {
       todasLasFundas.push({ id: doc.id, ...doc.data() });
     });
     
-    // Actualiza la lista de autocompletado del asistente y pinta las tarjetas
     actualizarDatalistAsistente();
     renderizarFundas(todasLasFundas);
   } catch (error) {
@@ -98,10 +141,8 @@ async function cargarFundas() {
   }
 }
 
-// NUEVA FUNCIÓN: Rellena el buscador inteligente del asistente con nombres existentes
 function actualizarDatalistAsistente() {
   const datalist = document.getElementById("listaProductos");
-  // Extraemos nombres únicos sin repetidos
   const nombresUnicos = [...new Set(todasLasFundas.map(f => f.nombre).filter(Boolean))];
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
@@ -123,11 +164,16 @@ async function guardarFunda() {
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
-    foto: ""
+    foto: fotoBase64 // Guardamos la foto procesada
   };
 
   try {
     if (idFundaEditando) {
+      // Si estamos editando y no se subió una foto nueva, mantenemos la que ya tenía
+      if (!fotoBase64) {
+        const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+        datosFunda.foto = vieja ? (vieja.foto || "") : "";
+      }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
       alert("Funda actualizada con éxito");
     } else {
@@ -164,6 +210,7 @@ function abrirEditarFunda(id) {
   document.getElementById("nombre").value = funda.nombre || "";
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
+  document.getElementById("fotoInput").value = "";
 
   if (Array.isArray(funda.stockPorModelo)) {
     document.getElementById("stockPorModelo").value = funda.stockPorModelo
@@ -174,11 +221,22 @@ function abrirEditarFunda(id) {
     document.getElementById("stockPorModelo").value = comps;
   }
 
+  // Cargar foto si ya existe una asignada
+  const preview = document.getElementById("previewFoto");
+  if (funda.foto) {
+    fotoBase64 = funda.foto;
+    preview.src = funda.foto;
+    preview.style.display = "block";
+  } else {
+    fotoBase64 = "";
+    preview.src = "";
+    preview.style.display = "none";
+  }
+
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
   document.getElementById("agregar").style.display = "flex";
 }
 
-// NUEVA FUNCIÓN: Lógica principal del Asistente Virtual
 async function procesarVentaAsistente() {
   const prodBuscado = document.getElementById("asistenteProducto").value.trim().toLowerCase();
   const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
@@ -189,68 +247,50 @@ async function procesarVentaAsistente() {
     return;
   }
 
-  // 1. Buscar el producto por nombre
   const fundaEncontrada = todasLasFundas.find(f => f.nombre && f.nombre.toLowerCase() === prodBuscado);
 
   if (!fundaEncontrada) {
-    alert("No se encontró ningún producto con ese nombre exacto. Verifique la lista.");
+    alert("No se encontró ningún producto con ese nombre exacto.");
     return;
   }
 
-  // 2. Modificar el stock dependiendo del formato (Nuevo o Viejo)
   if (Array.isArray(fundaEncontrada.stockPorModelo)) {
-    // NUEVO FORMATO
     const modeloStock = fundaEncontrada.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
     
     if (!modeloStock) {
-      alert(`Este producto no tiene registrado stock para el modelo iPhone "${modeloBuscado}".`);
+      alert(`No hay registrado stock para iPhone "${modeloBuscado}".`);
       return;
     }
 
     if (modeloStock.stock < unidadesAVender) {
-      alert(`¡Stock insuficiente! Solo quedan ${modeloStock.stock} unidades para iPhone ${modeloStock.modelo}.`);
+      alert(`¡Stock insuficiente! Quedan ${modeloStock.stock} unidades.`);
       return;
     }
 
-    // Restamos del stock
     modeloStock.stock -= unidadesAVender;
 
     try {
       await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
         stockPorModelo: fundaEncontrada.stockPorModelo
       });
-      alert(`¡Venta registrada! Se descontaron ${unidadesAVender} u. de iPhone ${modeloStock.modelo}`);
+      alert(`¡Venta registrada con éxito!`);
       ocultarAsistente();
       cargarFundas();
     } catch (error) {
       console.error(error);
-      alert("Error al procesar la venta en la base de datos.");
     }
-
   } else {
-    // COMPATIBILIDAD VIEJO FORMATO
-    const listaCompatibles = Array.isArray(fundaEncontrada.compatibles) 
-      ? fundaEncontrada.compatibles.map(c => String(c).toLowerCase().trim()) 
-      : String(fundaEncontrada.compatibles).toLowerCase().split(",");
-
-    const esCompatible = listaCompatibles.some(c => c.includes(modeloBuscado));
-
-    if (!esCompatible) {
-      alert("El modelo ingresado no se encuentra listado como compatible en este producto viejo.");
-      return;
-    }
-
+    // Modo compatible viejo
     const stockActualViejo = fundaEncontrada.stock ?? 0;
     if (stockActualViejo < unidadesAVender) {
-      alert(`¡Stock insuficiente! Solo quedan ${stockActualViejo} unidades globales.`);
+      alert(`¡Stock insuficiente!`);
       return;
     }
-
     try {
       await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
         stock: stockActualViejo - unidadesAVender
       });
-      alert(`¡Venta registrada en producto antiguo! Se descontaron ${unidadesAVender} u.`);
+      alert(`¡Venta registrada!`);
       ocultarAsistente();
       cargarFundas();
     } catch (error) {
@@ -263,7 +303,7 @@ async function procesarVentaAsistente() {
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
-window.ocultarAsistente = ocultarAsistente; // Exponer ocultar asistente
+window.ocultarAsistente = ocultarAsistente;
 
 function renderizarFundas(arrayDeFundas) {
   let html = "";
@@ -282,20 +322,27 @@ function renderizarFundas(arrayDeFundas) {
       listaModelosHTML = `• Compatibles: ${comps}`;
     }
 
-    // MODIFICADO: Se quitó por completo el botón de "🛒 Vender"
+    // Si el producto no tiene foto, usamos una por defecto limpia y minimalista
+    const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
+
     html += `
     <div class="card">
-      <h2>${f.nombre || "Sin nombre"}</h2>
-      <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
-      
-      <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
-        ${listaModelosHTML}
-      </div>
+      <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
+      <div class="card-body">
+        <h2>${f.nombre || "Sin nombre"}</h2>
+        <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
+        
+        <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
+          ${listaModelosHTML}
+        </div>
 
-      <p>💵 Costo: $${f.costo ?? 0}</p>
-      <p>💰 Venta: $${f.venta ?? 0}</p>
-      <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
-      <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
+        <p>💵 Costo: $${f.costo ?? 0}</p>
+        <p>💰 Venta: $${f.venta ?? 0}</p>
+        <div style="margin-top: 15px;">
+          <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
+          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
+        </div>
+      </div>
     </div>
     `;
   });
