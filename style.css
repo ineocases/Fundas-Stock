@@ -67,6 +67,31 @@ button:hover {
     background: #0077ed;
 }
 
+/* --- ELEMENTOS DE LA LISTA DE CATEGORÍAS GESTIONABLES --- */
+.item-crud-categoria {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid #e5e5ea;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.btn-eliminar-cat {
+    background: #ff3b30;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+.btn-eliminar-cat:hover {
+    background: #d63028;
+}
+
 /* --- CONTENEDOR DE FILTROS DE CATEGORÍAS (PILLS) --- */
 .categorias-container {
     display: flex;
@@ -151,7 +176,7 @@ button:hover {
 }
 
 /* --- MODALES GENERALES (Full Screen) --- */
-#agregar, #modalAsistente, #modalReservar {
+#agregar, #modalAsistente, #modalReservar, #modalCategorias {
     position: fixed;
     top: 0;
     left: 0;
