@@ -8,19 +8,21 @@
 </head>
 <body>
 
+  <!-- Pantalla de carga indispensable -->
   <div id="cargando" style="text-align: center; margin-top: 50px; font-family: Arial; font-size: 18px;">
     ⏳ Cargando aplicación...
   </div>
 
+  <!-- El login con doble acceso -->
   <div id="login" style="display:none;">
     <h2>IneoCases Stock</h2>
     <input id="email" placeholder="Email o Usuario Admin">
     <input id="password" type="password" placeholder="Contraseña Admin">
     <button id="btnLogin">Ingresar como Admin 🔐</button>
-    
     <button id="btnCliente" class="btn-secundario" style="margin-top: 12px; width: 100%; font-weight: 600;">📱 Entrar como Cliente (Ver Catálogo)</button>
   </div>
 
+  <!-- La app principal -->
   <div id="app" style="display:none;">
     <h1>📱 IneoCases Stock</h1>
     <div class="top-bar">
@@ -28,6 +30,7 @@
       <button id="btnNuevaFunda">➕ Nueva funda</button>
     </div>
 
+    <!-- FORMULARIO NUEVA/EDITAR FUNDA (Solo Admin) -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
@@ -55,6 +58,7 @@
       </div>
     </div>  
 
+    <!-- MODAL DEL ASISTENTE DE VENTAS (Solo Admin) -->
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
@@ -73,6 +77,24 @@
         <div class="modal-buttons">
           <button type="button" onclick="ocultarAsistente()" class="btn-secundario">Cerrar</button>
           <button id="btnRegistrarVenta">Confirmar Venta 🛒</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUEVO: MODAL MENÚ DE RESERVA (Solo Cliente) -->
+    <div id="modalReservar" style="display:none;">
+      <div class="modal-content">
+        <h3>🛍️ Menú de Reserva</h3>
+        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
+        
+        <label>Seleccioná tu modelo de iPhone</label>
+        <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
+        
+        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
+        
+        <div class="modal-buttons">
+          <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
+          <button id="btnConfirmarWhatsApp" style="background: #25D366; color: white; font-weight: 600;">Confirmar en WhatsApp 💬</button>
         </div>
       </div>
     </div>
