@@ -12,24 +12,26 @@ document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-// 2. Evento para el buscador en tiempo real
+// 2. Evento para el buscador en tiempo real (VERSIÓN A PRUEBA DE ERRORES)
 document.getElementById("buscar").addEventListener("input", (e) => {
   const textoBuscado = e.target.value.toLowerCase();
   
-  // Filtramos la lista guardada en memoria
   const fundasFiltradas = todasLasFundas.filter((funda) => {
-    const nombreFunda = funda.nombre.toLowerCase();
+    // Validación 1: Si no hay nombre, usamos un texto vacío en lugar de rompernos
+    const nombreFunda = funda.nombre ? String(funda.nombre).toLowerCase() : "";
     
-    // Convertimos los compatibles a texto
-    const modelosCompatibles = Array.isArray(funda.compatibles) 
-      ? funda.compatibles.join(" ").toLowerCase() 
-      : "";
+    // Validación 2: Chequeamos los compatibles con cuidado
+    let modelosCompatibles = "";
+    if (Array.isArray(funda.compatibles)) {
+      modelosCompatibles = funda.compatibles.join(" ").toLowerCase();
+    } else if (funda.compatibles) {
+      // Por si en alguna prueba vieja se guardó como texto y no como lista
+      modelosCompatibles = String(funda.compatibles).toLowerCase(); 
+    }
     
-    // Si coincide con el nombre o algún modelo compatible
     return nombreFunda.includes(textoBuscado) || modelosCompatibles.includes(textoBuscado);
   });
 
-  // Renderizamos solo las que cumplen la condición
   renderizarFundas(fundasFiltradas);
 });
 
