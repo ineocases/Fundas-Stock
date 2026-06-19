@@ -3,8 +3,9 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gsta
 import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 let todasLasFundas = [];
-let idEdicion = null; // Variable para saber si estamos editando algo
+let idEdicion = null;
 
+// Persistencia de sesión
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
@@ -25,23 +26,18 @@ async function login() {
 function mostrarFormulario() {
     const div = document.getElementById("agregar");
     div.style.display = div.style.display === "none" ? "block" : "none";
-    // Limpiamos el formulario al abrir
     document.getElementById("guardarFunda").innerText = "Guardar";
     idEdicion = null;
 }
 
-// --- NUEVA FUNCIÓN: CARGAR DATOS EN FORMULARIO ---
 window.editarFunda = (id) => {
-    const funda = todasLasFundas.find(f => f.id === id);
-    if (!funda) return;
-
-    document.getElementById("nombre").value = funda.nombre;
-    document.getElementById("stock").value = funda.stock;
-    document.getElementById("compatibles").value = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : funda.compatibles;
-    document.getElementById("costo").value = funda.costo;
-    document.getElementById("venta").value = funda.venta;
-
-    idEdicion = id; // Marcamos que estamos editando
+    const f = todasLasFundas.find(f => f.id === id);
+    document.getElementById("nombre").value = f.nombre;
+    document.getElementById("stock").value = f.stock;
+    document.getElementById("compatibles").value = Array.isArray(f.compatibles) ? f.compatibles.join(", ") : f.compatibles;
+    document.getElementById("costo").value = f.costo;
+    document.getElementById("venta").value = f.venta;
+    idEdicion = id;
     document.getElementById("guardarFunda").innerText = "Actualizar";
     document.getElementById("agregar").style.display = "block";
 };
@@ -54,17 +50,11 @@ async function guardarFunda() {
         costo: Number(document.getElementById("costo").value),
         venta: Number(document.getElementById("venta").value)
     };
-
     if (idEdicion) {
-        // ACTUALIZAR
         await updateDoc(doc(db, "fundas", idEdicion), data);
-        alert("¡Actualizado con éxito!");
     } else {
-        // NUEVO
         await addDoc(collection(db, "fundas"), data);
-        alert("¡Guardado con éxito!");
     }
-
     document.getElementById("agregar").style.display = "none";
     cargarFundas();
 }
@@ -83,14 +73,12 @@ function renderizarFundas(lista) {
         card.className = "card";
         card.innerHTML = `
             <h2>${f.nombre}</h2>
-            <div class="card-details">
-                <p>📦 <strong>Stock:</strong> ${f.stock}</p>
-                <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
-                <p>💵 <strong>Costo:</strong> $${f.costo}</p>
-                <p>💰 <strong>Venta:</strong> $${f.venta}</p>
-            </div>
-            <button onclick="editarFunda('${f.id}')">✏️ Editar</button>
-            <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
+            <p>📦 Stock: ${f.stock}</p>
+            <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
+            <p>💵 Costo: $${f.costo}</p>
+            <p>💰 Venta: $${f.venta}</p>
+            <button onclick="editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
+            <button class="btn-eliminar">🗑️ Eliminar</button>
         `;
         card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
         contenedor.appendChild(card);
@@ -104,7 +92,6 @@ async function eliminarFunda(id) {
     }
 }
 
-// --- EVENTOS ---
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
