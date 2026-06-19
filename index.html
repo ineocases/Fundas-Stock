@@ -8,20 +8,19 @@
 </head>
 <body>
 
-  <!-- Pantalla de carga indispensable -->
   <div id="cargando" style="text-align: center; margin-top: 50px; font-family: Arial; font-size: 18px;">
     ⏳ Cargando aplicación...
   </div>
 
-  <!-- El login -->
   <div id="login" style="display:none;">
     <h2>IneoCases Stock</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Contraseña">
-    <button id="btnLogin">Ingresar</button>
+    <input id="email" placeholder="Email o Usuario Admin">
+    <input id="password" type="password" placeholder="Contraseña Admin">
+    <button id="btnLogin">Ingresar como Admin 🔐</button>
+    
+    <button id="btnCliente" class="btn-secundario" style="margin-top: 12px; width: 100%; font-weight: 600;">📱 Entrar como Cliente (Ver Catálogo)</button>
   </div>
 
-  <!-- La app principal -->
   <div id="app" style="display:none;">
     <h1>📱 IneoCases Stock</h1>
     <div class="top-bar">
@@ -29,7 +28,6 @@
       <button id="btnNuevaFunda">➕ Nueva funda</button>
     </div>
 
-    <!-- FORMULARIO NUEVA/EDITAR FUNDA -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
@@ -46,7 +44,6 @@
         <label>Precio de venta ($)</label>
         <input id="venta" type="number" placeholder="0">
 
-        <!-- NUEVO: Input de Foto y Vista Previa -->
         <label>Foto del producto</label>
         <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
         <img id="previewFoto" src="" alt="Vista previa" style="display:none; width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
@@ -58,7 +55,6 @@
       </div>
     </div>  
 
-    <!-- MODAL DEL ASISTENTE DE VENTAS -->
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
@@ -83,7 +79,6 @@
 
     <div id="fundas"></div>
 
-    <!-- BOTÓN FLOTANTE DEL ASISTENTE -->
     <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
   </div>
 
