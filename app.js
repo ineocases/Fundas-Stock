@@ -22,29 +22,31 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
-// --- BUSCADOR ROBUSTO ---
-document.getElementById("buscar").addEventListener("input", (e) => {
-    const texto = e.target.value.toLowerCase().trim();
-    
-    if (texto === "") {
-        renderizarFundas(todasLasFundas);
-        return;
-    }
+// --- BUSCADORES SEPARADOS (Lógica Robusta) ---
+function aplicarFiltros() {
+    const textoNombre = document.getElementById("buscarNombre").value.toLowerCase().trim();
+    const textoModelo = document.getElementById("buscarModelo").value.toLowerCase().trim();
 
     const filtradas = todasLasFundas.filter(f => {
         const nombre = (f.nombre || "").toLowerCase();
         
-        // Conversión segura a string antes del split
+        // Convertimos a string obligatoriamente para evitar errores de .split()
         const rawModelos = f.compatibles ? String(f.compatibles) : "";
-        const modelos = rawModelos.split(',').map(m => m.trim().toLowerCase());
+        const modelos = rawModelos.toLowerCase().split(',').map(m => m.trim());
         
-        return nombre.includes(texto) || modelos.includes(texto);
+        const coincideNombre = nombre.includes(textoNombre);
+        const coincideModelo = textoModelo === "" ? true : modelos.includes(textoModelo);
+        
+        return coincideNombre && coincideModelo;
     });
-    
-    renderizarFundas(filtradas);
-});
 
-// --- RENDERIZADO ---
+    renderizarFundas(filtradas);
+}
+
+document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
+document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
+
+// --- RENDERIZADO DE TARJETAS ---
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = ""; 
@@ -59,7 +61,6 @@ function renderizarFundas(lista) {
             <p>💵 <b>Costo:</b> $${f.costo || 0}</p>
             <p>💰 <b>Venta:</b> $${f.venta || 0}</p>
             <button onclick="window.venderFunda('${fJson}')" class="btn-vender">🛒 Vender</button>
-            <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
             <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Eliminar</button>
         `;
         contenedor.appendChild(card);
@@ -106,8 +107,6 @@ window.venderFunda = async (fJson) => {
 window.eliminarFunda = async (id) => { 
     if(confirm("¿Seguro que deseas eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } 
 };
-
-window.editarFunda = (id) => { alert("Usa el formulario para registrar una nueva entrada o edita directamente en Firebase."); };
 
 document.getElementById("btnNuevaFunda").onclick = () => {
     const f = document.getElementById("agregar");
