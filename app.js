@@ -6,6 +6,7 @@ let todasLasFundas = [];
 let idEdicion = null;
 let ventaEnCurso = false;
 
+// --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
@@ -23,6 +24,7 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
+// --- 2. BUSCADORES ---
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("buscarNombre")?.addEventListener("input", window.aplicarFiltros);
     document.getElementById("buscarModelo")?.addEventListener("input", window.aplicarFiltros);
@@ -39,6 +41,7 @@ window.aplicarFiltros = () => {
     renderizarFundas(filtradas);
 };
 
+// --- 3. RENDERIZADO Y CRUD ---
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = "";
@@ -92,30 +95,25 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
+// --- 4. LÓGICA DE VENTAS ---
 window.venderFunda = async (fJson) => {
-    if (ventaEnCurso) return;
+    if (ventaEnCurso) return; 
     ventaEnCurso = true;
-
     try {
         const f = JSON.parse(decodeURIComponent(fJson));
         const cliente = prompt("Nombre del cliente:");
-        if (!cliente) { ventaEnCurso = false; return; }
-        
-        const modeloVendido = prompt("¿Qué modelo se lleva? (ej: 11):");
-        if (!modeloVendido) { ventaEnCurso = false; return; }
-        
+        if (!cliente) return;
+        const modeloVendido = prompt("Modelo que se lleva (ej: 11):", f.compatibles.split(',')[0]);
+        if (!modeloVendido) return;
         const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
-        if (isNaN(unidades)) { ventaEnCurso = false; return; }
-        
-        const precioTotal = parseFloat(prompt("Precio total:", f.venta * unidades));
-        const envio = parseFloat(prompt("Costo envío:", "0"));
+        if (isNaN(unidades) || unidades <= 0) return;
+        const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
+        const envio = parseFloat(prompt("Costo de envío:", "0"));
+        if (isNaN(precioTotal)) return;
 
-        // Lógica estricta de borrado del modelo
         let lista = String(f.compatibles).split(',').map(m => m.trim());
         let nuevaLista = lista.filter(m => m.toLowerCase() !== modeloVendido.trim().toLowerCase());
-        let nuevosCompatibles = nuevaLista.join(',');
-
-        // Guardar Venta
+        
         await addDoc(collection(db, "ventas"), { 
             producto: f.nombre, cliente: cliente, modelo: modeloVendido,
             unidades: unidades, costoUnitario: Number(f.costo),
@@ -124,25 +122,30 @@ window.venderFunda = async (fJson) => {
             fecha: new Date().toLocaleDateString(), fechaCompleta: new Date().toISOString() 
         });
         
-        // Actualizar Funda
-        await updateDoc(doc(db, "fundas", f.id), { 
-            stock: Number(f.stock) - unidades,
-            compatibles: nuevosCompatibles 
-        });
-
-        alert("Venta registrada. Stock y modelos actualizados.");
+        await updateDoc(doc(db, "fundas", f.id), { stock: Number(f.stock) - unidades, compatibles: nuevaLista.join(',') });
+        alert("Venta registrada correctamente.");
         await cargarDatos();
-    } catch (e) {
-        console.error("Error:", e);
-    } finally {
-        ventaEnCurso = false;
+    } catch (e) { console.error(e); } finally { ventaEnCurso = false; }
+};
+
+// --- 5. GESTIÓN DE HISTORIAL (EDITAR/ELIMINAR) ---
+window.eliminarVenta = async (id) => { if(confirm("¿Eliminar registro?")) { await deleteDoc(doc(db, "ventas", id)); cargarDatos(); } };
+
+window.editarVenta = async (vJson) => {
+    const v = JSON.parse(decodeURIComponent(vJson));
+    const nuevoCliente = prompt("Editar cliente:", v.cliente);
+    const nuevaGanancia = parseFloat(prompt("Editar ganancia:", v.ganancia));
+    if (nuevoCliente && !isNaN(nuevaGanancia)) {
+        await updateDoc(doc(db, "ventas", v.id), { cliente: nuevoCliente, ganancia: nuevaGanancia });
+        cargarDatos();
     }
 };
 
-window.eliminarFunda = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
+window.eliminarFunda = async (id) => { if(confirm("¿Eliminar funda?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
 document.getElementById("btnNuevaFunda").onclick = () => { idEdicion = null; document.getElementById("agregar").style.display = "block"; };
 document.getElementById("btnLogin").onclick = async () => { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); };
 
+// --- 6. DASHBOARD E HISTORIAL ---
 async function actualizarDashboard() {
     const vSnap = await getDocs(collection(db, "ventas"));
     const fSnap = await getDocs(collection(db, "fundas"));
@@ -161,11 +164,15 @@ async function actualizarDashboard() {
 async function cargarHistorial() {
     const snap = await getDocs(query(collection(db, "ventas"), orderBy("fechaCompleta", "desc")));
     let t = `<table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>Unid.</th><th>Ganancia</th></tr>`;
+        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>U.</th><th>G.</th><th>Acciones</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
-            <td>${v.unidades || 0}</td><td>$${(v.ganancia || 0).toFixed(2)}</td></tr>`;
+        const vJson = encodeURIComponent(JSON.stringify({id: d.id, ...v}));
+        t += `<tr>
+            <td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
+            <td>${v.unidades || 0}</td><td>$${(v.ganancia || 0).toFixed(2)}</td>
+            <td><button onclick="window.editarVenta('${vJson}')">✏️</button><button onclick="window.eliminarVenta('${d.id}')">🗑️</button></td>
+        </tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
