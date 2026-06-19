@@ -13,10 +13,8 @@
     ⏳ Cargando aplicación...
   </div>
 
-  <!-- PANTALLA DE BIENVENIDA / LOGIN INTERACTIVO PREMIUM -->
   <div id="login" style="display:none;">
     <div class="login-container">
-      <!-- Sección Principal para Clientes -->
       <div class="login-welcome">
         <div class="header-logo-welcome">
           <img src="logo.svg" alt="Logo" class="app-logo-welcome">
@@ -27,13 +25,11 @@
         <button id="btnCliente" class="btn-principal-welcome">Entrar a ver Catálogo 📱</button>
       </div>
       
-      <!-- Acceso Oculto/Sutil para el Administrador -->
       <div class="admin-trigger-zone">
         <button type="button" id="btnAbrirAdminModal" class="btn-link-admin">🔒 Acceso Personal de Trabajo</button>
       </div>
     </div>
 
-    <!-- Panel Modal Desplegable para Login de Admin -->
     <div id="modalAdminLogin" class="modal-admin-overlay" style="display: none;">
       <div class="modal-admin-content">
         <div class="modal-admin-header">
@@ -57,7 +53,6 @@
     </div>
   </div>
 
-  <!-- SECCIÓN PRINCIPAL DE LA APLICACIÓN -->
   <div id="app" style="display:none;">
     <div class="header-logo">
       <img src="logo.svg" alt="Logo" class="app-logo">
@@ -68,7 +63,6 @@
       <input id="buscar" placeholder="Buscar producto o modelo...">
       <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
       
-      <!-- Botón de Menú Hamburguesa Interactivo -->
       <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
         <span></span>
         <span></span>
@@ -76,16 +70,35 @@
       </button>
     </div>
 
-    <!-- Barra Dinámica de Categorías (Píldoras de Filtro) -->
     <div id="filtrosCategorias" class="categorias-container"></div>
 
-    <!-- Menú Lateral Desplegable y Capa de Fondo -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebarMenu" class="sidebar">
       <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
+      <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
     </div>
 
-    <!-- Modal Agregar/Editar Item -->
+    <div id="modalCategorias" style="display:none;">
+      <div class="modal-content">
+        <h3>📁 Administrar Mis Categorías</h3>
+        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Creá o eliminá las categorías de tu negocio:</p>
+        
+        <label>Nombre de la nueva categoría</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <input id="nuevoNombreCategoria" placeholder="Ej: Corte, Auriculares, Fundas..." style="margin-bottom:0;">
+          <button id="btnGuardarCategoria" style="white-space: nowrap;">Añadir ➕</button>
+        </div>
+
+        <label>Categorías existentes</label>
+        <div id="listaCategoriasCrud" style="max-height: 250px; overflow-y: auto; border: 1px solid #d2d2d7; border-radius: 12px; background: #f5f5f7; padding: 10px;">
+          </div>
+
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button type="button" id="btnCerrarCategorias" class="btn-secundario" style="width: 100%;">Cerrar Ventana</button>
+        </div>
+      </div>
+    </div>
+
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nuevo Artículo</h3>
@@ -95,8 +108,7 @@
 
         <label>Categoría</label>
         <select id="categoriaSelect">
-          <!-- Se llena dinámicamente -->
-        </select>
+          </select>
         
         <label>Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
         <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
@@ -112,7 +124,6 @@
         
         <img id="previewFoto" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
-        <!-- Panel de control Pro -->
         <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
           <div style="text-align: center; margin-bottom: 12px;">
             <label for="sliderEscala" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
@@ -137,7 +148,6 @@
       </div>
     </div>  
 
-    <!-- Modal Asistente de Ventas -->
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
@@ -160,7 +170,6 @@
       </div>
     </div>
 
-    <!-- Modal Reservas WhatsApp -->
     <div id="modalReservar" style="display:none;">
       <div class="modal-content">
         <h3>🛍️ Menú de Reserva</h3>
