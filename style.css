@@ -24,7 +24,7 @@ h1 {
     margin-bottom: 0;
 }
 
-input {
+input, select {
     width: 100%;
     padding: 12px;
     border-radius: 12px;
@@ -36,7 +36,7 @@ input {
     transition: all 0.2s ease;
 }
 
-input:focus {
+input:focus, select:focus {
     outline: none;
     border-color: #0071e3;
     box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
@@ -89,34 +89,61 @@ button:hover {
     transform: translateY(-2px);
 }
 
-/* MODIFICADO: MODALES EN MODO PANTALLA COMPLETA TOTAL */
-#agregar, #modalAsistente, #modalReservarPrevia, #modalReservar {
+/* ALINEACIÓN DEL LOGO Y TEXTO DE iNEOCASES */
+.header-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 25px;
+}
+
+.header-logo h1, .header-logo h2 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.app-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 50%; /* Fuerza el diseño circular perfecto */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+#login .header-logo {
+    justify-content: center;
+    margin-top: 25px;
+    margin-bottom: 35px;
+}
+
+/* MODALES EN MODO PANTALLA COMPLETA TOTAL (Full Screen Takeover estilo iOS) */
+#agregar, #modalAsistente, #modalReservar {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #ffffff; /* Fondo blanco pleno que tapa todo por completo */
+    background: #ffffff;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Alinea al inicio superior */
+    align-items: flex-start;
     z-index: 9999;
-    overflow-y: auto; /* Permite scroll vertical interno si el contenido es largo */
+    overflow-y: auto;
 }
 
 .modal-content {
     background: white;
     padding: 40px 24px;
     width: 100%;
-    max-width: 500px; /* En compu se mantiene centrado prolijo, en cel ocupa todo */
-    min-height: 100vh; /* Fuerza a que ocupe todo el alto disponible de la pantalla */
+    max-width: 500px;
+    min-height: 100vh;
     box-sizing: border-box;
-    box-shadow: none; /* Eliminamos sombras flotantes */
-    border-radius: 0; /* Eliminamos bordes redondeados de ventana */
+    box-shadow: none;
+    border-radius: 0;
     animation: deslizarPantalla 0.35s cubic-bezier(0.32, 0.94, 0.6, 1);
 }
 
-/* Animación estilo iOS: se desliza limpiamente desde abajo hacia arriba */
 @keyframes deslizarPantalla {
     from { transform: translateY(100vh); }
     to { transform: translateY(0); }
@@ -138,7 +165,7 @@ button:hover {
     background: #dcdce2;
 }
 
-/* CONTENEDOR DE TARJETAS */
+/* CONTENEDOR DE TARJETAS (GRID) */
 #fundas {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
