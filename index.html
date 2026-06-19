@@ -57,12 +57,23 @@
         <!-- Vista previa de la imagen original o procesada -->
         <img id="previewFoto" src="" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
-        <!-- Slider interactivo para controlar el tamaño de la funda sobre el fondo -->
-        <div id="controlTamañoContenedor" style="display: none; margin: 15px 0; text-align: center; font-family: -apple-system, sans-serif;">
-          <label for="sliderEscala" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 8px;">
-            📏 Tamaño de la funda: <span id="valorEscala">72%</span>
-          </label>
-          <input type="range" id="sliderEscala" min="40" max="95" value="72" style="width: 80%; max-width: 300px; accent-color: #0071e3;">
+        <!-- Panel de control Pro: Deslizadores interactivos de tamaño y rotación -->
+        <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
+          <!-- Slider de Tamaño -->
+          <div style="text-align: center; margin-bottom: 12px;">
+            <label for="sliderEscala" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
+              📏 Tamaño de la funda: <span id="valorEscala">72%</span>
+            </label>
+            <input type="range" id="sliderEscala" min="40" max="95" value="72" style="width: 80%; max-width: 300px; accent-color: #0071e3;">
+          </div>
+
+          <!-- Slider de Rotación -->
+          <div style="text-align: center;">
+            <label for="sliderRotacion" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
+              🔄 Rotación de la funda: <span id="valorRotacion">0°</span>
+            </label>
+            <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 80%; max-width: 300px; accent-color: #5856d6;">
+          </div>
         </div>
         
         <div class="modal-buttons">
