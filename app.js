@@ -1,7 +1,8 @@
 import { auth, db } from "./firebase.js";
 import {
   signInWithEmailAndPassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInAnonymously // Importamos el login de clientes seguro
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
   collection,
@@ -17,44 +18,68 @@ console.log("DB conectada con éxito:", db);
 // Variables globales
 let todasLasFundas = [];
 let idFundaEditando = null;
-let fotoBase64 = ""; // Almacena la foto optimizada en texto
+let fotoBase64 = ""; 
+let esAdmin = false; // Flag clave de seguridad de rol
 
 // Asignación de eventos de la interfaz
-document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnLogin").onclick = loginAdmin;
+document.getElementById("btnCliente").onclick = loginCliente; // Evento cliente
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
-
-// Capturar y optimizar la imagen al seleccionarla
 document.getElementById("fotoInput").onchange = procesarImagen;
 
-// OBSERVADOR DE SESIÓN
+// OBSERVADOR DE SESIÓN INTELIGENTE
 onAuthStateChanged(auth, (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
+    
+    // Si el usuario ingresó sin correo/pass (Anónimo), es un Cliente. Si no, sos Vos (Admin)
+    esAdmin = !user.isAnonymous;
+    
+    // Adaptar la interfaz general según el rol
+    if (esAdmin) {
+      document.getElementById("btnNuevaFunda").style.display = "inline-block";
+      document.getElementById("btnAsistente").style.display = "flex";
+    } else {
+      document.getElementById("btnNuevaFunda").style.display = "none";
+      document.getElementById("btnAsistente").style.display = "none";
+    }
+    
     cargarFundas(); 
   } else {
     document.getElementById("login").style.display = "block";
-    document.getElementById("app").style.none;
+    document.getElementById("app").style.display = "none";
   }
 });
 
-async function login() {
+async function loginAdmin() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
-    alert("Error al ingresar: Verifique su email y contraseña.");
+    alert("Error al ingresar como Admin: Verifique sus credenciales.");
+    console.error(error);
+  }
+}
+
+// NUEVA FUNCIÓN: Login automático para tus clientes sin pedirles nada
+async function loginCliente() {
+  try {
+    await signInAnonymously(auth);
+  } catch (error) {
+    alert("Error al ingresar en modo cliente. Asegúrate de activar 'Anónimo' en la consola de Firebase.");
     console.error(error);
   }
 }
 
 function mostrarFormulario() {
+  if (!esAdmin) return; // Protección extra
   idFundaEditando = null;
   fotoBase64 = ""; 
   document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
@@ -81,6 +106,7 @@ function ocultarFormulario() {
 }
 
 function mostrarAsistente() {
+  if (!esAdmin) return;
   document.getElementById("asistenteProducto").value = "";
   document.getElementById("asistenteModelo").value = "";
   document.getElementById("asistenteUnidades").value = "1";
@@ -91,7 +117,6 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-// FUNCIÓN OPTIMIZADA: Comprime a 600x600 en JPG liviano para Firestore
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -105,27 +130,21 @@ function procesarImagen(evento) {
     const img = new Image();
     img.onload = function () {
       const canvas = document.createElement("canvas");
-      // 600x600 es el tamaño perfecto: ultra liviano para texto y súper nítido en pantallas
       canvas.width = 600;
       canvas.height = 600;
       const ctx = canvas.getContext("2d");
 
-      // Recorte perfecto tipo cuadrado centrado (object-fit: cover)
       const ladoMenor = Math.min(img.width, img.height);
       const sx = (img.width - ladoMenor) / 2;
       const sy = (img.height - ladoMenor) / 2;
 
       ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 600, 600);
-
-      // Comprimimos la calidad al 60% para asegurar que pese poquísimo en la base de datos
       fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
 
-      // Mostrar vista previa en el modal
       const preview = document.getElementById("previewFoto");
       preview.src = fotoBase64;
       preview.style.display = "block";
 
-      // Habilitar botón de nuevo
       btnGuardar.disabled = false;
       btnGuardar.innerText = idFundaEditando ? "Actualizar Funda" : "Guardar";
     };
@@ -151,14 +170,16 @@ async function cargarFundas() {
 
 function actualizarDatalistAsistente() {
   const datalist = document.getElementById("listaProductos");
+  if (!datalist) return;
   const nombresUnicos = [...new Set(todasLasFundas.map(f => f.nombre).filter(Boolean))];
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
 
 async function guardarFunda() {
+  if (!esAdmin) return;
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
-  btnGuardar.innerText = "💾 Guardando en Firebase...";
+  btnGuardar.innerText = "💾 Guardando...";
 
   const compatiblesInput = document.getElementById("stockPorModelo").value;
   const stockPorModeloArray = compatiblesInput.split(",")
@@ -196,13 +217,13 @@ async function guardarFunda() {
     cargarFundas();
   } catch (error) {
     console.error("Error al guardar:", error);
-    alert("Hubo un problema al guardar. Si la foto es demasiado grande, intenta con otra.");
   } finally {
     btnGuardar.disabled = false;
   }
 }
 
 async function eliminarFunda(id) {
+  if (!esAdmin) return;
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
@@ -215,6 +236,7 @@ async function eliminarFunda(id) {
 }
 
 function abrirEditarFunda(id) {
+  if (!esAdmin) return;
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
 
@@ -231,9 +253,6 @@ function abrirEditarFunda(id) {
     document.getElementById("stockPorModelo").value = funda.stockPorModelo
       .map(m => `${m.modelo}:${m.stock}`)
       .join(", ");
-  } else {
-    const comps = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : (funda.compatibles || "");
-    document.getElementById("stockPorModelo").value = comps;
   }
 
   const preview = document.getElementById("previewFoto");
@@ -252,6 +271,7 @@ function abrirEditarFunda(id) {
 }
 
 async function procesarVentaAsistente() {
+  if (!esAdmin) return;
   const prodBuscado = document.getElementById("asistenteProducto").value.trim().toLowerCase();
   const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
   const unidadesAVender = Number(document.getElementById("asistenteUnidades").value);
@@ -293,22 +313,6 @@ async function procesarVentaAsistente() {
     } catch (error) {
       console.error(error);
     }
-  } else {
-    const stockActualViejo = fundaEncontrada.stock ?? 0;
-    if (stockActualViejo < unidadesAVender) {
-      alert(`¡Stock insuficiente!`);
-      return;
-    }
-    try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
-        stock: stockActualViejo - unidadesAVender
-      });
-      alert(`¡Venta registrada!`);
-      ocultarAsistente();
-      cargarFundas();
-    } catch (error) {
-      console.error(error);
-    }
   }
 }
 
@@ -317,6 +321,7 @@ window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
 window.ocultarAsistente = ocultarAsistente;
 
+// RENDERIZADO CONTROLADO POR ROL
 function renderizarFundas(arrayDeFundas) {
   let html = "";
   arrayDeFundas.forEach((f) => {
@@ -334,8 +339,19 @@ function renderizarFundas(arrayDeFundas) {
       listaModelosHTML = `• Compatibles: ${comps}`;
     }
 
-    // Imagen por defecto si no tiene una guardada todavía
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
+
+    // MODIFICACIÓN DE SEGURIDAD: Si no es Admin, el HTML de costos y botones NUNCA se inyecta en el navegador
+    let bloqueAdmin = "";
+    if (esAdmin) {
+      bloqueAdmin = `
+        <p style="margin-top:8px; color:#1d1d1f;">💵 Costo: <b>$${f.costo ?? 0}</b></p>
+        <div style="margin-top: 15px;">
+          <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
+          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
+        </div>
+      `;
+    }
 
     html += `
     <div class="card">
@@ -348,12 +364,8 @@ function renderizarFundas(arrayDeFundas) {
           ${listaModelosHTML}
         </div>
 
-        <p>💵 Costo: $${f.costo ?? 0}</p>
-        <p>💰 Venta: $${f.venta ?? 0}</p>
-        <div style="margin-top: 15px;">
-          <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
-          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
-        </div>
+        <p style="font-size: 16px; color:#0071e3; font-weight:600;">💰 Precio: $${f.venta ?? 0}</p>
+        ${bloqueAdmin}
       </div>
     </div>
     `;
@@ -372,12 +384,6 @@ function filtrarFundas(evento) {
       compatibleCoincide = f.stockPorModelo.some((m) => 
         String(m.modelo).toLowerCase().trim().includes(textoBuscado)
       );
-    } else if (Array.isArray(f.compatibles)) {
-      compatibleCoincide = f.compatibles.some((modelo) => 
-        String(modelo).toLowerCase().trim().includes(textoBuscado)
-      );
-    } else if (typeof f.compatibles === "string") {
-      compatibleCoincide = f.compatibles.toLowerCase().includes(textoBuscado);
     }
     return nombreCoincide || compatibleCoincide;
   });
