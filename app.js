@@ -51,10 +51,11 @@ document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-// Control de apertura y cierre del menú lateral
+// Control de apertura y cierre con alternancia de estado para la Cruz (X)
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
   document.getElementById("sidebarOverlay").classList.toggle("active");
+  document.getElementById("btnMenuHamburguesa").classList.toggle("active"); // Alterna clase active para la cruz
 }
 
 // Control del Modal de Login de Administrador
@@ -88,7 +89,6 @@ async function ejecutarCambioRol() {
 onAuthStateChanged(auth, (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
-    // Cerramos el panel flotante de credenciales en caso de éxito
     document.getElementById("modalAdminLogin").style.display = "none"; 
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -284,7 +284,6 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
 
     const radianes = (anguloRotacion * Math.PI) / 180;
 
-    // Pasada A: Renderizado de la Sombra Proyectada (Desplazada y Difuminada)
     ctxFinal.save();
     ctxFinal.translate((1000 / 2) + 15, (1000 / 2) + 25); 
     ctxFinal.rotate(radianes);
@@ -295,7 +294,6 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // Pasada B: Dibujo de la Funda Limpia (Encima)
     ctxFinal.save();
     ctxFinal.translate(1000 / 2, 1000 / 2);
     ctxFinal.rotate(radianes);
@@ -321,7 +319,6 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   }
 }
 
-// RESERVAS DIRECTAS A TU WHATSAPP
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
