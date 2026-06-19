@@ -17,7 +17,7 @@ console.log("DB conectada con éxito:", db);
 // Variables globales
 let todasLasFundas = [];
 let idFundaEditando = null;
-let fotoBase64 = ""; // Variable global para almacenar el texto comprimido de la imagen
+let fotoBase64 = ""; // Almacena la foto optimizada en texto
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = login;
@@ -27,7 +27,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 
-// NUEVO: Capturar y procesar imagen a 1000x1000 automáticamente
+// Capturar y optimizar la imagen al seleccionarla
 document.getElementById("fotoInput").onchange = procesarImagen;
 
 // OBSERVADOR DE SESIÓN
@@ -39,7 +39,7 @@ onAuthStateChanged(auth, (user) => {
     cargarFundas(); 
   } else {
     document.getElementById("login").style.display = "block";
-    document.getElementById("app").style.display = "none";
+    document.getElementById("app").style.none;
   }
 });
 
@@ -56,9 +56,10 @@ async function login() {
 
 function mostrarFormulario() {
   idFundaEditando = null;
-  fotoBase64 = ""; // Limpiar foto
+  fotoBase64 = ""; 
   document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
   document.getElementById("guardarFunda").innerText = "Guardar";
+  document.getElementById("guardarFunda").disabled = false;
   
   document.getElementById("nombre").value = "";
   document.getElementById("stockPorModelo").value = "";
@@ -66,7 +67,6 @@ function mostrarFormulario() {
   document.getElementById("venta").value = "";
   document.getElementById("fotoInput").value = "";
   
-  // Ocultar preview
   const preview = document.getElementById("previewFoto");
   preview.src = "";
   preview.style.display = "none";
@@ -91,35 +91,43 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-// NUEVA FUNCIÓN: Redimensiona y recorta fotos a 1000x1000 sin perder calidad en Base64
+// FUNCIÓN OPTIMIZADA: Comprime a 600x600 en JPG liviano para Firestore
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
+
+  const btnGuardar = document.getElementById("guardarFunda");
+  btnGuardar.disabled = true;
+  btnGuardar.innerText = "⏳ Procesando foto...";
 
   const lector = new FileReader();
   lector.onload = function (e) {
     const img = new Image();
     img.onload = function () {
       const canvas = document.createElement("canvas");
-      canvas.width = 1000;
-      canvas.height = 1000;
+      // 600x600 es el tamaño perfecto: ultra liviano para texto y súper nítido en pantallas
+      canvas.width = 600;
+      canvas.height = 600;
       const ctx = canvas.getContext("2d");
 
-      // Calcular recorte estilo 'object-fit: cover' para que quede cuadrado perfecto
+      // Recorte perfecto tipo cuadrado centrado (object-fit: cover)
       const ladoMenor = Math.min(img.width, img.height);
       const sx = (img.width - ladoMenor) / 2;
       const sy = (img.height - ladoMenor) / 2;
 
-      // Dibujar en el canvas forzando las dimensiones 1000x1000
-      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 1000, 1000);
+      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 600, 600);
 
-      // Convertir a texto comprimido JPEG al 70% de calidad (Excelente peso/estética)
-      fotoBase64 = canvas.toDataURL("image/jpeg", 0.7);
+      // Comprimimos la calidad al 60% para asegurar que pese poquísimo en la base de datos
+      fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
 
       // Mostrar vista previa en el modal
       const preview = document.getElementById("previewFoto");
       preview.src = fotoBase64;
       preview.style.display = "block";
+
+      // Habilitar botón de nuevo
+      btnGuardar.disabled = false;
+      btnGuardar.innerText = idFundaEditando ? "Actualizar Funda" : "Guardar";
     };
     img.src = e.target.result;
   };
@@ -148,6 +156,10 @@ function actualizarDatalistAsistente() {
 }
 
 async function guardarFunda() {
+  const btnGuardar = document.getElementById("guardarFunda");
+  btnGuardar.disabled = true;
+  btnGuardar.innerText = "💾 Guardando en Firebase...";
+
   const compatiblesInput = document.getElementById("stockPorModelo").value;
   const stockPorModeloArray = compatiblesInput.split(",")
     .map(item => {
@@ -164,27 +176,29 @@ async function guardarFunda() {
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
-    foto: fotoBase64 // Guardamos la foto procesada
+    foto: fotoBase64 
   };
 
   try {
     if (idFundaEditando) {
-      // Si estamos editando y no se subió una foto nueva, mantenemos la que ya tenía
       if (!fotoBase64) {
         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
         datosFunda.foto = vieja ? (vieja.foto || "") : "";
       }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
-      alert("Funda actualizada con éxito");
+      alert("Funda actualizada con éxito 🎉");
     } else {
       await addDoc(collection(db, "fundas"), datosFunda);
-      alert("Funda guardada con éxito");
+      alert("Funda guardada con éxito 🎉");
     }
 
     ocultarFormulario();
     cargarFundas();
   } catch (error) {
     console.error("Error al guardar:", error);
+    alert("Hubo un problema al guardar. Si la foto es demasiado grande, intenta con otra.");
+  } finally {
+    btnGuardar.disabled = false;
   }
 }
 
@@ -206,6 +220,7 @@ function abrirEditarFunda(id) {
 
   idFundaEditando = id;
   document.getElementById("modalTitulo").innerText = "✏️ Editar Funda";
+  document.getElementById("guardarFunda").disabled = false;
 
   document.getElementById("nombre").value = funda.nombre || "";
   document.getElementById("costo").value = funda.costo ?? 0;
@@ -221,7 +236,6 @@ function abrirEditarFunda(id) {
     document.getElementById("stockPorModelo").value = comps;
   }
 
-  // Cargar foto si ya existe una asignada
   const preview = document.getElementById("previewFoto");
   if (funda.foto) {
     fotoBase64 = funda.foto;
@@ -280,7 +294,6 @@ async function procesarVentaAsistente() {
       console.error(error);
     }
   } else {
-    // Modo compatible viejo
     const stockActualViejo = fundaEncontrada.stock ?? 0;
     if (stockActualViejo < unidadesAVender) {
       alert(`¡Stock insuficiente!`);
@@ -299,7 +312,6 @@ async function procesarVentaAsistente() {
   }
 }
 
-// Vinculaciones globales
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
@@ -322,7 +334,7 @@ function renderizarFundas(arrayDeFundas) {
       listaModelosHTML = `• Compatibles: ${comps}`;
     }
 
-    // Si el producto no tiene foto, usamos una por defecto limpia y minimalista
+    // Imagen por defecto si no tiene una guardada todavía
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
 
     html += `
