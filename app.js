@@ -45,7 +45,24 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// Botones y Acciones
+// --- BUSCADOR ESTRICTO ---
+document.getElementById("buscar").addEventListener("input", (e) => {
+    const t = e.target.value.toLowerCase().trim();
+    if (!t) return renderizarFundas(todasLasFundas);
+
+    const filtradas = todasLasFundas.filter(f => {
+        const nombreMatch = (f.nombre || "").toLowerCase().includes(t);
+        // Divide los modelos por coma y limpia espacios, luego busca coincidencia exacta
+        const modelos = (f.compatibles || "").split(',').map(m => m.trim().toLowerCase());
+        const modeloMatch = modelos.includes(t);
+        
+        return nombreMatch || modeloMatch;
+    });
+    
+    renderizarFundas(filtradas);
+});
+
+// --- FUNCIONES DE ACCIÓN ---
 document.getElementById("btnNuevaFunda").onclick = () => {
     const form = document.getElementById("agregar");
     form.style.display = form.style.display === "none" ? "block" : "none";
@@ -61,7 +78,6 @@ document.getElementById("guardarFunda").onclick = async () => {
     };
     await addDoc(collection(db, "fundas"), d);
     document.getElementById("agregar").style.display = "none";
-    alert("Guardado correctamente");
     cargarDatos();
 };
 
@@ -106,18 +122,9 @@ async function cargarHistorial() {
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
 
-document.getElementById("buscar").addEventListener("input", (e) => {
-    const t = e.target.value.toLowerCase();
-    renderizarFundas(todasLasFundas.filter(f => f.nombre.toLowerCase().includes(t)));
-});
-
+window.eliminarFunda = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
+window.editarFunda = (id) => { alert("Usa el formulario para actualizar."); };
 document.getElementById("btnLogin").onclick = async () => {
     try { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); } 
-    catch(e) { alert("Error al ingresar"); }
+    catch(e) { alert("Error"); }
 };
-
-// Funciones globales necesarias para los botones de las tarjetas
-window.eliminarFunda = async (id) => { 
-    if(confirm("¿Seguro que deseas eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } 
-};
-window.editarFunda = (id) => { alert("Para editar, recarga y usa la lógica de actualización."); };
