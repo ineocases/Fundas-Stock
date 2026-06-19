@@ -22,26 +22,26 @@ function renderizar(lista) {
         card.innerHTML = `
             ${f.fotoUrl ? `<img src="${f.fotoUrl}" style="width:100%; height:120px; object-fit:cover; border-radius:5px;">` : ""}
             <h3>${f.nombre}</h3>
-            <p>📦 Stock: ${f.stock}</p>
+            <p>📦 Stock: <b>${f.stock}</b></p>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button onclick="window.cambiarStock('${f.id}', -1)" class="btn-stock" style="background:#6c757d;">➖</button>
+                <button onclick="window.cambiarStock('${f.id}', 1)" class="btn-stock" style="background:#28a745;">➕</button>
+            </div>
             <p>📱 Modelos: ${f.compatibles}</p>
             <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
-            <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Eliminar</button>
+            <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Borrar</button>
         `;
         c.appendChild(card);
     });
 }
 
-function aplicarFiltros() {
-    const n = document.getElementById("buscarNombre").value.toLowerCase();
-    const m = document.getElementById("buscarModelo").value.toLowerCase();
-    renderizar(todasLasFundas.filter(f => 
-        f.nombre.toLowerCase().includes(n) && 
-        String(f.compatibles).toLowerCase().includes(m)
-    ));
-}
-
-document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
-document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
+window.cambiarStock = async (id, delta) => {
+    const f = todasLasFundas.find(x => x.id === id);
+    const nuevoStock = Number(f.stock) + delta;
+    if (nuevoStock < 0) return;
+    await updateDoc(doc(db, "fundas", id), { stock: nuevoStock });
+    cargarFundas();
+};
 
 document.getElementById("guardarFunda").onclick = async () => {
     const data = { nombre: document.getElementById("nombre").value, stock: Number(document.getElementById("stock").value), compatibles: document.getElementById("compatibles").value, fotoUrl: document.getElementById("fotoUrl").value };
@@ -62,3 +62,11 @@ window.editarFunda = (id) => {
 window.eliminarFunda = async (id) => { if(confirm("¿Borrar?")) { await deleteDoc(doc(db, "fundas", id)); cargarFundas(); } };
 document.getElementById("btnNuevaFunda").onclick = () => { idEdicion = null; document.getElementById("agregar").style.display = "block"; };
 document.getElementById("btnLogin").onclick = async () => { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); };
+
+function aplicarFiltros() {
+    const n = document.getElementById("buscarNombre").value.toLowerCase();
+    const m = document.getElementById("buscarModelo").value.toLowerCase();
+    renderizar(todasLasFundas.filter(f => f.nombre.toLowerCase().includes(n) && String(f.compatibles).toLowerCase().includes(m)));
+}
+document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
+document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
