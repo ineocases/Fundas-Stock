@@ -1,21 +1,28 @@
 import { auth, db } from "./firebase.js";
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { collection, getDocs, addDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 let todasLasFundas = [];
 
-// --- FUNCIONES ---
-
-async function login() {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
+// --- PERSISTENCIA: Esto mantiene la sesión iniciada automáticamente ---
+onAuthStateChanged(auth, (user) => {
+    if (user) {
         document.getElementById("login").style.display = "none";
         document.getElementById("app").style.display = "block";
         cargarFundas();
+    } else {
+        document.getElementById("login").style.display = "block";
+        document.getElementById("app").style.display = "none";
+    }
+});
+
+// --- FUNCIONES ---
+
+async function login() {
+    try {
+        await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value);
     } catch (e) {
-        alert("Error al entrar");
+        alert("Error al entrar: verifica tus datos.");
     }
 }
 
@@ -39,10 +46,10 @@ function renderizarFundas(lista) {
         card.innerHTML = `
             <h2>${f.nombre || "Sin nombre"}</h2>
             <div class="card-details">
-                <p>📦 Stock: ${f.stock || 0}</p>
-                <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : (f.compatibles || "N/A")}</p>
-                <p>💵 Costo: $${f.costo || 0}</p>
-                <p>💰 Venta: $${f.venta || 0}</p>
+                <p>📦 <strong>Stock:</strong> ${f.stock || 0}</p>
+                <p>📱 <strong>Modelos:</strong> ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : (f.compatibles || "N/A")}</p>
+                <p>💵 <strong>Costo:</strong> $${f.costo || 0}</p>
+                <p>💰 <strong>Venta:</strong> $${f.venta || 0}</p>
             </div>
             <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
         `;
@@ -52,7 +59,7 @@ function renderizarFundas(lista) {
 }
 
 async function eliminarFunda(id) {
-    if (confirm("¿Borrar?")) {
+    if (confirm("¿Seguro que quieres eliminar esta funda?")) {
         try {
             await deleteDoc(doc(db, "fundas", id));
             cargarFundas();
