@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>InoCases | Stock</title>
+    <title>InoCases | Control de Stock</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,18 +15,23 @@
 
     <div id="app" style="display:none;">
         <h1>Control de Stock</h1>
-        <input type="text" id="buscarNombre" placeholder="Buscar funda...">
+        
+        <div class="search-container">
+            <input type="text" id="buscarNombre" placeholder="Buscar por nombre...">
+            <input type="text" id="buscarModelo" placeholder="Buscar por modelo...">
+        </div>
+
         <button id="btnNuevaFunda">➕ Nueva Funda</button>
         <div id="fundas"></div>
     </div>
 
-    <div id="agregar" style="display:none; background: #fff; padding: 20px; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); width: 300px; border: 1px solid #ccc; border-radius: 10px;">
+    <div id="agregar" style="display:none; background: #fff; padding: 20px; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); width: 300px; border: 1px solid #ccc; border-radius: 10px; z-index: 1000;">
         <input type="text" id="nombre" placeholder="Nombre">
         <input type="text" id="fotoUrl" placeholder="URL Foto">
         <input type="number" id="stock" placeholder="Stock">
         <input type="text" id="compatibles" placeholder="Modelos (ej: 11,13,15)">
-        <button id="guardarFunda" style="background:green;">Guardar</button>
-        <button onclick="document.getElementById('agregar').style.display='none'">Cancelar</button>
+        <button id="guardarFunda" style="background:green; color:white; border:none; padding:10px; width:100%; margin-top:10px;">Guardar</button>
+        <button onclick="document.getElementById('agregar').style.display='none'" style="background:gray; color:white; border:none; padding:10px; width:100%; margin-top:5px;">Cancelar</button>
     </div>
 
     <script type="module" src="app.js"></script>
