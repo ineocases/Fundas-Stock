@@ -1,50 +1,72 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <title>InoCases | Stock</title>
-    <link rel="stylesheet" href="style.css">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>IneoCases Stock</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
-    <div id="login">
-        <h2>Acceso al Stock</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Contraseña">
-        <button id="btnLogin">Entrar</button>
-    </div>
 
-    <div id="app" style="display:none;">
-        <h1>Control de Stock</h1>
-        <div class="search-container">
-            <input type="text" id="buscarNombre" placeholder="Buscar por nombre...">
-            <input type="text" id="buscarModelo" placeholder="Buscar por modelo...">
-        </div>
-        <button id="btnNuevaFunda">➕ Nueva Funda</button>
-        <div id="fundas"></div>
-    </div>
+<div id="login">
 
-    <!-- Botón Flotante -->
-    <button id="btnFlotante">±</button>
+<h2>IneoCases Stock</h2>
 
-    <!-- Selector de Stock Flotante -->
-    <div id="selectorStock" class="modal">
-        <h3>Ajustar Stock</h3>
-        <select id="selectFunda"></select>
-        <input type="number" id="inputCantidad" placeholder="Cantidad (+ para sumar, - para restar)">
-        <button id="ejecutarAjuste" style="background:#28a745;">Aplicar</button>
-        <button onclick="document.getElementById('selectorStock').style.display='none'" style="background:gray;">Cancelar</button>
-    </div>
+<input id="email" placeholder="Email">
 
-    <!-- Formulario Agregar/Editar -->
-    <div id="agregar" class="modal">
-        <input type="text" id="nombre" placeholder="Nombre">
-        <input type="text" id="fotoUrl" placeholder="URL Foto">
-        <input type="number" id="stock" placeholder="Stock">
-        <input type="text" id="compatibles" placeholder="Modelos (ej: 11,13,15)">
-        <button id="guardarFunda" style="background:green;">Guardar</button>
-        <button onclick="document.getElementById('agregar').style.display='none'" style="background:gray;">Cancelar</button>
-    </div>
+<input id="password" type="password" placeholder="Contraseña">
 
-    <script type="module" src="app.js"></script>
+<button id="btnLogin">
+Ingresar
+</button>
+
+</div>
+
+
+<div id="app" style="display:none;">
+
+<h1>📱 IneoCases Stock</h1>
+
+<input
+id="buscar"
+placeholder="Buscar iPhone 12">
+
+
+<button id="btnNuevaFunda">➕ Nueva funda</button>
+
+<div id="agregar" style="display:none">
+
+<input id="nombre" placeholder="Nombre">
+
+<input id="stock" type="number" placeholder="Stock">
+
+<input id="compatibles" placeholder="11,12,13,15">
+
+<input id="costo" type="number" placeholder="Costo">
+
+<input id="venta" type="number" placeholder="Precio de venta">
+
+<button id="guardarFunda">
+
+Guardar
+
+</button>
+
+</div>  
+<div id="fundas"></div>
+
+
+</div>
+
+
+<script type="module" src="app.js"></script>
+
 </body>
+
 </html>

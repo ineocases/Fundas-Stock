@@ -1,78 +1,112 @@
 import { auth, db } from "./firebase.js";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-let todasLasFundas = []; let idEdicion = null;
+import {
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-onAuthStateChanged(auth, (user) => {
-    if (user) { document.getElementById("login").style.display = "none"; document.getElementById("app").style.display = "block"; cargarFundas(); }
-    else { document.getElementById("login").style.display = "block"; document.getElementById("app").style.display = "none"; }
-});
+import {
+  collection,
+  getDocs,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+console.log("DB:", db);
+
+document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("guardarFunda").onclick = guardarFunda;
+
+async function login() {
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  await signInWithEmailAndPassword(auth, email, password);
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  cargarFundas();
+}
+
+
+function mostrarFormulario() {
+
+  document.getElementById("agregar").style.display = "block";
+
+}
+
 
 async function cargarFundas() {
-    const snap = await getDocs(collection(db, "fundas"));
-    todasLasFundas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderizar(todasLasFundas);
+
+  const snapshot = await getDocs(collection(db, "fundas"));
+
+  let html = "";
+
+  snapshot.forEach((doc) => {
+
+    const f = doc.data();
+
+html += `
+
+<div class="card">
+
+<h2>${f.nombre}</h2>
+
+<p>📦 Stock: ${f.stock}</p>
+
+<p>📱 Compatibles: ${f.compatibles.join(" • ")}</p>
+
+<p>💵 Costo: $${f.costo}</p>
+
+<p>💰 Venta: $${f.venta}</p>
+
+<button>🛒 Vender</button>
+
+<button>✏️ Editar</button>
+
+<button>🗑️ Eliminar</button>
+
+</div>
+
+`;
+
+  });
+
+  document.getElementById("fundas").innerHTML = html;
+
 }
 
-function renderizar(lista) {
-    const c = document.getElementById("fundas"); c.innerHTML = "";
-    lista.forEach(f => {
-        const card = document.createElement("div"); card.className = "card";
-        card.innerHTML = `
-            ${f.fotoUrl ? `<img src="${f.fotoUrl}" style="width:100%; height:120px; object-fit:cover; border-radius:5px;">` : ""}
-            <h3>${f.nombre}</h3>
-            <p>📦 Stock: <b>${f.stock}</b></p>
-            <p>📱 Modelos: ${f.compatibles}</p>
-            <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
-            <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Borrar</button>
-        `;
-        c.appendChild(card);
-    });
-}
 
-// Botón Flotante
-document.getElementById("btnFlotante").onclick = () => {
-    const s = document.getElementById("selectFunda");
-    s.innerHTML = todasLasFundas.map(f => `<option value="${f.id}">${f.nombre}</option>`).join('');
-    document.getElementById("selectorStock").style.display = "block";
-};
+async function guardarFunda() {
 
-document.getElementById("ejecutarAjuste").onclick = async () => {
-    const id = document.getElementById("selectFunda").value;
-    const cant = Number(document.getElementById("inputCantidad").value);
-    const f = todasLasFundas.find(x => x.id === id);
-    if (f && cant !== 0) {
-        await updateDoc(doc(db, "fundas", id), { stock: Number(f.stock) + cant });
-        document.getElementById("selectorStock").style.display = "none";
-        cargarFundas();
+  console.log("DB antes de guardar:", db);
+
+  await addDoc(
+
+    collection(db, "fundas"),
+
+    {
+
+      nombre: document.getElementById("nombre").value,
+
+      stock: Number(document.getElementById("stock").value),
+
+      compatibles:
+      document.getElementById("compatibles")
+      .value
+      .split(","),
+
+      costo: Number(document.getElementById("costo").value),
+
+      venta: Number(document.getElementById("venta").value),
+
+      foto: ""
+
     }
-};
 
-document.getElementById("guardarFunda").onclick = async () => {
-    const data = { nombre: document.getElementById("nombre").value, stock: Number(document.getElementById("stock").value), compatibles: document.getElementById("compatibles").value, fotoUrl: document.getElementById("fotoUrl").value };
-    if (idEdicion) await updateDoc(doc(db, "fundas", idEdicion), data);
-    else await addDoc(collection(db, "fundas"), data);
-    document.getElementById("agregar").style.display = "none";
-    cargarFundas();
-};
+  );
 
-window.editarFunda = (id) => {
-    const f = todasLasFundas.find(x => x.id === id);
-    idEdicion = id;
-    document.getElementById("nombre").value = f.nombre; document.getElementById("stock").value = f.stock;
-    document.getElementById("compatibles").value = f.compatibles; document.getElementById("fotoUrl").value = f.fotoUrl || "";
-    document.getElementById("agregar").style.display = "block";
-};
+  alert("Guardada");
 
-window.eliminarFunda = async (id) => { if(confirm("¿Borrar?")) { await deleteDoc(doc(db, "fundas", id)); cargarFundas(); } };
-document.getElementById("btnNuevaFunda").onclick = () => { idEdicion = null; document.getElementById("agregar").style.display = "block"; };
-document.getElementById("btnLogin").onclick = async () => { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); };
-
-function aplicarFiltros() {
-    const n = document.getElementById("buscarNombre").value.toLowerCase();
-    const m = document.getElementById("buscarModelo").value.toLowerCase();
-    renderizar(todasLasFundas.filter(f => f.nombre.toLowerCase().includes(n) && String(f.compatibles).toLowerCase().includes(m)));
 }
-document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
-document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
