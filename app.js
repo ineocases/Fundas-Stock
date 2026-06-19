@@ -94,20 +94,28 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
-// --- 4. LÓGICA DE VENTAS ---
+// --- 4. LÓGICA DE VENTAS (FLUJO MEJORADO) ---
 window.venderFunda = async (fJson) => {
     const f = JSON.parse(decodeURIComponent(fJson));
+    
     const cliente = prompt("Nombre del cliente:");
-    const modeloVendido = prompt("Modelo específico (ej: 11):", f.compatibles.split(',')[0]);
-    const unidades = parseInt(prompt("Unidades:", "1"));
+    if (!cliente) return;
+    
+    const modelo = prompt("Modelo de iPhone (ej: 11, 12, 13):", f.compatibles.split(',')[0]);
+    if (!modelo) return;
+    
+    const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
+    if (isNaN(unidades) || unidades <= 0) return;
+    
     const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
     const envio = parseFloat(prompt("Costo de envío:", "0"));
     
-    if (!cliente || !unidades || isNaN(precioTotal)) return;
+    if (isNaN(precioTotal)) return;
     
     await addDoc(collection(db, "ventas"), { 
-        producto: f.nombre + " (" + modeloVendido + ")",
+        producto: f.nombre,
         cliente: cliente, 
+        modelo: modelo,
         unidades: unidades, 
         costoUnitario: f.costo,
         precioVenta: precioTotal / unidades, 
@@ -118,6 +126,7 @@ window.venderFunda = async (fJson) => {
     });
     
     await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - unidades });
+    alert("Venta registrada correctamente");
     cargarDatos();
 };
 
@@ -144,11 +153,10 @@ async function actualizarDashboard() {
 async function cargarHistorial() {
     const snap = await getDocs(query(collection(db, "ventas"), orderBy("fechaCompleta", "desc")));
     let t = `<table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
-        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Unid.</th><th>P. Compra</th><th>P. Venta</th><th>Envío</th><th>Ganancia</th></tr>`;
+        <tr style="background:#f0f0f0;"><th>Cliente</th><th>Producto</th><th>Modelo</th><th>Unid.</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente || '-'}</td><td>${v.producto}</td><td>${v.unidades}</td><td>$${(v.costoUnitario||0).toFixed(2)}</td>
-        <td>$${(v.precioVenta||0).toFixed(2)}</td><td>$${(v.envio||0).toFixed(2)}</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
+        t += `<tr><td>${v.cliente || '-'}</td><td>${v.producto}</td><td>${v.modelo || '-'}</td><td>${v.unidades}</td><td>$${(v.ganancia || 0).toFixed(2)}</td></tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
