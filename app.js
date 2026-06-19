@@ -17,7 +17,7 @@ console.log("DB conectada con éxito:", db);
 
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
-const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
+const REMOVE_BG_API_KEY = "TU_API_KEY_AQUI"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -26,6 +26,7 @@ let fotoBase64 = "";
 let esAdmin = false; 
 let fundaReservando = null; 
 let imagenRecortadaTemporal = null; // Guarda temporalmente el PNG transparente de Remove.bg
+let porcentajeEscala = 0.72; // Controla el tamaño de la funda dentro del lienzo final (72% por defecto)
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -83,7 +84,7 @@ async function loginCliente() {
   }
 }
 
-// 🚀 PASO 1: ENVIAR FOTO A REMOVE.BG Y VERIFICAR RECORTE TRANSPARENTE
+// 🚀 PASO 1: ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ DINÁMICA
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -125,15 +126,31 @@ async function procesarImagenPro() {
 
     await new Promise((res) => imagenRecortadaTemporal.onload = res);
 
-    // Renderizar la vista previa transparente para controlar si los bordes son correctos
+    // Renderizar e inicializar la vista previa interactiva
     const preview = document.getElementById("previewFoto");
     preview.src = urlImagenRecortada;
     preview.style.display = "block";
 
-    // Insertar controles de aceptación dinámica
-    crearBotonesConfirmacion();
+    // Habilitar y configurar el slider de tamaño
+    const contenedorSlider = document.getElementById("controlTamañoContenedor");
+    if (contenedorSlider) {
+      contenedorSlider.style.display = "block";
+      const slider = document.getElementById("sliderEscala");
+      slider.value = 72;
+      porcentajeEscala = 0.72;
+      document.getElementById("valorEscala").innerText = "72%";
+      
+      // Escuchar cambios en vivo del slider para actualizar el lienzo al instante
+      slider.oninput = function() {
+        porcentajeEscala = Number(this.value) / 100;
+        document.getElementById("valorEscala").innerText = this.value + "%";
+        aplicarMontajeFinal(false); // Renderiza en tiempo real sin alertas invasivas
+      };
+    }
 
-    alert("¡Fondo removido! Revisá la vista previa. Si el recorte es correcto, presioná 'Aplicar fondo y sombra'.");
+    // Insertar controles de aceptación dinámica e iniciar montaje inicial automático
+    crearBotonesConfirmacion();
+    aplicarMontajeFinal(false); 
 
   } catch (err) {
     console.error("Error en proceso Pro:", err);
@@ -144,41 +161,55 @@ async function procesarImagenPro() {
   }
 }
 
-// Generador de controles para confirmación del catálogo
+// Generador de controles para confirmación del catálogo y corrección manual
 function crearBotonesConfirmacion() {
   if (document.getElementById("contenedorConfirmacion")) return;
 
   const contenedor = document.createElement("div");
   contenedor.id = "contenedorConfirmacion";
-  contenedor.style.cssText = "margin-top: 15px; display: flex; gap: 10px; justify-content: center;";
+  contenedor.style.cssText = "margin-top: 15px; display: flex; flex-direction: column; gap: 10px; align-items: center;";
+
+  const filaAcciones = document.createElement("div");
+  filaAcciones.style.cssText = "display: flex; gap: 10px; justify-content: center; width: 100%;";
 
   const btnAceptar = document.createElement("button");
-  btnAceptar.innerText = "✅ Todo bien, aplicar fondo y sombra";
+  btnAceptar.innerText = "✅ Aplicar y Confirmar";
   btnAceptar.style.background = "#28a745";
-  btnAceptar.onclick = aplicarMontajeFinal;
+  btnAceptar.onclick = () => aplicarMontajeFinal(true); // Guarda definitivamente
 
   const btnCancelar = document.createElement("button");
-  btnCancelar.innerText = "❌ Cancelar / Salir";
+  btnCancelar.innerText = "❌ Cancelar";
   btnCancelar.style.background = "#dc3545";
   btnCancelar.onclick = () => {
     document.getElementById("contenedorConfirmacion").remove();
+    document.getElementById("controlTamañoContenedor").style.display = "none";
     document.getElementById("previewFoto").style.display = "none";
     imagenRecortadaTemporal = null;
   };
 
-  contenedor.appendChild(btnAceptar);
-  contenedor.appendChild(btnCancelar);
+  filaAcciones.appendChild(btnAceptar);
+  filaAcciones.appendChild(btnCancelar);
+
+  // Botón externo de auxilio por si la IA recortó mal la carcasa
+  const btnRestaurar = document.createElement("a");
+  btnRestaurar.innerText = "✏️ Corregir recorte / Restaurar bordes";
+  btnRestaurar.href = "https://www.remove.bg/upload";
+  btnRestaurar.target = "_blank";
+  btnRestaurar.style.cssText = "background: #ff9500; color: white; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; text-align: center; margin-top: 5px;";
+  btnRestaurar.onclick = () => {
+    alert("Te abrimos la herramienta oficial de Remove.bg. Subí tu foto ahí, tocá 'Edit', usá el pincel 'Restore' para recuperar las esquinas borradas, descargá el PNG corregido y cargalo usando el selector de archivos normal de la app.");
+  };
+
+  contenedor.appendChild(filaAcciones);
+  contenedor.appendChild(btnRestaurar);
   
   const preview = document.getElementById("previewFoto");
   preview.parentNode.insertBefore(contenedor, preview.nextSibling);
 }
 
-// 🎨 PASO 2: RENDERIZADO 1000x1000 CON COMPOSICIÓN DE SOMBRA PROFUNDA DE ALTA FIDELIDAD
-async function aplicarMontajeFinal() {
+// 🎨 PASO 2: RENDERIZADO 1000x1000 CON TAMAÑO DINÁMICO Y SOMBRA PROYECTADA
+async function aplicarMontajeFinal(mostrarAlerta = false) {
   if (!imagenRecortadaTemporal) return;
-
-  const btnGuardar = document.getElementById("guardarFunda");
-  btnGuardar.disabled = true;
 
   try {
     const imgFondo = new Image();
@@ -186,7 +217,7 @@ async function aplicarMontajeFinal() {
 
     await new Promise((res, rej) => {
       imgFondo.onload = res;
-      imgFondo.onerror = () => rej(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Asegúrate de que esté en la misma carpeta raíz."));
+      imgFondo.onerror = () => rej(new Error("No se pudo cargar la imagen 'fondo-estudio.png'."));
     });
 
     const canvasFinal = document.createElement("canvas");
@@ -194,40 +225,46 @@ async function aplicarMontajeFinal() {
     canvasFinal.height = 1000;
     const ctxFinal = canvasFinal.getContext("2d");
 
-    // 1. Dibujar el fondo base estructurado
+    // 1. Pintar el fondo de estudio limpio primero
     ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
 
-    // 2. Cálculos geométricos precisos para mantener márgenes óptimos (max 720px)
-    const escala = Math.min(720 / imagenRecortadaTemporal.width, 720 / imagenRecortadaTemporal.height);
+    // 2. Cálculos geométricos de escala en base al valor del control deslizante
+    const limitePixel = 1000 * porcentajeEscala;
+    const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
+    
     const anchoFinal = imagenRecortadaTemporal.width * escala;
     const altoFinal = imagenRecortadaTemporal.height * escala;
     const dx = (1000 - anchoFinal) / 2;
     const dy = (1000 - altoFinal) / 2;
 
-    // 3. Proyección de sombreado volumétrico flotante (Solución al aplanado de capas)
+    // 3. Renderizar la sombra flotante independiente con difuminado suave
     ctxFinal.save();
-    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.35)"; 
+    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.32)"; 
     ctxFinal.shadowBlur = 35;
     ctxFinal.shadowOffsetX = 0;
-    ctxFinal.shadowOffsetY = 30; // Efecto de elevación tridimensional
+    ctxFinal.shadowOffsetY = 28; // Desplazamiento tridimensional hacia abajo
     
-    // Dibujamos la estampa para forzar la proyección del difuminado
     ctxFinal.drawImage(imagenRecortadaTemporal, dx, dy, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // 4. Segunda pasada de dibujo para afilar bordes limpios sobre la sombra anterior
+    // 4. Estampar la funda nítida al frente acoplando los dos dibujos
     ctxFinal.drawImage(imagenRecortadaTemporal, dx, dy, anchoFinal, altoFinal);
 
-    // Convertir el canvas final consolidado a cadena base64 en formato PNG
+    // Exportar el lienzo finalizado a Base64 en formato PNG
     fotoBase64 = canvasFinal.toDataURL("image/png");
     document.getElementById("previewFoto").src = fotoBase64;
 
-    document.getElementById("contenedorConfirmacion").remove();
-    alert("¡Fondo y sombra Pro acoplados con éxito! Ahora podés guardar el producto. 🚀");
-    btnGuardar.disabled = false;
+    if (mostrarAlerta) {
+      if (document.getElementById("contenedorConfirmacion")) {
+        document.getElementById("contenedorConfirmacion").remove();
+      }
+      document.getElementById("controlTamañoContenedor").style.display = "none";
+      alert("¡Montaje Pro acoplado con éxito al tamaño elegido! Ya podés guardar la funda. 🚀");
+      document.getElementById("guardarFunda").disabled = false;
+    }
 
   } catch (error) {
-    alert(error.message);
+    console.error(error);
   }
 }
 
@@ -296,7 +333,7 @@ function mostrarFormulario() {
   document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
   document.getElementById("guardarFunda").innerText = "Guardar";
   document.getElementById("guardarFunda").disabled = false;
-  document.getElementById("btnCrearFoto").innerText = "Crear foto Pro"; // NOMBRE CORREGIDO SIN EMOJI
+  document.getElementById("btnCrearFoto").innerText = "Crear foto Pro";
   document.getElementById("btnCrearFoto").disabled = false;
   
   document.getElementById("nombre").value = "";
@@ -309,12 +346,18 @@ function mostrarFormulario() {
   preview.src = "";
   preview.style.display = "none";
   
+  // Ocultar paneles dinámicos residuales si quedaron abiertos
+  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+  document.getElementById("controlTamañoContenedor").style.display = "none";
+  
   document.getElementById("agregar").style.display = "flex";
 }
 
 function ocultarFormulario() {
   idFundaEditando = null;
   fotoBase64 = "";
+  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+  document.getElementById("controlTamañoContenedor").style.display = "none";
   document.getElementById("agregar").style.display = "none";
 }
 
@@ -330,10 +373,14 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-// Procesamiento estándar alternativo cuadrado (1:1)
+// Procesamiento estándar alternativo cuadrado (1:1) sin Remove.bg
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
+
+  // Si se sube un archivo nuevo por aquí, limpiamos estados de Remove.bg
+  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+  document.getElementById("controlTamañoContenedor").style.display = "none";
 
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
@@ -441,7 +488,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda eliminada correctamente");
+      alert("Funda|} eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -479,6 +526,9 @@ function abrirEditarFunda(id) {
     preview.src = "";
     preview.style.display = "none";
   }
+
+  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+  document.getElementById("controlTamañoContenedor").style.display = "none";
 
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
   document.getElementById("agregar").style.display = "flex";
