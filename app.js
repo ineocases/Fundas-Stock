@@ -23,10 +23,6 @@ function renderizar(lista) {
             ${f.fotoUrl ? `<img src="${f.fotoUrl}" style="width:100%; height:120px; object-fit:cover; border-radius:5px;">` : ""}
             <h3>${f.nombre}</h3>
             <p>📦 Stock: <b>${f.stock}</b></p>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button onclick="window.cambiarStock('${f.id}', -1)" class="btn-stock" style="background:#6c757d;">➖</button>
-                <button onclick="window.cambiarStock('${f.id}', 1)" class="btn-stock" style="background:#28a745;">➕</button>
-            </div>
             <p>📱 Modelos: ${f.compatibles}</p>
             <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
             <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Borrar</button>
@@ -35,12 +31,22 @@ function renderizar(lista) {
     });
 }
 
-window.cambiarStock = async (id, delta) => {
+// Botón Flotante
+document.getElementById("btnFlotante").onclick = () => {
+    const s = document.getElementById("selectFunda");
+    s.innerHTML = todasLasFundas.map(f => `<option value="${f.id}">${f.nombre}</option>`).join('');
+    document.getElementById("selectorStock").style.display = "block";
+};
+
+document.getElementById("ejecutarAjuste").onclick = async () => {
+    const id = document.getElementById("selectFunda").value;
+    const cant = Number(document.getElementById("inputCantidad").value);
     const f = todasLasFundas.find(x => x.id === id);
-    const nuevoStock = Number(f.stock) + delta;
-    if (nuevoStock < 0) return;
-    await updateDoc(doc(db, "fundas", id), { stock: nuevoStock });
-    cargarFundas();
+    if (f && cant !== 0) {
+        await updateDoc(doc(db, "fundas", id), { stock: Number(f.stock) + cant });
+        document.getElementById("selectorStock").style.display = "none";
+        cargarFundas();
+    }
 };
 
 document.getElementById("guardarFunda").onclick = async () => {
