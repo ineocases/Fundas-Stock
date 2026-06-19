@@ -17,7 +17,7 @@ console.log("DB conectada con éxito:", db);
 
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
-const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- API KEY integrada con éxito
+const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- Tu API Key integrada
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -212,7 +212,7 @@ function crearBotonesConfirmacion() {
   preview.parentNode.insertBefore(contenedor, preview.nextSibling);
 }
 
-// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN COMPLEMENTARIA DE PROYECCIÓN DE SOMBRA
+// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN Y SOMBRA PROYECTADA REALISTA
 async function aplicarMontajeFinal(mostrarAlerta = false) {
   if (!imagenRecortadaTemporal) return;
 
@@ -239,27 +239,39 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     const anchoFinal = imagenRecortadaTemporal.width * escala;
     const altoFinal = imagenRecortadaTemporal.height * escala;
 
-    // Pasamos el ángulo de grados a radianes
+    // Ángulo en radianes
     const radianes = (anguloRotacion * Math.PI) / 180;
 
-    // 3. PASADA A: RENDER DE SOMBRA (Se traslada al centro, se rota y se desplaza el eje Y hacia abajo)
+    // ==========================================
+    // 3. PASADA A: GENERACIÓN DE LA SOMBRA REAL (Flotante y visible)
+    // ==========================================
     ctxFinal.save();
-    ctxFinal.translate(1000 / 2, 1000 / 2); // Trasladar al centro absoluto
-    ctxFinal.rotate(radianes);              // Aplicar rotación elegida por el usuario
     
-    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.32)"; 
-    ctxFinal.shadowBlur = 35;
+    // Desplazamos el centro de la sombra levemente en X e Y para que no quede totalmente tapada
+    ctxFinal.translate((1000 / 2) + 15, (1000 / 2) + 25); 
+    ctxFinal.rotate(radianes);
+    
+    // Configuramos una sombra oscura y bien difuminada
+    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.45)"; 
+    ctxFinal.shadowBlur = 40; 
     ctxFinal.shadowOffsetX = 0;
-    ctxFinal.shadowOffsetY = 28;             // Generar el efecto de elevación flotante
-    
-    // Dibujamos con origen modificado por la traslación del eje
+    ctxFinal.shadowOffsetY = 0;
+
+    // Dibujamos la silueta que proyectará la sombra de fondo
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // 4. PASADA B: DIBUJO DE FUNDA EN ENFOQUE LIMPIO
+    // ==========================================
+    // 4. PASADA B: DIBUJO DE LA FUNDA LIMPIA (Encima)
+    // ==========================================
     ctxFinal.save();
     ctxFinal.translate(1000 / 2, 1000 / 2);
     ctxFinal.rotate(radianes);
+    
+    // Forzamos transparencia en la sombra para este renderizado limpísimo
+    ctxFinal.shadowColor = "transparent";
+    ctxFinal.shadowBlur = 0;
+    
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
@@ -373,6 +385,7 @@ function ocultarFormulario() {
   document.getElementById("agregar").style.display = "none";
 }
 
+// ASISTENTE DE VENTAS
 function mostrarAsistente() {
   if (!esAdmin) return;
   document.getElementById("asistenteProducto").value = "";
@@ -498,7 +511,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda eliminada correctamente");
+      alert("Funda HIPAA eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
