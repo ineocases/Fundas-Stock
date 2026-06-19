@@ -42,6 +42,10 @@ document.getElementById("fotoInput").onchange = procesarImagen;
 document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
+// Eventos para el control del panel interactivo oculto de Login Admin
+document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
+document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
+
 // Eventos para el Menú Lateral (Hamburguesa)
 document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
@@ -53,20 +57,28 @@ function toggleSidebar() {
   document.getElementById("sidebarOverlay").classList.toggle("active");
 }
 
-// Lógica de cambio de rol dinámico desde el Sidebar
+// Control del Modal de Login de Administrador
+function abrirModalAdmin() {
+  document.getElementById("modalAdminLogin").style.display = "flex";
+  document.getElementById("email").focus();
+}
+
+function cerrarModalAdmin() {
+  document.getElementById("modalAdminLogin").style.display = "none";
+  document.getElementById("email").value = "";
+  document.getElementById("password").value = "";
+}
+
+// Lógica de cambio de rol dinámico desde el Sidebar de 3 rayas
 async function ejecutarCambioRol() {
-  toggleSidebar(); // Cerramos el menú primero
-  
-  // Forzamos el deslogueo actual para limpiar estados en Firebase
+  toggleSidebar(); 
   await signOut(auth);
   
   if (esAdmin) {
-    // Si era admin, lo pasamos automáticamente a modo cliente (Anónimo)
     loginCliente();
   } else {
-    // Si era cliente, lo mandamos al panel de Login para que ponga sus credenciales admin
     document.getElementById("app").style.display = "none";
-    document.getElementById("login").style.display = "block";
+    document.getElementById("login").style.display = "flex";
     document.getElementById("email").value = "";
     document.getElementById("password").value = "";
   }
@@ -76,12 +88,13 @@ async function ejecutarCambioRol() {
 onAuthStateChanged(auth, (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
+    // Cerramos el panel flotante de credenciales en caso de éxito
+    document.getElementById("modalAdminLogin").style.display = "none"; 
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
     
     esAdmin = !user.isAnonymous;
     
-    // Cambiar dinámicamente el texto del menú de 3 rayas según el rol actual
     const btnCambiarRol = document.getElementById("btnCambiarRol");
     if (esAdmin) {
       btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
@@ -95,8 +108,7 @@ onAuthStateChanged(auth, (user) => {
     
     cargarFundas(); 
   } else {
-    // Si no hay sesión iniciada de ningún tipo, mostramos login base
-    document.getElementById("login").style.display = "block";
+    document.getElementById("login").style.display = "flex";
     document.getElementById("app").style.display = "none";
   }
 });
@@ -245,7 +257,7 @@ function crearBotonesConfirmacion() {
   preview.parentNode.insertBefore(contenedor, preview.nextSibling);
 }
 
-// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN Y SOMBRA PROYECTADA REALISTA
+// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN Y SOMBRA PROYECTADA PREMIUM REALISTA
 async function aplicarMontajeFinal(mostrarAlerta = false) {
   if (!imagenRecortadaTemporal) return;
 
@@ -272,7 +284,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
 
     const radianes = (anguloRotacion * Math.PI) / 180;
 
-    // Sombra
+    // Pasada A: Renderizado de la Sombra Proyectada (Desplazada y Difuminada)
     ctxFinal.save();
     ctxFinal.translate((1000 / 2) + 15, (1000 / 2) + 25); 
     ctxFinal.rotate(radianes);
@@ -283,7 +295,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // Funda nítida
+    // Pasada B: Dibujo de la Funda Limpia (Encima)
     ctxFinal.save();
     ctxFinal.translate(1000 / 2, 1000 / 2);
     ctxFinal.rotate(radianes);
