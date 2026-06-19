@@ -21,7 +21,6 @@ let idFundaEditando = null;
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
-document.getElementById("btnCancelar").onclick = ocultarFormulario; // <-- NUEVO: Evento cancelar
 document.getElementById("guardarFunda").onclick = guardarFunda;
 document.getElementById("buscar").addEventListener("input", filtrarFundas);
 
@@ -51,20 +50,19 @@ async function login() {
 
 function mostrarFormulario() {
   idFundaEditando = null;
-  document.getElementById("modalTitulo").innerText = "➕ Nueva Funda"; // Título dinámico
+  document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
   document.getElementById("guardarFunda").innerText = "Guardar";
   
-  // Limpiar campos
   document.getElementById("nombre").value = "";
   document.getElementById("stock").value = "";
   document.getElementById("compatibles").value = "";
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
   
-  document.getElementById("agregar").style.display = "flex"; // Se usa 'flex' para centrar el modal
+  document.getElementById("agregar").style.display = "flex";
 }
 
-// NUEVA FUNCIÓN: Oculta el modal de manera segura
+// Función para ocultar el modal
 function ocultarFormulario() {
   idFundaEditando = null;
   document.getElementById("agregar").style.display = "none";
@@ -105,7 +103,7 @@ async function guardarFunda() {
       alert("Funda guardada con éxito");
     }
 
-    ocultarFormulario(); // Cerramos usando la nueva función
+    ocultarFormulario();
     cargarFundas();
   } catch (error) {
     console.error("Error al guardar:", error);
@@ -131,7 +129,7 @@ function abrirEditarFunda(id) {
 
   idFundaEditando = id;
 
-  document.getElementById("modalTitulo").innerText = "✏️ Editar Funda"; // Cambia el título
+  document.getElementById("modalTitulo").innerText = "✏️ Editar Funda";
   document.getElementById("nombre").value = funda.nombre || "";
   document.getElementById("stock").value = funda.stock ?? 0;
   document.getElementById("compatibles").value = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : (funda.compatibles || "");
@@ -139,11 +137,13 @@ function abrirEditarFunda(id) {
   document.getElementById("venta").value = funda.venta ?? 0;
 
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
-  document.getElementById("agregar").style.display = "flex"; // Abre el modal
+  document.getElementById("agregar").style.display = "flex";
 }
 
+// Vinculación global para el HTML nativo (Agregado ocultarFormulario aquí)
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
+window.ocultarFormulario = ocultarFormulario; // <-- NUEVO: Ahora el HTML puede usarlo sin problemas
 
 function renderizarFundas(arrayDeFundas) {
   let html = "";
