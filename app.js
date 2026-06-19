@@ -21,21 +21,18 @@ let idFundaEditando = null;
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("btnCancelar").onclick = ocultarFormulario; // <-- NUEVO: Evento cancelar
 document.getElementById("guardarFunda").onclick = guardarFunda;
 document.getElementById("buscar").addEventListener("input", filtrarFundas);
 
-// OBSERVADOR DE SESIÓN (Quita el cartel de cargando)
+// OBSERVADOR DE SESIÓN
 onAuthStateChanged(auth, (user) => {
-  // Escondemos el cartel de carga pase lo que pase
   document.getElementById("cargando").style.display = "none";
-
   if (user) {
-    // Si ya inició sesión antes
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
     cargarFundas(); 
   } else {
-    // Si no está logueado
     document.getElementById("login").style.display = "block";
     document.getElementById("app").style.display = "none";
   }
@@ -54,15 +51,23 @@ async function login() {
 
 function mostrarFormulario() {
   idFundaEditando = null;
+  document.getElementById("modalTitulo").innerText = "➕ Nueva Funda"; // Título dinámico
   document.getElementById("guardarFunda").innerText = "Guardar";
   
+  // Limpiar campos
   document.getElementById("nombre").value = "";
   document.getElementById("stock").value = "";
   document.getElementById("compatibles").value = "";
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
   
-  document.getElementById("agregar").style.display = "block";
+  document.getElementById("agregar").style.display = "flex"; // Se usa 'flex' para centrar el modal
+}
+
+// NUEVA FUNCIÓN: Oculta el modal de manera segura
+function ocultarFormulario() {
+  idFundaEditando = null;
+  document.getElementById("agregar").style.display = "none";
 }
 
 async function cargarFundas() {
@@ -100,16 +105,7 @@ async function guardarFunda() {
       alert("Funda guardada con éxito");
     }
 
-    idFundaEditando = null;
-    document.getElementById("guardarFunda").innerText = "Guardar";
-    
-    document.getElementById("nombre").value = "";
-    document.getElementById("stock").value = "";
-    document.getElementById("compatibles").value = "";
-    document.getElementById("costo").value = "";
-    document.getElementById("venta").value = "";
-    document.getElementById("agregar").style.display = "none";
-
+    ocultarFormulario(); // Cerramos usando la nueva función
     cargarFundas();
   } catch (error) {
     console.error("Error al guardar:", error);
@@ -135,6 +131,7 @@ function abrirEditarFunda(id) {
 
   idFundaEditando = id;
 
+  document.getElementById("modalTitulo").innerText = "✏️ Editar Funda"; // Cambia el título
   document.getElementById("nombre").value = funda.nombre || "";
   document.getElementById("stock").value = funda.stock ?? 0;
   document.getElementById("compatibles").value = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : (funda.compatibles || "");
@@ -142,12 +139,9 @@ function abrirEditarFunda(id) {
   document.getElementById("venta").value = funda.venta ?? 0;
 
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
-  document.getElementById("agregar").style.display = "block";
-  
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById("agregar").style.display = "flex"; // Abre el modal
 }
 
-// Vinculación global para que el HTML dinámico pueda llamarlas
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 
@@ -167,7 +161,7 @@ function renderizarFundas(arrayDeFundas) {
       <p>💰 Venta: $${f.venta ?? 0}</p>
       <button>🛒 Vender</button>
       <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
-      <button onclick="eliminarFunda('${f.id}')">🗑️ Eliminar</button>
+      <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
     </div>
     `;
   });
