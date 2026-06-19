@@ -17,7 +17,7 @@ console.log("DB conectada con éxito:", db);
 
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
-const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
+const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- API KEY integrada con éxito
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -26,7 +26,8 @@ let fotoBase64 = "";
 let esAdmin = false; 
 let fundaReservando = null; 
 let imagenRecortadaTemporal = null; // Guarda temporalmente el PNG transparente de Remove.bg
-let porcentajeEscala = 0.72; // Controla el tamaño de la funda dentro del lienzo final (72% por defecto)
+let porcentajeEscala = 0.72; // Controla el tamaño (72% por defecto)
+let anguloRotacion = 0; // Controla la rotación en grados (0 por defecto)
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -37,7 +38,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // FLUJO INTERACTIVO CON REMOVE.BG
+document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
@@ -84,16 +85,11 @@ async function loginCliente() {
   }
 }
 
-// 🚀 PASO 1: ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ DINÁMICA
+// 🚀 PASO 1: ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
     alert("Por favor, selecciona un archivo primero utilizando el selector.");
-    return;
-  }
-
-  if (REMOVE_BG_API_KEY === "TU_API_KEY_AQUI") {
-    alert("Por favor, primero configura tu API Key de remove.bg.");
     return;
   }
 
@@ -126,29 +122,40 @@ async function procesarImagenPro() {
 
     await new Promise((res) => imagenRecortadaTemporal.onload = res);
 
-    // Renderizar e inicializar la vista previa interactiva
     const preview = document.getElementById("previewFoto");
     preview.src = urlImagenRecortada;
     preview.style.display = "block";
 
-    // Habilitar y configurar el slider de tamaño
-    const contenedorSlider = document.getElementById("controlTamañoContenedor");
-    if (contenedorSlider) {
-      contenedorSlider.style.display = "block";
-      const slider = document.getElementById("sliderEscala");
-      slider.value = 72;
+    // Inicializar y resetear sliders del panel dinámico
+    const contenedorSliders = document.getElementById("controlCamposPro");
+    if (contenedorSliders) {
+      contenedorSliders.style.display = "block";
+      
+      const sliderEscala = document.getElementById("sliderEscala");
+      sliderEscala.value = 72;
       porcentajeEscala = 0.72;
       document.getElementById("valorEscala").innerText = "72%";
+
+      const sliderRotacion = document.getElementById("sliderRotacion");
+      sliderRotacion.value = 0;
+      anguloRotacion = 0;
+      document.getElementById("valorRotacion").innerText = "0°";
       
-      // Escuchar cambios en vivo del slider para actualizar el lienzo al instante
-      slider.oninput = function() {
+      // Evento para cambio de Tamaño en vivo
+      sliderEscala.oninput = function() {
         porcentajeEscala = Number(this.value) / 100;
         document.getElementById("valorEscala").innerText = this.value + "%";
-        aplicarMontajeFinal(false); // Renderiza en tiempo real sin alertas invasivas
+        aplicarMontajeFinal(false); 
+      };
+
+      // Evento para cambio de Rotación en vivo
+      sliderRotacion.oninput = function() {
+        anguloRotacion = Number(this.value);
+        document.getElementById("valorRotacion").innerText = this.value + "°";
+        aplicarMontajeFinal(false); 
       };
     }
 
-    // Insertar controles de aceptación dinámica e iniciar montaje inicial automático
     crearBotonesConfirmacion();
     aplicarMontajeFinal(false); 
 
@@ -161,7 +168,6 @@ async function procesarImagenPro() {
   }
 }
 
-// Generador de controles para confirmación del catálogo y corrección manual
 function crearBotonesConfirmacion() {
   if (document.getElementById("contenedorConfirmacion")) return;
 
@@ -175,14 +181,14 @@ function crearBotonesConfirmacion() {
   const btnAceptar = document.createElement("button");
   btnAceptar.innerText = "✅ Aplicar y Confirmar";
   btnAceptar.style.background = "#28a745";
-  btnAceptar.onclick = () => aplicarMontajeFinal(true); // Guarda definitivamente
+  btnAceptar.onclick = () => aplicarMontajeFinal(true);
 
   const btnCancelar = document.createElement("button");
   btnCancelar.innerText = "❌ Cancelar";
   btnCancelar.style.background = "#dc3545";
   btnCancelar.onclick = () => {
     document.getElementById("contenedorConfirmacion").remove();
-    document.getElementById("controlTamañoContenedor").style.display = "none";
+    document.getElementById("controlCamposPro").style.display = "none";
     document.getElementById("previewFoto").style.display = "none";
     imagenRecortadaTemporal = null;
   };
@@ -190,7 +196,6 @@ function crearBotonesConfirmacion() {
   filaAcciones.appendChild(btnAceptar);
   filaAcciones.appendChild(btnCancelar);
 
-  // Botón externo de auxilio por si la IA recortó mal la carcasa
   const btnRestaurar = document.createElement("a");
   btnRestaurar.innerText = "✏️ Corregir recorte / Restaurar bordes";
   btnRestaurar.href = "https://www.remove.bg/upload";
@@ -207,7 +212,7 @@ function crearBotonesConfirmacion() {
   preview.parentNode.insertBefore(contenedor, preview.nextSibling);
 }
 
-// 🎨 PASO 2: RENDERIZADO 1000x1000 CON TAMAÑO DINÁMICO Y SOMBRA PROYECTADA
+// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN COMPLEMENTARIA DE PROYECCIÓN DE SOMBRA
 async function aplicarMontajeFinal(mostrarAlerta = false) {
   if (!imagenRecortadaTemporal) return;
 
@@ -225,32 +230,40 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     canvasFinal.height = 1000;
     const ctxFinal = canvasFinal.getContext("2d");
 
-    // 1. Pintar el fondo de estudio limpio primero
+    // 1. Fondo de estudio base
     ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
 
-    // 2. Cálculos geométricos de escala en base al valor del control deslizante
+    // 2. Cálculos geométricos proporcionales
     const limitePixel = 1000 * porcentajeEscala;
     const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
-    
     const anchoFinal = imagenRecortadaTemporal.width * escala;
     const altoFinal = imagenRecortadaTemporal.height * escala;
-    const dx = (1000 - anchoFinal) / 2;
-    const dy = (1000 - altoFinal) / 2;
 
-    // 3. Renderizar la sombra flotante independiente con difuminado suave
+    // Pasamos el ángulo de grados a radianes
+    const radianes = (anguloRotacion * Math.PI) / 180;
+
+    // 3. PASADA A: RENDER DE SOMBRA (Se traslada al centro, se rota y se desplaza el eje Y hacia abajo)
     ctxFinal.save();
+    ctxFinal.translate(1000 / 2, 1000 / 2); // Trasladar al centro absoluto
+    ctxFinal.rotate(radianes);              // Aplicar rotación elegida por el usuario
+    
     ctxFinal.shadowColor = "rgba(0, 0, 0, 0.32)"; 
     ctxFinal.shadowBlur = 35;
     ctxFinal.shadowOffsetX = 0;
-    ctxFinal.shadowOffsetY = 28; // Desplazamiento tridimensional hacia abajo
+    ctxFinal.shadowOffsetY = 28;             // Generar el efecto de elevación flotante
     
-    ctxFinal.drawImage(imagenRecortadaTemporal, dx, dy, anchoFinal, altoFinal);
+    // Dibujamos con origen modificado por la traslación del eje
+    ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
-    // 4. Estampar la funda nítida al frente acoplando los dos dibujos
-    ctxFinal.drawImage(imagenRecortadaTemporal, dx, dy, anchoFinal, altoFinal);
+    // 4. PASADA B: DIBUJO DE FUNDA EN ENFOQUE LIMPIO
+    ctxFinal.save();
+    ctxFinal.translate(1000 / 2, 1000 / 2);
+    ctxFinal.rotate(radianes);
+    ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
+    ctxFinal.restore();
 
-    // Exportar el lienzo finalizado a Base64 en formato PNG
+    // Exportar el resultado consolidado
     fotoBase64 = canvasFinal.toDataURL("image/png");
     document.getElementById("previewFoto").src = fotoBase64;
 
@@ -258,8 +271,8 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
       if (document.getElementById("contenedorConfirmacion")) {
         document.getElementById("contenedorConfirmacion").remove();
       }
-      document.getElementById("controlTamañoContenedor").style.display = "none";
-      alert("¡Montaje Pro acoplado con éxito al tamaño elegido! Ya podés guardar la funda. 🚀");
+      document.getElementById("controlCamposPro").style.display = "none";
+      alert("¡Montaje Pro acoplado con éxito con el tamaño y giro elegidos! Ya podés guardar la funda. 🚀");
       document.getElementById("guardarFunda").disabled = false;
     }
 
@@ -346,9 +359,8 @@ function mostrarFormulario() {
   preview.src = "";
   preview.style.display = "none";
   
-  // Ocultar paneles dinámicos residuales si quedaron abiertos
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlTamañoContenedor").style.display = "none";
+  document.getElementById("controlCamposPro").style.display = "none";
   
   document.getElementById("agregar").style.display = "flex";
 }
@@ -357,7 +369,7 @@ function ocultarFormulario() {
   idFundaEditando = null;
   fotoBase64 = "";
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlTamañoContenedor").style.display = "none";
+  document.getElementById("controlCamposPro").style.display = "none";
   document.getElementById("agregar").style.display = "none";
 }
 
@@ -373,14 +385,12 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-// Procesamiento estándar alternativo cuadrado (1:1) sin Remove.bg
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
 
-  // Si se sube un archivo nuevo por aquí, limpiamos estados de Remove.bg
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlTamañoContenedor").style.display = "none";
+  document.getElementById("controlCamposPro").style.display = "none";
 
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
@@ -488,7 +498,7 @@ async function eliminarFunda(id) {
   if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda|} eliminada correctamente");
+      alert("Funda eliminada correctamente");
       cargarFundas();
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -528,7 +538,7 @@ function abrirEditarFunda(id) {
   }
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlTamañoContenedor").style.display = "none";
+  document.getElementById("controlCamposPro").style.display = "none";
 
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
   document.getElementById("agregar").style.display = "flex";
@@ -580,7 +590,6 @@ async function procesarVentaAsistente() {
   }
 }
 
-// Inyección de métodos al entorno global de navegación
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
