@@ -12,21 +12,26 @@ document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-// Buscador en tiempo real
+// Escuchador para el buscador
 document.getElementById("buscar").addEventListener("input", (e) => {
     const textoBuscado = e.target.value.toLowerCase().trim();
-    
     const fundasFiltradas = todasLasFundas.filter((funda) => {
         const nombre = funda.nombre ? funda.nombre.toLowerCase() : "";
         const modelos = Array.isArray(funda.compatibles) ? funda.compatibles.join(" ").toLowerCase() : String(funda.compatibles).toLowerCase();
-        
         return nombre.includes(textoBuscado) || modelos.includes(textoBuscado);
     });
-
     renderizarFundas(fundasFiltradas);
 });
 
-// --- FUNCIONES DE LÓGICA ---
+// Escuchador DELEGADO para los botones de eliminar
+document.getElementById("fundas").addEventListener("click", (e) => {
+    if (e.target.classList.contains("btn-eliminar")) {
+        const id = e.target.getAttribute("data-id");
+        eliminarFunda(id);
+    }
+});
+
+// --- FUNCIONES ---
 
 async function login() {
     const email = document.getElementById("email").value.trim();
@@ -38,7 +43,6 @@ async function login() {
         cargarFundas();
     } catch (error) {
         alert("Error al iniciar sesión.");
-        console.error(error);
     }
 }
 
@@ -69,7 +73,7 @@ function renderizarFundas(lista) {
                 <p>💰 Venta: $${f.venta || 0}</p>
                 <button>🛒 Vender</button>
                 <button>✏️ Editar</button>
-                <button onclick="eliminarFunda('${f.id}')">🗑️ Eliminar</button>
+                <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
             </div>
         `;
     });
@@ -91,12 +95,10 @@ async function guardarFunda() {
         cargarFundas();
     } catch (error) {
         alert("Error al guardar");
-        console.error(error);
     }
 }
 
-// Función global para el botón de eliminar
-window.eliminarFunda = async (id) => {
+async function eliminarFunda(id) {
     if (confirm("¿Estás seguro de eliminar esta funda?")) {
         try {
             await deleteDoc(doc(db, "fundas", id));
@@ -107,4 +109,4 @@ window.eliminarFunda = async (id) => {
             console.error(error);
         }
     }
-};
+}
