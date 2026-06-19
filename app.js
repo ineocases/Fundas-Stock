@@ -22,6 +22,8 @@ const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1";
 
 // Variables globales de control
 let todasLasFundas = [];
+let listaCategorias = []; 
+let categoriaSeleccionadaFiltro = "Todas"; 
 let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
@@ -42,23 +44,19 @@ document.getElementById("fotoInput").onchange = procesarImagen;
 document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
-// Eventos para el control del panel interactivo oculto de Login Admin
 document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
 document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
 
-// Eventos para el Menú Lateral (Hamburguesa)
 document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-// Control de apertura y cierre con alternancia de estado para la Cruz (X)
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
   document.getElementById("sidebarOverlay").classList.toggle("active");
-  document.getElementById("btnMenuHamburguesa").classList.toggle("active"); // Alterna clase active para la cruz
+  document.getElementById("btnMenuHamburguesa").classList.toggle("active");
 }
 
-// Control del Modal de Login de Administrador
 function abrirModalAdmin() {
   document.getElementById("modalAdminLogin").style.display = "flex";
   document.getElementById("email").focus();
@@ -70,7 +68,6 @@ function cerrarModalAdmin() {
   document.getElementById("password").value = "";
 }
 
-// Lógica de cambio de rol dinámico desde el Sidebar de 3 rayas
 async function ejecutarCambioRol() {
   toggleSidebar(); 
   await signOut(auth);
@@ -86,7 +83,7 @@ async function ejecutarCambioRol() {
 }
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
     document.getElementById("modalAdminLogin").style.display = "none"; 
@@ -106,6 +103,7 @@ onAuthStateChanged(auth, (user) => {
       document.getElementById("btnAsistente").style.display = "none";
     }
     
+    await cargarCategorias();
     cargarFundas(); 
   } else {
     document.getElementById("login").style.display = "flex";
@@ -128,16 +126,71 @@ async function loginCliente() {
   try {
     await signInAnonymously(auth);
   } catch (error) {
-    alert("Error al ingresar en modo cliente. Verifica si el acceso Anónimo está activo en Firebase.");
+    alert("Error al ingresar en modo cliente.");
     console.error(error);
   }
 }
 
-// 🚀 PASO 1: ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
+// 📂 GESTIÓN Y CARGA DE CATEGORÍAS (FIRESTORE)
+async function cargarCategorias() {
+  try {
+    const snapshot = await getDocs(collection(db, "categorias"));
+    let lista = [];
+    snapshot.forEach(doc => {
+      lista.push(doc.data().nombre);
+    });
+
+    // ✨ CATEGORÍAS COMERCIALES SOLICITADAS
+    if (lista.length === 0) {
+      const predeterminadas = ["Fundas", "Auriculares", "Cargadores", "Hidrogel", "Protectores"];
+      for (const cat of predeterminadas) {
+        await addDoc(collection(db, "categorias"), { nombre: cat });
+        lista.push(cat);
+      }
+    }
+    
+    listaCategorias = lista;
+    renderizarPildorasCategorias();
+    actualizarSelectFormulario();
+  } catch (error) {
+    console.error("Error al cargar categorías:", error);
+  }
+}
+
+function renderizarPildorasCategorias() {
+  const contenedor = document.getElementById("filtrosCategorias");
+  if (!contenedor) return;
+
+  let html = `<div class="categoria-pill ${categoriaSeleccionadaFiltro === 'Todas' ? 'active' : ''}" data-cat="Todas">Todas</div>`;
+  
+  listaCategorias.forEach(cat => {
+    html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat ? 'active' : ''}" data-cat="${cat}">${cat}</div>`;
+  });
+
+  contenedor.innerHTML = html;
+
+  const pills = contenedor.querySelectorAll(".categoria-pill");
+  pills.forEach(pill => {
+    pill.onclick = function() {
+      categoriaSeleccionadaFiltro = this.getAttribute("data-cat");
+      pills.forEach(p => p.classList.remove("active"));
+      this.classList.add("active");
+      filtrarFundas();
+    };
+  });
+}
+
+function actualizarSelectFormulario() {
+  const select = document.getElementById("categoriaSelect");
+  if (!select) return;
+  select.innerHTML = listaCategorias.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+}
+
+// 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Por favor, selecciona un archivo primero utilizando el selector.");
+    alert("Por favor, selecciona un archivo primero.");
     return;
   }
 
@@ -158,9 +211,7 @@ async function procesarImagenPro() {
       body: formData
     });
 
-    if (!respuestaAPI.ok) {
-      throw new Error("Error en la API de Remove.bg. Verifica tus créditos o tu clave API.");
-    }
+    if (!respuestaAPI.ok) throw new Error("Error en la API de Remove.bg.");
 
     const blobImagenRecortada = await respuestaAPI.blob();
     const urlImagenRecortada = URL.createObjectURL(blobImagenRecortada);
@@ -205,8 +256,8 @@ async function procesarImagenPro() {
     aplicarMontajeFinal(false); 
 
   } catch (err) {
-    console.error("Error en proceso Pro:", err);
-    alert(err.message || "Hubo un problema al conectar con Remove.bg.");
+    console.error(err);
+    alert("Hubo un problema al conectar con Remove.bg.");
   } finally {
     btnCrear.disabled = false;
     btnCrear.innerText = "Crear foto Pro";
@@ -241,23 +292,11 @@ function crearBotonesConfirmacion() {
   filaAcciones.appendChild(btnAceptar);
   filaAcciones.appendChild(btnCancelar);
 
-  const btnRestaurar = document.createElement("a");
-  btnRestaurar.innerText = "✏️ Corregir recorte / Restaurar bordes";
-  btnRestaurar.href = "https://www.remove.bg/upload";
-  btnRestaurar.target = "_blank";
-  btnRestaurar.style.cssText = "background: #ff9500; color: white; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; text-align: center; margin-top: 5px;";
-  btnRestaurar.onclick = () => {
-    alert("Te abrimos la herramienta oficial de Remove.bg...");
-  };
-
   contenedor.appendChild(filaAcciones);
-  contenedor.appendChild(btnRestaurar);
-  
   const preview = document.getElementById("previewFoto");
   preview.parentNode.insertBefore(contenedor, preview.nextSibling);
 }
 
-// 🎨 PASO 2: RENDERIZADO CON ROTACIÓN Y SOMBRA PROYECTADA PREMIUM REALISTA
 async function aplicarMontajeFinal(mostrarAlerta = false) {
   if (!imagenRecortadaTemporal) return;
 
@@ -267,7 +306,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
 
     await new Promise((res, rej) => {
       imgFondo.onload = res;
-      imgFondo.onerror = () => rej(new Error("No se pudo cargar la imagen 'fondo-estudio.png'."));
+      imgFondo.onerror = () => rej(new Error("Falta fondo-estudio.png"));
     });
 
     const canvasFinal = document.createElement("canvas");
@@ -285,20 +324,10 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     const radianes = (anguloRotacion * Math.PI) / 180;
 
     ctxFinal.save();
-    ctxFinal.translate((1000 / 2) + 15, (1000 / 2) + 25); 
+    ctxFinal.translate(1000 / 2, 1000 / 2); 
     ctxFinal.rotate(radianes);
-    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.45)"; 
-    ctxFinal.shadowBlur = 40; 
-    ctxFinal.shadowOffsetX = 0;
-    ctxFinal.shadowOffsetY = 0;
-    ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
-    ctxFinal.restore();
-
-    ctxFinal.save();
-    ctxFinal.translate(1000 / 2, 1000 / 2);
-    ctxFinal.rotate(radianes);
-    ctxFinal.shadowColor = "transparent";
-    ctxFinal.shadowBlur = 0;
+    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.35)"; 
+    ctxFinal.shadowBlur = 35; 
     ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
     ctxFinal.restore();
 
@@ -306,14 +335,10 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
     document.getElementById("previewFoto").src = fotoBase64;
 
     if (mostrarAlerta) {
-      if (document.getElementById("contenedorConfirmacion")) {
-        document.getElementById("contenedorConfirmacion").remove();
-      }
+      if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
       document.getElementById("controlCamposPro").style.display = "none";
-      alert("¡Montaje Pro acoplado con éxito con el tamaño y giro elegidos! Ya podés guardar la funda. 🚀");
-      document.getElementById("guardarFunda").disabled = false;
+      alert("¡Montaje Pro acoplado! El fondo se aplicó correctamente. 🚀");
     }
-
   } catch (error) {
     console.error(error);
   }
@@ -334,19 +359,19 @@ function abrirModalReservar(id) {
     const modelosDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
 
     if (modelosDisponibles.length === 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock de ningún modelo</option>`;
+      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
       document.getElementById("btnConfirmarWhatsApp").disabled = true;
     } else {
       document.getElementById("btnConfirmarWhatsApp").disabled = false;
       modelosDisponibles.forEach(m => {
         const option = document.createElement("option");
         option.value = m.modelo;
-        option.innerText = `iPhone ${m.modelo} (${m.stock} disponibles)`;
+        option.innerText = `${m.modelo} (${m.stock} u.)`;
         selectModelo.appendChild(option);
       });
     }
   } else {
-    selectModelo.innerHTML = `<option value="Estándar">Modelo Único</option>`;
+    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
     document.getElementById("btnConfirmarWhatsApp").disabled = false;
   }
 
@@ -360,16 +385,13 @@ function cerrarModalReservar() {
 
 function enviarWhatsApp() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
-  if (!modeloSeleccionado) {
-    alert("Por favor, selecciona un modelo válido.");
-    return;
-  }
+  if (!modeloSeleccionado) return;
 
-  const mensaje = `Hola IneoCases! 👋 Me gustaría reservar el siguiente producto:\n\n` +
-                  `📱 *Funda:* ${fundaReservando.nombre}\n` +
-                  `⚙️ *Modelo:* iPhone ${modeloSeleccionado}\n` +
+  const mensaje = `Hola IneoCases! 👋 Me gustaría reservar:\n\n` +
+                  `📦 *Producto:* ${fundaReservando.nombre}\n` +
+                  `⚙️ *Variante/Modelo:* ${modeloSeleccionado}\n` +
                   `💰 *Precio:* $${fundaReservando.venta}\n\n` +
-                  `¿Me confirman si puedo pasar a retirar? ¡Muchas gracias!`;
+                  `¿Tienen disponibilidad para coordinar? ¡Gracias!`;
 
   const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, "_blank");
@@ -380,22 +402,18 @@ function mostrarFormulario() {
   if (!esAdmin) return;
   idFundaEditando = null;
   fotoBase64 = ""; 
-  document.getElementById("modalTitulo").innerText = "➕ Nueva Funda";
+  document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
   document.getElementById("guardarFunda").innerText = "Guardar";
   document.getElementById("guardarFunda").disabled = false;
-  document.getElementById("btnCrearFoto").innerText = "Crear foto Pro";
-  document.getElementById("btnCrearFoto").disabled = false;
   
   document.getElementById("nombre").value = "";
+  if(document.getElementById("categoriaSelect").options.length > 0) document.getElementById("categoriaSelect").selectedIndex = 0;
   document.getElementById("stockPorModelo").value = "";
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
   document.getElementById("fotoInput").value = "";
   
-  const preview = document.getElementById("previewFoto");
-  preview.src = "";
-  preview.style.display = "none";
-  
+  document.getElementById("previewFoto").style.display = "none";
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
   document.getElementById("agregar").style.display = "flex";
@@ -430,7 +448,6 @@ function procesarImagen(evento) {
 
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
-  btnGuardar.innerText = "⏳ Procesando foto...";
 
   const lector = new FileReader();
   lector.onload = function (e) {
@@ -453,7 +470,6 @@ function procesarImagen(evento) {
       preview.style.display = "block";
 
       btnGuardar.disabled = false;
-      btnGuardar.innerText = idFundaEditando ? "Actualizar Funda" : "Guardar";
     };
     img.src = e.target.result;
   };
@@ -468,9 +484,9 @@ async function cargarFundas() {
       todasLasFundas.push({ id: doc.id, ...doc.data() });
     });
     actualizarDatalistAsistente();
-    renderizarFundas(todasLasFundas);
+    filtrarFundas();
   } catch (error) {
-    console.error("Error al cargar fundas:", error);
+    console.error(error);
   }
 }
 
@@ -485,7 +501,6 @@ async function guardarFunda() {
   if (!esAdmin) return;
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
-  btnGuardar.innerText = "💾 Guardando...";
 
   const compatiblesInput = document.getElementById("stockPorModelo").value;
   const stockPorModeloArray = compatiblesInput.split(",")
@@ -500,6 +515,7 @@ async function guardarFunda() {
 
   const datosFunda = {
     nombre: document.getElementById("nombre").value,
+    categoria: document.getElementById("categoriaSelect").value, 
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
@@ -513,15 +529,15 @@ async function guardarFunda() {
         datosFunda.foto = vieja ? (vieja.foto || "") : "";
       }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
-      alert("Funda actualizada con éxito 🎉");
+      alert("Artículo actualizado 🎉");
     } else {
       await addDoc(collection(db, "fundas"), datosFunda);
-      alert("Funda guardada con éxito 🎉");
+      alert("Artículo guardado 🎉");
     }
     ocultarFormulario();
     cargarFundas();
   } catch (error) {
-    console.error("Error al guardar:", error);
+    console.error(error);
   } finally {
     btnGuardar.disabled = false;
   }
@@ -529,13 +545,12 @@ async function guardarFunda() {
 
 async function eliminarFunda(id) {
   if (!esAdmin) return;
-  if (confirm("¿Estás seguro de que deseas eliminar esta funda?")) {
+  if (confirm("¿Seguro que deseas eliminar este artículo?")) {
     try {
       await deleteDoc(doc(db, "fundas", id));
-      alert("Funda eliminada correctamente");
       cargarFundas();
     } catch (error) {
-      console.error("Error al eliminar:", error);
+      console.error(error);
     }
   }
 }
@@ -546,13 +561,12 @@ function abrirEditarFunda(id) {
   if (!funda) return;
 
   idFundaEditando = id;
-  document.getElementById("modalTitulo").innerText = "✏️ Editar Funda";
-  document.getElementById("guardarFunda").disabled = false;
+  document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
 
   document.getElementById("nombre").value = funda.nombre || "";
+  document.getElementById("categoriaSelect").value = funda.categoria || listaCategorias[0];
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
-  document.getElementById("fotoInput").value = "";
 
   if (Array.isArray(funda.stockPorModelo)) {
     document.getElementById("stockPorModelo").value = funda.stockPorModelo
@@ -567,13 +581,12 @@ function abrirEditarFunda(id) {
     preview.style.display = "block";
   } else {
     fotoBase64 = "";
-    preview.src = "";
     preview.style.display = "none";
   }
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
-  document.getElementById("guardarFunda").innerText = "Actualizar Funda";
+  document.getElementById("guardarFunda").innerText = "Actualizar";
   document.getElementById("agregar").style.display = "flex";
 }
 
@@ -583,30 +596,13 @@ async function procesarVentaAsistente() {
   const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
   const unidadesAVender = Number(document.getElementById("asistenteUnidades").value);
 
-  if (!prodBuscado || !modeloBuscado || unidadesAVender <= 0) {
-    alert("Por favor, rellene todos los campos con valores válidos.");
-    return;
-  }
-
   const fundaEncontrada = todasLasFundas.find(f => f.nombre && f.nombre.toLowerCase() === prodBuscado);
-
-  if (!fundaEncontrada) {
-    alert("No se encontró ningún producto con ese nombre exacto.");
-    return;
-  }
+  if (!fundaEncontrada) return alert("Producto no encontrado.");
 
   if (Array.isArray(fundaEncontrada.stockPorModelo)) {
     const modeloStock = fundaEncontrada.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
-    
-    if (!modeloStock) {
-      alert(`No hay registrado stock para iPhone "${modeloBuscado}".`);
-      return;
-    }
-
-    if (modeloStock.stock < unidadesAVender) {
-      alert(`¡Stock insuficiente! Quedan ${modeloStock.stock} unidades.`);
-      return;
-    }
+    if (!modeloStock) return alert("Variante/Modelo no encontrado.");
+    if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
 
     modeloStock.stock -= unidadesAVender;
 
@@ -614,7 +610,7 @@ async function procesarVentaAsistente() {
       await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
         stockPorModelo: fundaEncontrada.stockPorModelo
       });
-      alert(`¡Venta registrada con éxito!`);
+      alert(`¡Venta registrada!`);
       ocultarAsistente();
       cargarFundas();
     } catch (error) {
@@ -639,12 +635,8 @@ function renderizarFundas(arrayDeFundas) {
     if (Array.isArray(f.stockPorModelo)) {
       totalStock = f.stockPorModelo.reduce((acc, item) => acc + item.stock, 0);
       listaModelosHTML = f.stockPorModelo
-        .map(m => `• iPhone ${m.modelo}: <b>${m.stock} u.</b>`)
+        .map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`)
         .join("<br>");
-    } else {
-      totalStock = f.stock ?? 0;
-      const comps = Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : String(f.compatibles || "");
-      listaModelosHTML = `• Compatibles: ${comps}`;
     }
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
@@ -662,10 +654,7 @@ function renderizarFundas(arrayDeFundas) {
       bloqueAcciones = `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.455L0 24zm6.59-4.846c1.66.986 3.296 1.489 5.273 1.49 5.373 0 9.744-4.373 9.747-9.747.002-2.585-1.004-5.014-2.835-6.845-1.83-1.83-4.26-2.834-6.845-2.834-5.383 0-9.754 4.373-9.758 9.749-.001 1.981.504 3.626 1.503 5.29L2.525 21.45l4.122-1.296zm12.393-5.593c-.33-.165-1.951-.963-2.251-1.073-.3-.109-.518-.165-.736.165-.218.329-.846 1.073-1.037 1.292-.19.218-.382.245-.712.08-1.121-.56-2.125-1.28-3.04-2.133-.746-.692-1.348-1.523-1.742-2.452-.19-.329-.02-.507.145-.671.149-.147.33-.384.495-.577.165-.191.22-.329.33-.548.11-.219.055-.411-.028-.577-.082-.165-.736-1.774-1.009-2.433-.266-.643-.538-.553-.736-.563-.19-.01-.409-.01-.628-.01-.218 0-.573.082-.873.411-.3.33-1.146 1.122-1.146 2.738 0 1.617 1.175 3.178 1.339 3.397.165.22 2.313 3.532 5.6 4.951.783.339 1.396.541 1.873.693.787.251 1.5.216 2.065.132.63-.094 1.951-.797 2.224-1.527.273-.731.273-1.356.191-1.488-.081-.13-.297-.213-.627-.378z"/>
-            </svg>
-            Reservar
+            Reservar Artículo
           </button>
         </div>
       `;
@@ -673,6 +662,7 @@ function renderizarFundas(arrayDeFundas) {
 
     html += `
     <div class="card">
+      <div class="badge-categoria">${f.categoria || "Fundas"}</div>
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
         <h2>${f.nombre || "Sin nombre"}</h2>
@@ -691,9 +681,14 @@ function renderizarFundas(arrayDeFundas) {
   document.getElementById("fundas").innerHTML = html;
 }
 
-function filtrarFundas(evento) {
-  const textoBuscado = evento.target.value.toLowerCase().trim();
+function filtrarFundas() {
+  const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
+  
   const fundasFiltradas = todasLasFundas.filter((f) => {
+    if (categoriaSeleccionadaFiltro !== "Todas") {
+      if (f.categoria !== categoriaSeleccionadaFiltro) return false;
+    }
+
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     
@@ -703,7 +698,9 @@ function filtrarFundas(evento) {
         String(m.modelo).toLowerCase().trim().includes(textoBuscado)
       );
     }
+    
     return nombreCoincide || compatibleCoincide;
   });
+  
   renderizarFundas(fundasFiltradas);
 }
