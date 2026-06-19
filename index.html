@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>iNeo Cases - Stock</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -63,6 +64,9 @@
       <input id="buscar" placeholder="Buscar producto o modelo...">
       <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
       
+      <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar Excel</button>
+      <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+      
       <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
         <span></span>
         <span></span>
@@ -90,8 +94,7 @@
         </div>
 
         <label>Categorías existentes</label>
-        <div id="listaCategoriasCrud" style="max-height: 250px; overflow-y: auto; border: 1px solid #d2d2d7; border-radius: 12px; background: #f5f5f7; padding: 10px;">
-          </div>
+        <div id="listaCategoriasCrud" style="max-height: 250px; overflow-y: auto; border: 1px solid #d2d2d7; border-radius: 12px; background: #f5f5f7; padding: 10px;"></div>
 
         <div class="modal-buttons" style="margin-top: 20px;">
           <button type="button" id="btnCerrarCategorias" class="btn-secundario" style="width: 100%;">Cerrar Ventana</button>
@@ -107,8 +110,7 @@
         <input id="nombre" placeholder="Ej: Auriculares Bluetooth Pro">
 
         <label>Categoría</label>
-        <select id="categoriaSelect">
-          </select>
+        <select id="categoriaSelect"></select>
         
         <label>Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
         <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
