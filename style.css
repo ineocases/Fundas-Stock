@@ -1,32 +1,23 @@
-/* --- Global --- */
 body { font-family: sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
 #app { max-width: 1000px; margin: auto; }
 
-/* --- Contenedores --- */
+/* Contenedores */
 #panel, .card, #historial, #agregar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
 
-/* --- Grilla de Tarjetas --- */
-#fundas { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-    gap: 20px; 
-    margin-top: 20px; 
-}
+/* Botones */
+button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top: 5px; width: 100%; transition: 0.2s; }
+button:hover { opacity: 0.8; }
+.btn-vender { background-color: #28a745 !important; }
+.btn-editar { background-color: #ffc107 !important; color: black !important; }
+.btn-eliminar { background-color: #dc3545 !important; }
+#btnNuevaFunda { background-color: #007bff !important; margin-bottom: 20px; }
 
-.card { display: flex; flex-direction: column; justify-content: space-between; }
+/* Grilla */
+#fundas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.card h3 { margin: 0 0 10px 0; }
+.card p { margin: 4px 0; font-size: 0.95rem; color: #444; }
 
-/* --- Botones --- */
-button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top: 5px; width: 100%; }
-.btn-vender { background-color: #28a745; }
-.btn-editar { background-color: #ffc107; color: black; }
-.btn-eliminar { background-color: #dc3545; }
-
-/* --- Tabla --- */
-table { width: 100%; border-collapse: collapse; }
+/* Tabla */
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
 th { background-color: #f8f9fa; }
-/* Esto le da el estilo azul a todos los botones que no sean Vender/Editar/Eliminar */
-button { 
-    background-color: #007AFF !important; 
-    color: white !important;
-}
