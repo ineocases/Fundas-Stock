@@ -8,10 +8,12 @@
 </head>
 <body>
 
+  <!-- Pantalla de carga indispensable -->
   <div id="cargando" style="text-align: center; margin-top: 50px; font-family: Arial; font-size: 18px;">
     ⏳ Cargando aplicación...
   </div>
 
+  <!-- El login -->
   <div id="login" style="display:none;">
     <h2>IneoCases Stock</h2>
     <input id="email" placeholder="Email">
@@ -19,6 +21,7 @@
     <button id="btnLogin">Ingresar</button>
   </div>
 
+  <!-- La app principal -->
   <div id="app" style="display:none;">
     <h1>📱 IneoCases Stock</h1>
     <div class="top-bar">
@@ -26,6 +29,7 @@
       <button id="btnNuevaFunda">➕ Nueva funda</button>
     </div>
 
+    <!-- FORMULARIO ESTILO MODAL -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
@@ -46,7 +50,8 @@
         <input id="venta" type="number" placeholder="0">
         
         <div class="modal-buttons">
-          <button id="btnCancelar" class="btn-secundario">Cancelar</button>
+          <!-- MODIFICADO: Ahora llama directamente a la función global -->
+          <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
           <button id="guardarFunda">Guardar</button>
         </div>
       </div>
