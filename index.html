@@ -13,23 +13,27 @@
     ⏳ Cargando aplicación...
   </div>
 
+  <!-- PANTALLA DE BIENVENIDA / LOGIN INTERACTIVO PREMIUM -->
   <div id="login" style="display:none;">
     <div class="login-container">
+      <!-- Sección Principal para Clientes -->
       <div class="login-welcome">
         <div class="header-logo-welcome">
           <img src="logo.svg" alt="Logo" class="app-logo-welcome">
           <h1>iNeo Cases</h1>
-          <p class="subtitle">Descubrí las mejores fundas premium para tu iPhone</p>
+          <p class="subtitle">Descubrí los mejores accesorios premium para tu dispositivo</p>
         </div>
         
         <button id="btnCliente" class="btn-principal-welcome">Entrar a ver Catálogo 📱</button>
       </div>
       
+      <!-- Acceso Oculto/Sutil para el Administrador -->
       <div class="admin-trigger-zone">
         <button type="button" id="btnAbrirAdminModal" class="btn-link-admin">🔒 Acceso Personal de Trabajo</button>
       </div>
     </div>
 
+    <!-- Panel Modal Desplegable para Login de Admin -->
     <div id="modalAdminLogin" class="modal-admin-overlay" style="display: none;">
       <div class="modal-admin-content">
         <div class="modal-admin-header">
@@ -53,6 +57,7 @@
     </div>
   </div>
 
+  <!-- SECCIÓN PRINCIPAL DE LA APLICACIÓN -->
   <div id="app" style="display:none;">
     <div class="header-logo">
       <img src="logo.svg" alt="Logo" class="app-logo">
@@ -60,9 +65,10 @@
     </div>
     
     <div class="top-bar">
-      <input id="buscar" placeholder="Buscar iPhone 12, 13...">
-      <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nueva</button>
+      <input id="buscar" placeholder="Buscar producto o modelo...">
+      <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
       
+      <!-- Botón de Menú Hamburguesa Interactivo -->
       <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
         <span></span>
         <span></span>
@@ -70,20 +76,30 @@
       </button>
     </div>
 
+    <!-- Barra Dinámica de Categorías (Píldoras de Filtro) -->
+    <div id="filtrosCategorias" class="categorias-container"></div>
+
+    <!-- Menú Lateral Desplegable y Capa de Fondo -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebarMenu" class="sidebar">
       <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
     </div>
 
+    <!-- Modal Agregar/Editar Item -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
-        <h3 id="modalTitulo">Nueva Funda</h3>
+        <h3 id="modalTitulo">Nuevo Artículo</h3>
         
-        <label>Nombre del modelo/diseño</label>
-        <input id="nombre" placeholder="Ej: Funda Silicona Púrpura">
+        <label>Nombre del producto</label>
+        <input id="nombre" placeholder="Ej: Auriculares Bluetooth Pro">
+
+        <label>Categoría</label>
+        <select id="categoriaSelect">
+          <!-- Se llena dinámicamente -->
+        </select>
         
-        <label>Modelos y Stock (Formato: modelo:cantidad)</label>
-        <input id="stockPorModelo" placeholder="Ej: 11:3, 12:1, 14:4">
+        <label>Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
+        <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
         
         <label>Costo de lista ($)</label>
         <input id="costo" type="number" placeholder="0">
@@ -96,17 +112,18 @@
         
         <img id="previewFoto" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
+        <!-- Panel de control Pro -->
         <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
           <div style="text-align: center; margin-bottom: 12px;">
             <label for="sliderEscala" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
-              📏 Tamaño de la funda: <span id="valorEscala">72%</span>
+              📏 Tamaño del producto: <span id="valorEscala">72%</span>
             </label>
             <input type="range" id="sliderEscala" min="40" max="95" value="72" style="width: 80%; max-width: 300px; accent-color: #0071e3;">
           </div>
 
           <div style="text-align: center;">
             <label for="sliderRotacion" style="font-weight: 600; color: #1d1d1f; display: block; margin-bottom: 5px;">
-              🔄 Rotación de la funda: <span id="valorRotacion">0°</span>
+              🔄 Rotación del producto: <span id="valorRotacion">0°</span>
             </label>
             <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 80%; max-width: 300px; accent-color: #5856d6;">
           </div>
@@ -120,17 +137,18 @@
       </div>
     </div>  
 
+    <!-- Modal Asistente de Ventas -->
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
         <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente:</p>
         
         <label>Nombre del producto</label>
-        <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar la funda...">
+        <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar...">
         <datalist id="listaProductos"></datalist>
 
-        <label>Modelo de iPhone vendido</label>
-        <input id="asistenteModelo" placeholder="Ej: 12, 14 Pro, 11">
+        <label>Modelo / Variante vendida</label>
+        <input id="asistenteModelo" placeholder="Ej: 12, Blanco, Único">
 
         <label>Unidades vendidas</label>
         <input id="asistenteUnidades" type="number" value="1" min="1">
@@ -142,12 +160,13 @@
       </div>
     </div>
 
+    <!-- Modal Reservas WhatsApp -->
     <div id="modalReservar" style="display:none;">
       <div class="modal-content">
         <h3>🛍️ Menú de Reserva</h3>
         <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
         
-        <label>Seleccioná tu modelo de iPhone</label>
+        <label>Seleccioná tu variante / modelo</label>
         <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
         
         <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
