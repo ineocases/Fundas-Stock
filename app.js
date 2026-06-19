@@ -12,26 +12,23 @@ document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-// 2. Evento para el buscador en tiempo real (VERSIÓN A PRUEBA DE ERRORES)
+// 2. Evento para el buscador todoterreno
 document.getElementById("buscar").addEventListener("input", (e) => {
-  const textoBuscado = e.target.value.toLowerCase();
+  // Pasamos lo que escribís a minúsculas y le sacamos los espacios extra de los bordes
+  const textoBuscado = e.target.value.toLowerCase().trim(); 
   
   const fundasFiltradas = todasLasFundas.filter((funda) => {
-    // Validación 1: Si no hay nombre, usamos un texto vacío en lugar de rompernos
-    const nombreFunda = funda.nombre ? String(funda.nombre).toLowerCase() : "";
+    // Agarra el nombre y lo pasa a minúsculas (si no hay nombre, lo deja vacío)
+    const nombre = funda.nombre ? String(funda.nombre).toLowerCase() : "";
     
-    // Validación 2: Chequeamos los compatibles con cuidado
-    let modelosCompatibles = "";
-    if (Array.isArray(funda.compatibles)) {
-      modelosCompatibles = funda.compatibles.join(" ").toLowerCase();
-    } else if (funda.compatibles) {
-      // Por si en alguna prueba vieja se guardó como texto y no como lista
-      modelosCompatibles = String(funda.compatibles).toLowerCase(); 
-    }
+    // Agarra exactamente esa lista de "11 12 13" que mencionaste y la convierte a texto
+    const modelos = funda.compatibles ? String(funda.compatibles).toLowerCase() : "";
     
-    return nombreFunda.includes(textoBuscado) || modelosCompatibles.includes(textoBuscado);
+    // Chequea si lo que escribiste está en el nombre O en los modelos
+    return nombre.includes(textoBuscado) || modelos.includes(textoBuscado);
   });
 
+  // Dibuja las tarjetas filtradas
   renderizarFundas(fundasFiltradas);
 });
 
