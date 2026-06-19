@@ -27,21 +27,21 @@
             </div>
         </div>
 
-        <input id="buscar" placeholder="Buscar funda...">
+        <input type="text" id="buscar" placeholder="Buscar por nombre o modelo (ej: 11, 12)...">
         <button id="btnNuevaFunda">➕ Nueva funda</button>
 
         <div id="agregar" style="display:none">
-            <input id="nombre" placeholder="Nombre de la funda">
-            <input id="stock" type="number" placeholder="Stock disponible">
+            <input id="nombre" placeholder="Nombre">
+            <input id="stock" type="number" placeholder="Stock">
             <input id="compatibles" placeholder="Modelos (ej: 11, 12, 13)">
-            <input id="costo" type="number" placeholder="Precio de costo">
+            <input id="costo" type="number" placeholder="Costo">
             <input id="venta" type="number" placeholder="Precio de venta">
             <button id="guardarFunda">Guardar Funda</button>
         </div>  
 
         <div id="fundas"></div>
 
-        <hr style="margin: 40px 0;">
+        <hr>
         <h2>📜 Historial de Ventas</h2>
         <div id="historial"></div>
     </div>
