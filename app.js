@@ -45,4 +45,59 @@ function renderizarFundas(lista) {
             <h2>${f.nombre || "Sin nombre"}</h2>
             <div class="card-details">
                 <p>📦 <strong>Stock:</strong> ${f.stock || 0}</p>
-                <p>📱 <strong>Model
+                <p>📱 <strong>Modelos:</strong> ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : (f.compatibles || "N/A")}</p>
+                <p>💵 <strong>Costo:</strong> $${f.costo || 0}</p>
+                <p>💰 <strong>Venta:</strong> $${f.venta || 0}</p>
+            </div>
+            <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
+        `;
+        
+        // Conexión del evento eliminar
+        card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
+        
+        contenedor.appendChild(card);
+    });
+}
+
+async function eliminarFunda(id) {
+    if (confirm("¿Estás seguro de que quieres eliminar esta funda?")) {
+        try {
+            await deleteDoc(doc(db, "fundas", id));
+            alert("Eliminado correctamente");
+            cargarFundas();
+        } catch (e) { 
+            alert("Error al eliminar"); 
+        }
+    }
+}
+
+async function guardarFunda() {
+    try {
+        await addDoc(collection(db, "fundas"), {
+            nombre: document.getElementById("nombre").value,
+            stock: Number(document.getElementById("stock").value),
+            compatibles: document.getElementById("compatibles").value.split(",").map(i => i.trim()),
+            costo: Number(document.getElementById("costo").value),
+            venta: Number(document.getElementById("venta").value)
+        });
+        alert("Funda guardada exitosamente");
+        document.getElementById("agregar").style.display = "none";
+        cargarFundas();
+    } catch (e) {
+        alert("Error al guardar");
+    }
+}
+
+// --- EVENTOS (Se definen al final para asegurar que existan las funciones) ---
+document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("guardarFunda").onclick = guardarFunda;
+
+document.getElementById("buscar").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase().trim();
+    const filtradas = todasLasFundas.filter(f => 
+        (f.nombre || "").toLowerCase().includes(texto) || 
+        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
+    );
+    renderizarFundas(filtradas);
+});
