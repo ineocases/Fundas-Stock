@@ -27,25 +27,25 @@
             </div>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="text" id="buscarNombre" placeholder="Buscar por nombre..." style="flex: 1;">
-            <input type="text" id="buscarModelo" placeholder="Buscar modelo (ej: 11)..." style="flex: 1;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="buscarNombre" placeholder="Buscar por nombre..." style="flex: 1; padding: 10px;">
+            <input type="text" id="buscarModelo" placeholder="Buscar modelo (ej: 11)..." style="flex: 1; padding: 10px;">
         </div>
         
         <button id="btnNuevaFunda">➕ Nueva funda</button>
 
         <div id="agregar" style="display:none">
-            <input id="nombre" placeholder="Nombre de la funda">
-            <input id="stock" type="number" placeholder="Stock disponible">
-            <input id="compatibles" placeholder="Modelos (separados por comas: 11, 12, 13)">
-            <input id="costo" type="number" placeholder="Precio de costo">
+            <input id="nombre" placeholder="Nombre">
+            <input id="stock" type="number" placeholder="Stock">
+            <input id="compatibles" placeholder="Modelos (ej: 11,12,13)">
+            <input id="costo" type="number" placeholder="Costo">
             <input id="venta" type="number" placeholder="Precio de venta">
-            <button id="guardarFunda">Guardar Funda</button>
+            <button id="guardarFunda">Guardar</button>
         </div>  
 
         <div id="fundas"></div>
 
-        <hr style="margin: 40px 0;">
+        <hr>
         <h2>📜 Historial de Ventas</h2>
         <div id="historial"></div>
     </div>
