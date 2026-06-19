@@ -94,14 +94,14 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
-// --- 4. LÓGICA DE VENTAS (FLUJO MEJORADO) ---
+// --- 4. LÓGICA DE VENTAS ---
 window.venderFunda = async (fJson) => {
     const f = JSON.parse(decodeURIComponent(fJson));
     
     const cliente = prompt("Nombre del cliente:");
     if (!cliente) return;
     
-    const modelo = prompt("Modelo de iPhone (ej: 11, 12, 13):", f.compatibles.split(',')[0]);
+    const modelo = prompt("Modelo de iPhone:", f.compatibles.split(',')[0]);
     if (!modelo) return;
     
     const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
@@ -112,21 +112,25 @@ window.venderFunda = async (fJson) => {
     
     if (isNaN(precioTotal)) return;
     
+    // Guardar venta
     await addDoc(collection(db, "ventas"), { 
         producto: f.nombre,
         cliente: cliente, 
         modelo: modelo,
         unidades: unidades, 
-        costoUnitario: f.costo,
+        costoUnitario: Number(f.costo),
         precioVenta: precioTotal / unidades, 
-        envio: envio, 
-        ganancia: (precioTotal - (f.costo * unidades) - envio),
+        envio: Number(envio), 
+        ganancia: (Number(precioTotal) - (Number(f.costo) * unidades) - Number(envio)),
         fecha: new Date().toLocaleDateString(), 
         fechaCompleta: new Date().toISOString() 
     });
     
-    await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - unidades });
-    alert("Venta registrada correctamente");
+    // Actualizar stock restando unidades
+    const nuevoStock = Number(f.stock) - Number(unidades);
+    await updateDoc(doc(db, "fundas", f.id), { stock: nuevoStock });
+    
+    alert("Venta registrada y stock actualizado.");
     cargarDatos();
 };
 
