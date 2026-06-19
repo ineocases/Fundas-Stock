@@ -17,7 +17,7 @@ console.log("DB conectada con éxito:", db);
 
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
-const REMOVE_BG_API_KEY = "TU_API_KEY_AQUI"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
+const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; // <-- PEGA TU CLAVE DE REMOVE.BG ACÁ
 
 // Variables globales de control
 let todasLasFundas = [];
