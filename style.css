@@ -160,9 +160,24 @@ button:hover {
     margin-top: 25px;
 }
 
+/* Estilo para que el botón de la IA combine perfectamente con tu interfaz */
+#btnCrearFoto:hover {
+    background: #4341b7;
+    transform: scale(1.02);
+}
+
+#btnCrearFoto:disabled {
+    background: #a2a1e6;
+    cursor: not-allowed;
+}
+
 .btn-secundario {
     background: #e8e8ed;
     color: #1d1d1f;
+}
+
+.btn-secundario:hover {
+    background: #d2d2d7;
 }
 
 /* --- TARJETAS --- */
