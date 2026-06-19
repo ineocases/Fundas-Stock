@@ -2,36 +2,43 @@ import { auth, db } from "./firebase.js";
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-console.log("DB:", db);
-
-// 1. Variable global para guardar las fundas en memoria y optimizar búsquedas
+// Variable global para guardar los datos y buscar rápido
 let todasLasFundas = [];
 
-// Asignamos los eventos a los botones
+// ==========================================
+// 1. EVENTOS (Conectamos los botones e inputs)
+// ==========================================
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
 document.getElementById("guardarFunda").onclick = guardarFunda;
 
-// 2. Evento para el buscador con RASTREADOR
+// Buscador todoterreno
 document.getElementById("buscar").addEventListener("input", (e) => {
-  const textoBuscado = e.target.value.toLowerCase().trim(); 
-  
-  console.log("--- NUEVA BÚSQUEDA ---");
-  console.log("1. Escribiste:", textoBuscado);
-  console.log("2. Fundas totales en memoria:", todasLasFundas.length);
+  const textoBuscado = e.target.value.toLowerCase().trim();
   
   const fundasFiltradas = todasLasFundas.filter((funda) => {
+    // Aseguramos que el nombre exista y esté en minúsculas
     const nombre = funda.nombre ? String(funda.nombre).toLowerCase() : "";
-    const modelos = funda.compatibles ? String(funda.compatibles).toLowerCase() : "";
     
+    // Convertimos los compatibles a texto seguro para buscar
+    let modelos = "";
+    if (Array.isArray(funda.compatibles)) {
+      modelos = funda.compatibles.join(" ").toLowerCase();
+    } else if (funda.compatibles) {
+      modelos = String(funda.compatibles).toLowerCase();
+    }
+    
+    // Busca si hay coincidencia
     return nombre.includes(textoBuscado) || modelos.includes(textoBuscado);
   });
 
-  console.log("3. Fundas que coinciden y se van a mostrar:", fundasFiltradas.length);
-  
   renderizarFundas(fundasFiltradas);
 });
-// 3. Función de Login
+
+// ==========================================
+// 2. FUNCIONES PRINCIPALES
+// ==========================================
+
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -40,14 +47,13 @@ async function login() {
     await signInWithEmailAndPassword(auth, email, password);
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
-    cargarFundas();
+    cargarFundas(); // Cargamos los datos apenas entra
   } catch (error) {
     alert("Error al iniciar sesión. Revisa tus datos.");
     console.error(error);
   }
 }
 
-// 4. Mostrar/Ocultar el formulario
 function mostrarFormulario() {
   const formAgregar = document.getElementById("agregar");
   if (formAgregar.style.display === "none") {
@@ -57,36 +63,37 @@ function mostrarFormulario() {
   }
 }
 
-// 5. Cargar fundas desde Firebase
 async function cargarFundas() {
-  const snapshot = await getDocs(collection(db, "fundas"));
-  todasLasFundas = []; // Vaciamos la lista por si estamos recargando
+  try {
+    const snapshot = await getDocs(collection(db, "fundas"));
+    todasLasFundas = []; // Reiniciamos la lista local
 
-  snapshot.forEach((doc) => {
-    // Agregamos el ID del documento y sus datos al array
-    todasLasFundas.push({ id: doc.id, ...doc.data() });
-  });
+    snapshot.forEach((doc) => {
+      todasLasFundas.push({ id: doc.id, ...doc.data() });
+    });
 
-  // Mandamos a dibujar las tarjetas a la pantalla
-  renderizarFundas(todasLasFundas);
+    renderizarFundas(todasLasFundas);
+  } catch (error) {
+    console.error("Error al cargar las fundas:", error);
+  }
 }
 
-// 6. Generar el HTML de las tarjetas
 function renderizarFundas(arregloDeFundas) {
   let html = "";
 
   arregloDeFundas.forEach((f) => {
+    // Formateamos los compatibles para que se vean lindos en la tarjeta
     const compatiblesStr = Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles;
 
     html += `
       <div class="card">
-        <h3>${f.nombre}</h3>
+        <h3>${f.nombre || "Sin nombre"}</h3>
         
         <div class="card-details">
-          <p>📦 Stock: <strong>${f.stock}</strong></p>
-          <p>📱 ${compatiblesStr}</p>
-          <p>💵 Costo: $${f.costo}</p>
-          <p>💰 Venta: $${f.venta}</p>
+          <p>📦 Stock: <strong>${f.stock || 0}</strong></p>
+          <p>📱 ${compatiblesStr || "N/A"}</p>
+          <p>💵 Costo: $${f.costo || 0}</p>
+          <p>💰 Venta: $${f.venta || 0}</p>
         </div>
 
         <div class="card-actions">
@@ -101,14 +108,16 @@ function renderizarFundas(arregloDeFundas) {
   document.getElementById("fundas").innerHTML = html;
 }
 
-// 7. Guardar una nueva funda en Firebase
 async function guardarFunda() {
   try {
+    const inputCompatibles = document.getElementById("compatibles").value;
+    // Convierte el texto "11, 12, 13" en una lista real sacando los espacios
+    const listaCompatibles = inputCompatibles.split(",").map(item => item.trim()).filter(item => item !== "");
+
     await addDoc(collection(db, "fundas"), {
       nombre: document.getElementById("nombre").value,
       stock: Number(document.getElementById("stock").value),
-      // Separa por comas y quita espacios en blanco extra
-      compatibles: document.getElementById("compatibles").value.split(",").map(item => item.trim()),
+      compatibles: listaCompatibles,
       costo: Number(document.getElementById("costo").value),
       venta: Number(document.getElementById("venta").value),
       foto: ""
@@ -116,14 +125,14 @@ async function guardarFunda() {
 
     alert("¡Funda guardada exitosamente!");
     
-    // Limpiamos los inputs
+    // Limpiamos el formulario
     document.getElementById("nombre").value = "";
     document.getElementById("stock").value = "";
     document.getElementById("compatibles").value = "";
     document.getElementById("costo").value = "";
     document.getElementById("venta").value = "";
 
-    // Ocultamos el formulario y recargamos la lista
+    // Ocultamos el formulario y recargamos
     document.getElementById("agregar").style.display = "none";
     cargarFundas();
 
