@@ -18,7 +18,6 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
-// Renderizado principal
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = ""; 
@@ -28,8 +27,10 @@ function renderizarFundas(lista) {
         const fJson = encodeURIComponent(JSON.stringify(f));
         card.innerHTML = `
             <h3>${f.nombre}</h3>
-            <p>📦 Stock: ${f.stock}</p>
-            <p>💵 Venta: $${f.venta}</p>
+            <p>📦 <b>Stock:</b> ${f.stock}</p>
+            <p>📱 <b>Modelos:</b> ${f.compatibles || 'N/A'}</p>
+            <p>💵 <b>Costo:</b> $${f.costo || 0}</p>
+            <p>💰 <b>Venta:</b> $${f.venta || 0}</p>
             <button onclick="window.venderFunda('${fJson}')" class="btn-vender">🛒 Vender</button>
             <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
             <button onclick="window.eliminarFunda('${f.id}')" class="btn-eliminar">🗑️ Eliminar</button>
@@ -44,7 +45,25 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// Venta
+// Botones de acción
+document.getElementById("btnNuevaFunda").onclick = () => {
+    const form = document.getElementById("agregar");
+    form.style.display = form.style.display === "none" ? "block" : "none";
+};
+
+document.getElementById("guardarFunda").onclick = async () => {
+    const d = { 
+        nombre: document.getElementById("nombre").value, 
+        stock: Number(document.getElementById("stock").value),
+        compatibles: document.getElementById("compatibles").value,
+        costo: Number(document.getElementById("costo").value), 
+        venta: Number(document.getElementById("venta").value) 
+    };
+    await addDoc(collection(db, "fundas"), d);
+    document.getElementById("agregar").style.display = "none";
+    cargarDatos();
+};
+
 window.venderFunda = async (fJson) => {
     const f = JSON.parse(decodeURIComponent(fJson));
     const cliente = prompt("Nombre del cliente:");
@@ -61,7 +80,6 @@ window.venderFunda = async (fJson) => {
     cargarDatos();
 };
 
-// Dashboard
 async function actualizarDashboard() {
     const vSnap = await getDocs(collection(db, "ventas"));
     const fSnap = await getDocs(collection(db, "fundas"));
@@ -77,18 +95,16 @@ async function actualizarDashboard() {
     document.getElementById("ventasMes").innerText = m;
 }
 
-// Historial
 async function cargarHistorial() {
     const snap = await getDocs(query(collection(db, "ventas"), orderBy("fechaCompleta", "desc")));
     let t = `<table><tr><th>Cliente</th><th>Producto</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente}</td><td>${v.producto}</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
+        t += `<tr><td>${v.cliente}</td><td>${v.producto} (${v.unidades})</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
 
-// Eventos
 document.getElementById("buscar").addEventListener("input", (e) => {
     const t = e.target.value.toLowerCase();
     renderizarFundas(todasLasFundas.filter(f => f.nombre.toLowerCase().includes(t)));
@@ -97,10 +113,4 @@ document.getElementById("buscar").addEventListener("input", (e) => {
 document.getElementById("btnLogin").onclick = async () => {
     try { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); } 
     catch(e) { alert("Error"); }
-};
-document.getElementById("guardarFunda").onclick = async () => {
-    const d = { nombre: document.getElementById("nombre").value, stock: Number(document.getElementById("stock").value), costo: Number(document.getElementById("costo").value), venta: Number(document.getElementById("venta").value) };
-    await addDoc(collection(db, "fundas"), d);
-    document.getElementById("agregar").style.display = "none";
-    cargarDatos();
 };
