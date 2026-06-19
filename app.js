@@ -236,7 +236,7 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
-// FUNCIÓN PARA 1000x1000 CON TU IMAGEN DE FONDO PERSONALIZADA EN PNG
+// FUNCIÓN CORREGIDA: Segmentación por confianza (Ideal para objetos/fundas) y validación de errores
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -270,14 +270,18 @@ async function procesarImagenPro() {
         const imgFondo = new Image();
         imgFondo.src = "fondo-estudio.png"; 
         
-        // Esperamos a que tu fondo .png cargue por completo
         await new Promise((resolve, reject) => {
           imgFondo.onload = resolve;
-          imgFondo.onerror = () => reject(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Verifica que esté en la misma carpeta y bien escrito."));
+          imgFondo.onerror = () => reject(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Asegúrate de que esté en la misma carpeta."));
         });
 
-        // 2. Segmentación con MediaPipe (Recorte automático de la funda)
+        // 2. Segmentación con MediaPipe
         const segmentation = await imageSegmenter.segment(img);
+        
+        // VALIDACIÓN CLAVE: Verificar si la IA logró segmentar algo
+        if (!segmentation || (!segmentation.categoryMask && (!segmentation.confidenceMasks || segmentation.confidenceMasks.length === 0))) {
+          throw new Error("La IA no pudo distinguir de forma clara el producto del fondo. Intenta con una foto con mejor iluminación o un fondo que contraste más.");
+        }
         
         // Canvas intermedio para aislar la funda con transparencia
         const canvasRecorte = document.createElement("canvas");
@@ -287,13 +291,28 @@ async function procesarImagenPro() {
 
         ctxRecorte.drawImage(img, 0, 0);
         const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
-        const mask = segmentation.categoryMask.getAsUint8Array();
-
-        for (let i = 0; i < mask.length; i++) {
-          if (mask[i] === 0) {
-            imageData.data[i * 4 + 3] = 0; // Remueve el fondo original de la funda
+        
+        // Usamos la máscara de categoría si existe, de lo contrario usamos la de confianza
+        let mask;
+        if (segmentation.categoryMask) {
+          mask = segmentation.categoryMask.getAsUint8Array();
+          // Remover píxeles que pertenecen al fondo (categoría 0)
+          for (let i = 0; i < mask.length; i++) {
+            if (mask[i] === 0) {
+              imageData.data[i * 4 + 3] = 0; 
+            }
+          }
+        } else {
+          // Alternativa por confianza (suaviza bordes en objetos duros)
+          mask = segmentation.confidenceMasks[0].getAsFloat32Array();
+          for (let i = 0; i < mask.length; i++) {
+            // Si la confianza de que es fondo es alta, lo volvemos transparente
+            if (mask[i] < 0.5) { 
+              imageData.data[i * 4 + 3] = 0;
+            }
           }
         }
+        
         ctxRecorte.putImageData(imageData, 0, 0);
 
         // 3. Canvas Final: DEFINIDO EXACTO EN EL ESTÁNDAR 1000x1000
