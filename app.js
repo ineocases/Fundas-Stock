@@ -15,16 +15,15 @@ import {
 
 console.log("DB conectada con éxito:", db);
 
-// ⚠️ CONFIGURACIÓN: Colocá tu número de WhatsApp aquí (con código de país, sin el + ni espacios)
-// Ejemplo: "5491123456789" (Argentina: 54 + 9 + área + número)
-const NUMERO_WHATSAPP = "5491123456789"; 
+// 📱 TU NÚMERO ACTUALIZADO: Sin el +, sin espacios, listo para wa.me
+const NUMERO_WHATSAPP = "5491170089123"; 
 
 // Variables globales
 let todasLasFundas = [];
 let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
-let fundaReservando = null; // Almacena temporalmente el objeto que el cliente quiere reservar
+let fundaReservando = null; 
 
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
@@ -57,7 +56,7 @@ onAuthStateChanged(auth, (user) => {
     cargarFundas(); 
   } else {
     document.getElementById("login").style.display = "block";
-    document.getElementById("app").style.none;
+    document.getElementById("app").style.display = "none";
   }
 });
 
@@ -81,7 +80,6 @@ async function loginCliente() {
   }
 }
 
-// NUEVAS FUNCIONES: Control del Menú de Reserva de WhatsApp
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
@@ -94,7 +92,6 @@ function abrirModalReservar(id) {
   selectModelo.innerHTML = "";
 
   if (Array.isArray(funda.stockPorModelo)) {
-    // Filtrar para mostrar en el menú solo los que realmente tienen stock disponible
     const modelosDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
 
     if (modelosDisponibles.length === 0) {
@@ -125,20 +122,17 @@ function cerrarModalReservar() {
 function enviarWhatsApp() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
   if (!modeloSeleccionado) {
-    alert("Por favor, selecciona un modelo válido de la lista.");
+    alert("Por favor, selecciona un modelo válido.");
     return;
   }
 
-  // Estructura limpia y vendedora del mensaje de texto para tu WhatsApp
   const mensaje = `Hola IneoCases! 👋 Me gustaría reservar el siguiente producto:\n\n` +
                   `📱 *Funda:* ${fundaReservando.nombre}\n` +
                   `⚙️ *Modelo:* iPhone ${modeloSeleccionado}\n` +
                   `💰 *Precio:* $${fundaReservando.venta}\n\n` +
                   `¿Me confirman si puedo pasar a retirar? ¡Muchas gracias!`;
 
-  // Crear enlace directo universal para WhatsApp Web o App Móvil
   const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-  
   window.open(url, "_blank");
   cerrarModalReservar();
 }
@@ -381,7 +375,6 @@ async function procesarVentaAsistente() {
   }
 }
 
-// Registro global de funciones para interactuar con el HTML dinámico
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
@@ -408,11 +401,9 @@ function renderizarFundas(arrayDeFundas) {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
 
-    // RENDERIZADO CONDICIONAL POR ROL
     let bloqueAcciones = "";
     
     if (esAdmin) {
-      // Bloque del Administrador (Ver costos y gestionar)
       bloqueAcciones = `
         <p style="margin-top:8px; color:#1d1d1f;">💵 Costo: <b>$${f.costo ?? 0}</b></p>
         <div style="margin-top: 15px;">
@@ -421,11 +412,10 @@ function renderizarFundas(arrayDeFundas) {
         </div>
       `;
     } else {
-      // NUEVO: Bloque del Cliente (Botón de WhatsApp estético con logo SVG oficial)
       bloqueAcciones = `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.455L0 24zm6.59-4.846c1.66.986 3.296 1.489 5.273 1.49 5.373 0 9.744-4.373 9.747-9.747.002-2.585-1.004-5.014-2.835-6.845-1.83-1.83-4.26-2.834-6.845-2.834-5.383 0-9.754 4.373-9.758 9.749-.001 1.981.504 3.626 1.503 5.29L2.525 21.45l4.122-1.296zm12.393-5.593c-.33-.165-1.951-.963-2.251-1.073-.3-.109-.518-.165-.736.165-.218.329-.846 1.073-1.037 1.292-.19.218-.382.245-.712.08-1.121-.56-2.125-1.28-3.04-2.133-.746-.692-1.348-1.523-1.742-2.452-.19-.329-.02-.507.145-.671.149-.147.33-.384.495-.577.165-.191.22-.329.33-.548.11-.219.055-.411-.028-.577-.082-.165-.736-1.774-1.009-2.433-.266-.643-.538-.553-.736-.563-.19-.01-.409-.01-.628-.01-.218 0-.573.082-.873.411-.3.33-1.146 1.122-1.146 2.738 0 1.617 1.175 3.178 1.339 3.397.165.22 2.313 3.532 5.6 4.951.783.339 1.396.541 1.873.693.787.251 1.5.216 2.065.132.63-.094 1.951-.797 2.224-1.527.273-.731.273-1.356.191-1.488-.081-.13-.297-.213-.627-.378z"/>
             </svg>
             Reservar
