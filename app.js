@@ -54,15 +54,13 @@ function mostrarFormulario() {
   document.getElementById("guardarFunda").innerText = "Guardar";
   
   document.getElementById("nombre").value = "";
-  document.getElementById("stock").value = "";
-  document.getElementById("compatibles").value = "";
+  document.getElementById("stockPorModelo").value = "";
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
   
   document.getElementById("agregar").style.display = "flex";
 }
 
-// Función para ocultar el modal
 function ocultarFormulario() {
   idFundaEditando = null;
   document.getElementById("agregar").style.display = "none";
@@ -82,13 +80,21 @@ async function cargarFundas() {
 }
 
 async function guardarFunda() {
-  const compatiblesInput = document.getElementById("compatibles").value;
-  const compatiblesArray = compatiblesInput.split(",").map(item => item.trim());
+  // Procesamos el texto de entrada "11:3, 12:1, 14:4" y lo convertimos en una estructura limpia
+  const inputStockModelo = document.getElementById("stockPorModelo").value;
+  const stockPorModeloArray = inputStockModelo.split(",")
+    .map(item => {
+      const [modelo, cantidad] = item.split(":");
+      return {
+        modelo: modelo ? modelo.trim() : "",
+        stock: cantidad ? Number(cantidad.trim()) : 0
+      };
+    })
+    .filter(item => item.modelo !== ""); // Filtramos entradas vacías por seguridad
 
   const datosFunda = {
     nombre: document.getElementById("nombre").value,
-    stock: Number(document.getElementById("stock").value),
-    compatibles: compatiblesArray,
+    stockPorModelo: stockPorModeloArray, // Guardamos la nueva estructura detallada
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     foto: ""
@@ -128,35 +134,60 @@ function abrirEditarFunda(id) {
   if (!funda) return;
 
   idFundaEditando = id;
-
   document.getElementById("modalTitulo").innerText = "✏️ Editar Funda";
+
   document.getElementById("nombre").value = funda.nombre || "";
-  document.getElementById("stock").value = funda.stock ?? 0;
-  document.getElementById("compatibles").value = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : (funda.compatibles || "");
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
+
+  // Al editar, reconstruimos el formato "11:3, 12:1" para que sea fácil modificarlo
+  if (Array.isArray(funda.stockPorModelo)) {
+    document.getElementById("stockPorModelo").value = funda.stockPorModelo
+      .map(m => `${m.modelo}:${m.stock}`)
+      .join(", ");
+  } else {
+    // Cláusula de seguridad para productos creados con el sistema viejo
+    const comps = Array.isArray(funda.compatibles) ? funda.compatibles.join(", ") : (funda.compatibles || "");
+    document.getElementById("stockPorModelo").value = comps;
+  }
 
   document.getElementById("guardarFunda").innerText = "Actualizar Funda";
   document.getElementById("agregar").style.display = "flex";
 }
 
-// Vinculación global para el HTML nativo (Agregado ocultarFormulario aquí)
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
-window.ocultarFormulario = ocultarFormulario; // <-- NUEVO: Ahora el HTML puede usarlo sin problemas
+window.ocultarFormulario = ocultarFormulario;
 
 function renderizarFundas(arrayDeFundas) {
   let html = "";
   arrayDeFundas.forEach((f) => {
-    const compatiblesTexto = Array.isArray(f.compatibles) 
-      ? f.compatibles.join(" • ") 
-      : (f.compatibles ? String(f.compatibles) : "No especificado");
+    let listaModelosHTML = "";
+    let totalStock = 0;
+
+    // Si tiene la nueva estructura, calculamos totales y desglosamos la lista
+    if (Array.isArray(f.stockPorModelo)) {
+      totalStock = f.stockPorModelo.reduce((acc, item) => acc + item.stock, 0);
+      listaModelosHTML = f.stockPorModelo
+        .map(m => `• iPhone ${m.modelo}: <b>${m.stock} u.</b>`)
+        .join("<br>");
+    } else {
+      // Soporte de compatibilidad para tus datos viejos (Evita que se rompa la app)
+      totalStock = f.stock ?? 0;
+      const comps = Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : String(f.compatibles || "");
+      listaModelosHTML = `• Compatibles: ${comps}`;
+    }
 
     html += `
     <div class="card">
       <h2>${f.nombre || "Sin nombre"}</h2>
-      <p>📦 Stock: ${f.stock ?? 0}</p>
-      <p>📱 Compatibles: ${compatiblesTexto}</p>
+      <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
+      
+      <!-- Lista desglosada con estilo limpio -->
+      <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
+        ${listaModelosHTML}
+      </div>
+
       <p>💵 Costo: $${f.costo ?? 0}</p>
       <p>💰 Venta: $${f.venta ?? 0}</p>
       <button>🛒 Vender</button>
@@ -175,15 +206,22 @@ function filtrarFundas(evento) {
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     
     let compatibleCoincide = false;
-    if (Array.isArray(f.compatibles)) {
+    
+    // Buscar compatibilidades en el nuevo formato de array de objetos
+    if (Array.isArray(f.stockPorModelo)) {
+      compatibleCoincide = f.stockPorModelo.some((m) => 
+        String(m.modelo).toLowerCase().trim().includes(textoBuscado)
+      );
+    } 
+    // Buscar en el formato viejo por si quedan registros antiguos sin actualizar
+    else if (Array.isArray(f.compatibles)) {
       compatibleCoincide = f.compatibles.some((modelo) => 
         String(modelo).toLowerCase().trim().includes(textoBuscado)
       );
     } else if (typeof f.compatibles === "string") {
       compatibleCoincide = f.compatibles.toLowerCase().includes(textoBuscado);
-    } else if (f.compatibles) {
-      compatibleCoincide = String(f.compatibles).toLowerCase().includes(textoBuscado);
     }
+
     return nombreCoincide || compatibleCoincide;
   });
   renderizarFundas(fundasFiltradas);
