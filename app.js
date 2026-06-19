@@ -80,4 +80,34 @@ function renderizarFundas(lista) {
             <p>📦 Stock: ${f.stock || 0}</p>
             <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : (f.compatibles || "N/A")}</p>
             <p>💵 Costo: $${f.costo || 0}</p>
-            <p>💰 Venta: $${f.
+            <p>💰 Venta: $${f.venta || 0}</p>
+            <button onclick="window.editarFunda('${f.id}')" class="btn-editar">✏️ Editar</button>
+            <button class="btn-eliminar" data-id="${f.id}">🗑️ Eliminar</button>
+        `;
+        card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
+        contenedor.appendChild(card);
+    });
+}
+
+async function eliminarFunda(id) {
+    if (confirm("¿Estás seguro de eliminar esta funda?")) {
+        try {
+            await deleteDoc(doc(db, "fundas", id));
+            cargarFundas();
+        } catch (e) { alert("Error al borrar: " + e.message); }
+    }
+}
+
+// --- EVENTOS ---
+document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("guardarFunda").onclick = guardarFunda;
+
+document.getElementById("buscar").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase().trim();
+    const filtradas = todasLasFundas.filter(f => 
+        (f.nombre || "").toLowerCase().includes(texto) || 
+        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
+    );
+    renderizarFundas(filtradas);
+});
