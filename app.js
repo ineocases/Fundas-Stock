@@ -5,6 +5,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy 
 let todasLasFundas = [];
 let idEdicion = null;
 
+// --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
@@ -22,6 +23,7 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
+// --- 2. BUSCADORES ---
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("buscarNombre")?.addEventListener("input", window.aplicarFiltros);
     document.getElementById("buscarModelo")?.addEventListener("input", window.aplicarFiltros);
@@ -38,6 +40,7 @@ window.aplicarFiltros = () => {
     renderizarFundas(filtradas);
 };
 
+// --- 3. RENDERIZADO Y CRUD ---
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = "";
@@ -91,18 +94,30 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
+// --- 4. LÓGICA DE VENTAS ---
 window.venderFunda = async (fJson) => {
     const f = JSON.parse(decodeURIComponent(fJson));
-    const u = parseInt(prompt("Unidades:", "1"));
-    const precioVendido = parseFloat(prompt("Precio total cobrado:", f.venta * u));
+    const cliente = prompt("Nombre del cliente:");
+    const modeloVendido = prompt("Modelo específico (ej: 11):", f.compatibles.split(',')[0]);
+    const unidades = parseInt(prompt("Unidades:", "1"));
+    const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
     const envio = parseFloat(prompt("Costo de envío:", "0"));
-    if (!u || isNaN(precioVendido)) return;
+    
+    if (!cliente || !unidades || isNaN(precioTotal)) return;
+    
     await addDoc(collection(db, "ventas"), { 
-        producto: f.nombre, cliente: "Cliente", unidades: u, costoUnitario: f.costo,
-        precioVenta: precioVendido/u, envio: envio, ganancia: (precioVendido - (f.costo * u) - envio),
-        fecha: new Date().toLocaleDateString(), fechaCompleta: new Date().toISOString() 
+        producto: f.nombre + " (" + modeloVendido + ")",
+        cliente: cliente, 
+        unidades: unidades, 
+        costoUnitario: f.costo,
+        precioVenta: precioTotal / unidades, 
+        envio: envio, 
+        ganancia: (precioTotal - (f.costo * unidades) - envio),
+        fecha: new Date().toLocaleDateString(), 
+        fechaCompleta: new Date().toISOString() 
     });
-    await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - u });
+    
+    await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - unidades });
     cargarDatos();
 };
 
@@ -110,6 +125,7 @@ window.eliminarFunda = async (id) => { if(confirm("¿Eliminar?")) { await delete
 document.getElementById("btnNuevaFunda").onclick = () => { idEdicion = null; document.getElementById("agregar").style.display = "block"; };
 document.getElementById("btnLogin").onclick = async () => { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); };
 
+// --- 5. DASHBOARD E HISTORIAL ---
 async function actualizarDashboard() {
     const vSnap = await getDocs(collection(db, "ventas"));
     const fSnap = await getDocs(collection(db, "fundas"));
