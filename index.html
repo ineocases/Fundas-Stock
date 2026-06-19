@@ -29,7 +29,7 @@
       <button id="btnNuevaFunda">➕ Nueva funda</button>
     </div>
 
-    <!-- FORMULARIO ESTILO MODAL -->
+    <!-- FORMULARIO NUEVA/EDITAR FUNDA -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
@@ -37,7 +37,6 @@
         <label>Nombre del modelo/diseño</label>
         <input id="nombre" placeholder="Ej: Funda Silicona Púrpura">
         
-        <!-- CAMBIO: Unificamos modelo y stock en un solo input explicativo -->
         <label>Modelos y Stock (Formato: modelo:cantidad)</label>
         <input id="stockPorModelo" placeholder="Ej: 11:3, 12:1, 14:4">
         
@@ -53,8 +52,35 @@
         </div>
       </div>
     </div>  
-    
+
+    <!-- NUEVO: MODAL DEL ASISTENTE DE VENTAS -->
+    <div id="modalAsistente" style="display:none;">
+      <div class="modal-content">
+        <h3>🤖 Asistente Virtual de Ventas</h3>
+        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente indicando los datos aquí debajo:</p>
+        
+        <label>Nombre del producto</label>
+        <!-- Usa un datalist para autocompletar dinámicamente -->
+        <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar la funda...">
+        <datalist id="listaProductos"></datalist>
+
+        <label>Modelo de iPhone vendido</label>
+        <input id="asistenteModelo" placeholder="Ej: 12, 14 Pro, 11">
+
+        <label>Unidades vendidas</label>
+        <input id="asistenteUnidades" type="number" value="1" min="1">
+
+        <div class="modal-buttons">
+          <button type="button" onclick="ocultarAsistente()" class="btn-secundario">Cerrar</button>
+          <button id="btnRegistrarVenta">Confirmar Venta 🛒</button>
+        </div>
+      </div>
+    </div>
+
     <div id="fundas"></div>
+
+    <!-- NUEVO: BOTÓN FLOTANTE DEL ASISTENTE -->
+    <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
   </div>
 
   <script type="module" src="app.js"></script>
