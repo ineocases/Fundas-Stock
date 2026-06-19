@@ -4,7 +4,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy 
 
 let todasLasFundas = [];
 
-// --- ESTADO DE SESIÓN ---
+// --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
@@ -22,15 +22,14 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
-// --- BUSCADORES SEPARADOS (Lógica Robusta) ---
-function aplicarFiltros() {
+// --- 2. BUSCADORES (Lógica Robusta) ---
+window.aplicarFiltros = () => {
     const textoNombre = document.getElementById("buscarNombre").value.toLowerCase().trim();
     const textoModelo = document.getElementById("buscarModelo").value.toLowerCase().trim();
 
     const filtradas = todasLasFundas.filter(f => {
         const nombre = (f.nombre || "").toLowerCase();
-        
-        // Convertimos a string obligatoriamente para evitar errores de .split()
+        // Convertimos a string forzosamente para evitar el error de .split()
         const rawModelos = f.compatibles ? String(f.compatibles) : "";
         const modelos = rawModelos.toLowerCase().split(',').map(m => m.trim());
         
@@ -39,14 +38,14 @@ function aplicarFiltros() {
         
         return coincideNombre && coincideModelo;
     });
-
     renderizarFundas(filtradas);
-}
+};
 
-document.getElementById("buscarNombre").addEventListener("input", aplicarFiltros);
-document.getElementById("buscarModelo").addEventListener("input", aplicarFiltros);
+// Conexión de eventos
+document.getElementById("buscarNombre").addEventListener("input", window.aplicarFiltros);
+document.getElementById("buscarModelo").addEventListener("input", window.aplicarFiltros);
 
-// --- RENDERIZADO DE TARJETAS ---
+// --- 3. RENDERIZADO DE TARJETAS ---
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = ""; 
@@ -73,57 +72,64 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// --- CRUD Y VENTAS ---
+// --- 4. ACCIONES (Venta, Alta, Baja) ---
 document.getElementById("guardarFunda").onclick = async () => {
-    const d = { 
+    await addDoc(collection(db, "fundas"), { 
         nombre: document.getElementById("nombre").value, 
         stock: Number(document.getElementById("stock").value),
         compatibles: document.getElementById("compatibles").value,
         costo: Number(document.getElementById("costo").value), 
         venta: Number(document.getElementById("venta").value) 
-    };
-    await addDoc(collection(db, "fundas"), d);
+    });
     document.getElementById("agregar").style.display = "none";
-    alert("Funda guardada");
     cargarDatos();
 };
 
 window.venderFunda = async (fJson) => {
     const f = JSON.parse(decodeURIComponent(fJson));
-    const cliente = prompt("Nombre del cliente:");
-    const unidades = parseInt(prompt("Unidades:", "1"));
-    const precioVendido = parseFloat(prompt("Precio final cobrado:", f.venta * unidades));
+    const u = parseInt(prompt("Unidades:", "1"));
+    const precioFinal = parseFloat(prompt("Precio final cobrado:", f.venta * u));
     const envio = parseFloat(prompt("Costo de envío:", "0"));
-    if (!cliente || isNaN(unidades)) return;
     
-    await addDoc(collection(db, "ventas"), {
-        producto: f.nombre, cliente, unidades, ganancia: (precioVendido - (f.costo * unidades) - envio),
-        fecha: new Date().toLocaleDateString(), fechaCompleta: new Date().toISOString()
+    if (!u || isNaN(precioFinal)) return;
+    
+    await addDoc(collection(db, "ventas"), { 
+        producto: f.nombre, 
+        cliente: "Cliente", 
+        unidades: u, 
+        ganancia: (precioFinal - (f.costo * u) - envio), 
+        fecha: new Date().toLocaleDateString(), 
+        fechaCompleta: new Date().toISOString() 
     });
-    await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - unidades });
+    await updateDoc(doc(db, "fundas", f.id), { stock: f.stock - u });
     cargarDatos();
 };
 
 window.eliminarFunda = async (id) => { 
-    if(confirm("¿Seguro que deseas eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } 
+    if(confirm("¿Seguro que quieres eliminar esta funda?")) { 
+        await deleteDoc(doc(db, "fundas", id)); 
+        cargarDatos(); 
+    } 
 };
 
-document.getElementById("btnNuevaFunda").onclick = () => {
-    const f = document.getElementById("agregar");
-    f.style.display = f.style.display === "none" ? "block" : "none";
+document.getElementById("btnNuevaFunda").onclick = () => { 
+    const a = document.getElementById("agregar");
+    a.style.display = a.style.display === "none" ? "block" : "none";
 };
 
-// --- DASHBOARD E HISTORIAL ---
+// --- 5. DASHBOARD E HISTORIAL ---
 async function actualizarDashboard() {
     const vSnap = await getDocs(collection(db, "ventas"));
     const fSnap = await getDocs(collection(db, "fundas"));
     let g = 0, s = 0, m = 0;
+    
     fSnap.forEach(d => s += Number(d.data().stock || 0));
     vSnap.forEach(d => {
         const v = d.data();
         if (v.fecha === new Date().toLocaleDateString()) g += v.ganancia;
         if (new Date(v.fechaCompleta).getMonth() === new Date().getMonth()) m++;
     });
+    
     document.getElementById("gananciaHoy").innerText = `$${g.toFixed(2)}`;
     document.getElementById("stockTotal").innerText = s;
     document.getElementById("ventasMes").innerText = m;
@@ -140,6 +146,7 @@ async function cargarHistorial() {
 }
 
 document.getElementById("btnLogin").onclick = async () => {
-    try { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); } 
-    catch(e) { alert("Error de acceso"); }
+    try { 
+        await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); 
+    } catch(e) { alert("Error al iniciar sesión"); }
 };
