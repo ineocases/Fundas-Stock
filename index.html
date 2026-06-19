@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>iNeo Cases - Stock</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -52,9 +53,10 @@
 
         <label>Foto del producto</label>
         <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
-        <img id="previewFoto" src="" alt="Vista previa" style="display:none; width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
+        <img id="previewFoto" src="" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
         <div class="modal-buttons">
+          <button type="button" id="btnCrearFoto" style="background: #5856d6; color: white;">🪄 Crear foto Pro</button>
           <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
           <button id="guardarFunda">Guardar</button>
         </div>
@@ -64,7 +66,7 @@
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente indicando los datos aquí debajo:</p>
+        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente:</p>
         
         <label>Nombre del producto</label>
         <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar la funda...">
