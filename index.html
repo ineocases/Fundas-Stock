@@ -2,48 +2,31 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>InoCases | Gestión</title>
+    <title>InoCases | Stock</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div id="login">
-        <h2>Iniciar Sesión</h2>
+        <h2>Acceso al Stock</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Contraseña">
         <button id="btnLogin">Entrar</button>
     </div>
 
     <div id="app" style="display:none;">
-        <h1>Gestión de Inventario</h1>
-        
-        <div class="stats">
-            <p>Ganancia hoy: <span id="gananciaHoy">$0</span></p>
-            <p>Stock Total: <span id="stockTotal">0</span></p>
-            <p>Ventas del mes: <span id="ventasMes">0</span></p>
-        </div>
-
-        <div class="search-container">
-            <input type="text" id="buscarNombre" placeholder="Buscar por nombre...">
-            <input type="text" id="buscarModelo" placeholder="Buscar por modelo...">
-        </div>
-
-        <button id="btnNuevaFunda">➕ Agregar Nueva Funda</button>
-
+        <h1>Control de Stock</h1>
+        <input type="text" id="buscarNombre" placeholder="Buscar funda...">
+        <button id="btnNuevaFunda">➕ Nueva Funda</button>
         <div id="fundas"></div>
-
-        <hr>
-        <h2>Historial de Ventas</h2>
-        <div id="historial"></div>
     </div>
 
-    <div id="agregar" style="display:none; background: #fff; padding: 20px; position: fixed; top: 10%; width: 80%; max-width: 400px; border: 1px solid #ccc;">
-        <input type="text" id="nombre" placeholder="Nombre de la funda">
+    <div id="agregar" style="display:none; background: #fff; padding: 20px; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); width: 300px; border: 1px solid #ccc; border-radius: 10px;">
+        <input type="text" id="nombre" placeholder="Nombre">
+        <input type="text" id="fotoUrl" placeholder="URL Foto">
         <input type="number" id="stock" placeholder="Stock">
         <input type="text" id="compatibles" placeholder="Modelos (ej: 11,13,15)">
-        <input type="number" id="costo" placeholder="Costo">
-        <input type="number" id="venta" placeholder="Precio Venta">
         <button id="guardarFunda" style="background:green;">Guardar</button>
+        <button onclick="document.getElementById('agregar').style.display='none'">Cancelar</button>
     </div>
 
     <script type="module" src="app.js"></script>
