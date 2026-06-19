@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IneoCases Stock</title>
+  <title>iNeo Cases - Stock</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,10 @@
 
   <!-- El login con doble acceso -->
   <div id="login" style="display:none;">
-    <h2>IneoCases Stock</h2>
+    <div class="header-logo">
+      <img src="logo.png" alt="Logo Ineo Cases" class="app-logo">
+      <h2>iNeo Cases</h2>
+    </div>
     <input id="email" placeholder="Email o Usuario Admin">
     <input id="password" type="password" placeholder="Contraseña Admin">
     <button id="btnLogin">Ingresar como Admin 🔐</button>
@@ -24,13 +27,17 @@
 
   <!-- La app principal -->
   <div id="app" style="display:none;">
-    <h1>📱 IneoCases Stock</h1>
+    <div class="header-logo">
+      <img src="logo.png" alt="Logo Ineo Cases" class="app-logo">
+      <h1>iNeo Cases</h1>
+    </div>
+    
     <div class="top-bar">
       <input id="buscar" placeholder="Buscar iPhone 12, 13...">
       <button id="btnNuevaFunda">➕ Nueva funda</button>
     </div>
 
-    <!-- FORMULARIO NUEVA/EDITAR FUNDA (Solo Admin) -->
+    <!-- FORMULARIO NUEVA/EDITAR FUNDA (Solo Admin - Full Screen) -->
     <div id="agregar" style="display:none">
       <div class="modal-content">
         <h3 id="modalTitulo">Nueva Funda</h3>
@@ -58,7 +65,7 @@
       </div>
     </div>  
 
-    <!-- MODAL DEL ASISTENTE DE VENTAS (Solo Admin) -->
+    <!-- MODAL DEL ASISTENTE DE VENTAS (Solo Admin - Full Screen) -->
     <div id="modalAsistente" style="display:none;">
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
@@ -81,7 +88,7 @@
       </div>
     </div>
 
-    <!-- NUEVO: MODAL MENÚ DE RESERVA (Solo Cliente) -->
+    <!-- MODAL MENÚ DE RESERVA (Solo Cliente - Full Screen) -->
     <div id="modalReservar" style="display:none;">
       <div class="modal-content">
         <h3>🛍️ Menú de Reserva</h3>
@@ -99,8 +106,10 @@
       </div>
     </div>
 
+    <!-- Contenedor del listado de fundas -->
     <div id="fundas"></div>
 
+    <!-- Botón flotante para el Admin -->
     <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
   </div>
 
