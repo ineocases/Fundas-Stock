@@ -27,17 +27,17 @@ let esAdmin = false;
 let fundaReservando = null; 
 let imageSegmenter; // Instancia global para la IA de MediaPipe
 
-// Inicialización de la IA de MediaPipe al cargar la app
+// 🚀 NUEVA CONFIGURACIÓN DE IA: Modelo optimizado para siluetas definidas y bordes limpios
 async function iniciarIA() {
   try {
     const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
     imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
       baseOptions: { 
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite" 
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite" 
       },
       runningMode: "IMAGE"
     });
-    console.log("IA de MediaPipe inicializada correctamente.");
+    console.log("IA de MediaPipe optimizada para bordes inicializada correctamente.");
   } catch (error) {
     console.error("Error al inicializar MediaPipe:", error);
   }
@@ -53,7 +53,7 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnCrearFoto").onclick = procesarImagenPro; // EVENTO RECORTE IA CON FONDO PRO
+document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 // OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
@@ -236,7 +236,7 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
-// FUNCIÓN CORREGIDA: Segmentación por confianza (Ideal para objetos/fundas) y validación de errores
+// 🪄 FUNCIÓN PRO: Segmentación ultra precisa por confianza con umbral estricto (0.75)
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -275,15 +275,14 @@ async function procesarImagenPro() {
           imgFondo.onerror = () => reject(new Error("No se pudo cargar la imagen de fondo 'fondo-estudio.png'. Asegúrate de que esté en la misma carpeta."));
         });
 
-        // 2. Segmentación con MediaPipe
+        // 2. Ejecutar segmentación de MediaPipe
         const segmentation = await imageSegmenter.segment(img);
         
-        // VALIDACIÓN CLAVE: Verificar si la IA logró segmentar algo
-        if (!segmentation || (!segmentation.categoryMask && (!segmentation.confidenceMasks || segmentation.confidenceMasks.length === 0))) {
-          throw new Error("La IA no pudo distinguir de forma clara el producto del fondo. Intenta con una foto con mejor iluminación o un fondo que contraste más.");
+        if (!segmentation || (!segmentation.confidenceMasks || segmentation.confidenceMasks.length === 0)) {
+          throw new Error("La IA no pudo distinguir los bordes del producto. Intenta sacar la foto sobre un fondo de otro color que contraste.");
         }
         
-        // Canvas intermedio para aislar la funda con transparencia
+        // Canvas intermedio para aislar el producto con transparencia limpia
         const canvasRecorte = document.createElement("canvas");
         canvasRecorte.width = img.width;
         canvasRecorte.height = img.height;
@@ -292,57 +291,45 @@ async function procesarImagenPro() {
         ctxRecorte.drawImage(img, 0, 0);
         const imageData = ctxRecorte.getImageData(0, 0, img.width, img.height);
         
-        // Usamos la máscara de categoría si existe, de lo contrario usamos la de confianza
-        let mask;
-        if (segmentation.categoryMask) {
-          mask = segmentation.categoryMask.getAsUint8Array();
-          // Remover píxeles que pertenecen al fondo (categoría 0)
-          for (let i = 0; i < mask.length; i++) {
-            if (mask[i] === 0) {
-              imageData.data[i * 4 + 3] = 0; 
-            }
-          }
-        } else {
-          // Alternativa por confianza (suaviza bordes en objetos duros)
-          mask = segmentation.confidenceMasks[0].getAsFloat32Array();
-          for (let i = 0; i < mask.length; i++) {
-            // Si la confianza de que es fondo es alta, lo volvemos transparente
-            if (mask[i] < 0.5) { 
-              imageData.data[i * 4 + 3] = 0;
-            }
+        // Extraemos la máscara de confianza (valores de 0.0 a 1.0)
+        const mask = segmentation.confidenceMasks[0].getAsFloat32Array();
+        
+        for (let i = 0; i < mask.length; i++) {
+          // UMBRAL ESTRICTO (0.75): Si la certeza de que pertenece al objeto es baja, se vuelve 100% transparente
+          if (mask[i] < 0.75) { 
+            imageData.data[i * 4 + 3] = 0; // Canal Alpha en 0 (Transparente)
           }
         }
         
         ctxRecorte.putImageData(imageData, 0, 0);
 
-        // 3. Canvas Final: DEFINIDO EXACTO EN EL ESTÁNDAR 1000x1000
+        // 3. Canvas Final: Formato Cuadrado Apple Store (1000x1000)
         const canvasFinal = document.createElement("canvas");
         canvasFinal.width = 1000;
         canvasFinal.height = 1000;
         const ctxFinal = canvasFinal.getContext("2d");
 
-        // 4. Estampar tu imagen de fondo unificada a la resolución de 1000x1000 píxeles
+        // 4. Dibujar tu fondo de estudio
         ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
 
-        // 5. Configuración de Sombra Pro de alta fidelidad para superficies o texturas
-        ctxFinal.shadowColor = "rgba(0, 0, 0, 0.22)"; 
-        ctxFinal.shadowBlur = 35;        
+        // 5. Configuración de Sombra Inteligente Flotante
+        ctxFinal.shadowColor = "rgba(0, 0, 0, 0.25)"; 
+        ctxFinal.shadowBlur = 40;        
         ctxFinal.shadowOffsetX = 0;
-        ctxFinal.shadowOffsetY = 22;      // Efecto de elevación flotante sobre tu fondo
+        ctxFinal.shadowOffsetY = 25;      
 
-        // 6. Ajustar escala de la funda para que ocupe máximo 750px (márgenes visuales limpios)
+        // 6. Escalar el producto recortado para mantenerlo centrado (Max 750px)
         const escala = Math.min(750 / canvasRecorte.width, 750 / canvasRecorte.height);
         const anchoFinal = canvasRecorte.width * escala;
         const altoFinal = canvasRecorte.height * escala;
         
-        // Centrado matemático perfecto dentro del lienzo
         const dx = (1000 - anchoFinal) / 2;
         const dy = (1000 - altoFinal) / 2;
 
-        // 7. Dibujar la funda recortada sobre tu fondo aplicando la sombra configurada
+        // 7. Estampar la funda con la sombra aplicada
         ctxFinal.drawImage(canvasRecorte, dx, dy, anchoFinal, altoFinal);
 
-        // Guardar resultado final en formato PNG nítido
+        // Guardar resultado final en formato PNG de alta calidad sin pérdidas
         fotoBase64 = canvasFinal.toDataURL("image/png");
 
         const preview = document.getElementById("previewFoto");
@@ -398,7 +385,7 @@ async function guardarFunda() {
       const [modelo, cantidad] = item.split(":");
       return {
         modelo: modelo ? modelo.trim() : "",
-        stock: cantidad ? Number(cantidad.trim()) : 0
+        stock: quantity = cantidad ? Number(cantidad.trim()) : 0
       };
     })
     .filter(item => item.modelo !== "");
