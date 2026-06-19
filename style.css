@@ -67,30 +67,29 @@ button:hover {
     background: #0077ed;
 }
 
-/* --- LOGO Y ENCABEZADO (Versión más grande y definida) --- */
+/* --- LOGO Y ENCABEZADO (Logo 60px, texto fijo) --- */
 .header-logo {
     display: flex;
     align-items: center;
-    gap: 12px; /* Un poco más de espacio para que no se amontone */
+    gap: 15px;
     margin-bottom: 30px;
 }
 
 .header-logo h1, .header-logo h2 {
     margin: 0;
-    font-size: 32px; /* Texto un poco más grande para compensar */
+    font-size: 26px; /* Texto fijo, no cambia con el logo */
     font-weight: 700;
-    letter-spacing: -0.8px;
+    letter-spacing: -0.5px;
     line-height: 1;
 }
 
 .app-logo {
-    width: 48px;  /* Aumentado a 48px para mejor visibilidad */
-    height: 48px;
+    width: 60px;  /* Logo agrandado */
+    height: 60px;
     display: block;
     object-fit: contain;
     /* Suavizado avanzado */
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
     shape-rendering: geometricPrecision;
     flex-shrink: 0;
@@ -101,6 +100,7 @@ button:hover {
     margin-top: 50px;
     margin-bottom: 40px;
 }
+
 /* --- BOTÓN FLOTANTE (FAB) --- */
 .fab-asistente {
     position: fixed;
