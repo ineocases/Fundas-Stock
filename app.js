@@ -1,8 +1,5 @@
 import { auth, db } from "./firebase.js";
 
-console.log("AUTH:", auth);
-console.log("DB:", db);
-
 import {
   signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
@@ -13,67 +10,51 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+console.log("DB:", db);
+
+document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("guardarFunda").onclick = guardarFunda;
+
+async function login() {
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  await signInWithEmailAndPassword(auth, email, password);
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  cargarFundas();
+}
 
 
-// LOGIN
-document.getElementById("btnLogin").onclick = async () => {
+function mostrarFormulario() {
 
-  try {
+  document.getElementById("agregar").style.display = "block";
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-
-    await signInWithEmailAndPassword(auth, email, password);
-
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
-    cargarFundas();
-
-  } catch (error) {
-
-    alert(error.message);
-    console.log(error);
-
-  }
-
-};
+}
 
 
-
-
-// CARGAR FUNDAS
 async function cargarFundas() {
 
-  const querySnapshot = await getDocs(
-    collection(db, "fundas")
-  );
+  const snapshot = await getDocs(collection(db, "fundas"));
 
   let html = "";
 
-  querySnapshot.forEach((doc) => {
+  snapshot.forEach((doc) => {
 
     const f = doc.data();
 
     html += `
-
       <div class="card">
 
-        <h2>${f.nombre}</h2>
+      <h2>${f.nombre}</h2>
 
-        <p>📦 Stock: ${f.stock}</p>
-
-        <p>📱 Compatibles:
-        ${f.compatibles.join(", ")}</p>
-
-        <p>💵 Costo:
-        $${f.costo}</p>
-
-        <p>💰 Venta:
-        $${f.venta}</p>
+      <p>📦 ${f.stock}</p>
 
       </div>
-
     `;
 
   });
@@ -83,91 +64,35 @@ async function cargarFundas() {
 }
 
 
+async function guardarFunda() {
 
+  console.log("DB antes de guardar:", db);
 
-// MOSTRAR FORMULARIO
-document.getElementById("btnNuevaFunda").onclick = () => {
+  await addDoc(
 
-  document.getElementById("agregar").style.display = "block";
+    collection(db, "fundas"),
 
-};
+    {
 
+      nombre: document.getElementById("nombre").value,
 
+      stock: Number(document.getElementById("stock").value),
 
-
-// GUARDAR FUNDA
-document.getElementById("guardarFunda").onclick = async () => {
-
-  try {
-
-    const nombre = document.getElementById("nombre").value;
-
-    const stock = Number(
-      document.getElementById("stock").value
-    );
-
-    const compatibles =
+      compatibles:
       document.getElementById("compatibles")
       .value
-      .split(",")
-      .map(x => x.trim());
+      .split(","),
 
-    const costo = Number(
-      document.getElementById("costo").value
-    );
+      costo: Number(document.getElementById("costo").value),
 
-    const venta = Number(
-      document.getElementById("venta").value
-    );
+      venta: Number(document.getElementById("venta").value),
 
+      foto: ""
 
-    await addDoc(
+    }
 
-      collection(db, "fundas"),
+  );
 
-      {
+  alert("Guardada");
 
-        nombre: nombre,
-
-        stock: stock,
-
-        compatibles: compatibles,
-
-        costo: costo,
-
-        venta: venta,
-
-        foto: ""
-
-      }
-
-    );
-
-
-    alert("Funda guardada");
-
-
-    document.getElementById("agregar").style.display = "none";
-
-
-    document.getElementById("nombre").value = "";
-    document.getElementById("stock").value = "";
-    document.getElementById("compatibles").value = "";
-    document.getElementById("costo").value = "";
-    document.getElementById("venta").value = "";
-
-
-    cargarFundas();
-
-
-  }
-
-  catch (error) {
-
-    alert(error.message);
-
-    console.log(error);
-
-  }
-
-};
+}
