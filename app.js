@@ -4,11 +4,15 @@ import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, orderBy 
 
 let todasLasFundas = [];
 
+// --- INICIO DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById("login").style.display = "none";
         document.getElementById("app").style.display = "block";
         cargarDatos();
+    } else {
+        document.getElementById("login").style.display = "block";
+        document.getElementById("app").style.display = "none";
     }
 });
 
@@ -18,6 +22,7 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
+// --- RENDERIZADO DE TARJETAS ---
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
     contenedor.innerHTML = ""; 
@@ -45,24 +50,22 @@ async function cargarFundas() {
     renderizarFundas(todasLasFundas);
 }
 
-// --- BUSCADOR ESTRICTO ---
+// --- BUSCADOR ESTRICTO (Nombre o Modelo exacto) ---
 document.getElementById("buscar").addEventListener("input", (e) => {
     const t = e.target.value.toLowerCase().trim();
     if (!t) return renderizarFundas(todasLasFundas);
 
     const filtradas = todasLasFundas.filter(f => {
         const nombreMatch = (f.nombre || "").toLowerCase().includes(t);
-        // Divide los modelos por coma y limpia espacios, luego busca coincidencia exacta
         const modelos = (f.compatibles || "").split(',').map(m => m.trim().toLowerCase());
         const modeloMatch = modelos.includes(t);
-        
         return nombreMatch || modeloMatch;
     });
     
     renderizarFundas(filtradas);
 });
 
-// --- FUNCIONES DE ACCIÓN ---
+// --- LÓGICA DE VENTAS Y CRUD ---
 document.getElementById("btnNuevaFunda").onclick = () => {
     const form = document.getElementById("agregar");
     form.style.display = form.style.display === "none" ? "block" : "none";
@@ -78,6 +81,7 @@ document.getElementById("guardarFunda").onclick = async () => {
     };
     await addDoc(collection(db, "fundas"), d);
     document.getElementById("agregar").style.display = "none";
+    alert("Funda guardada");
     cargarDatos();
 };
 
@@ -97,6 +101,7 @@ window.venderFunda = async (fJson) => {
     cargarDatos();
 };
 
+// --- DASHBOARD E HISTORIAL ---
 async function actualizarDashboard() {
     const vSnap = await getDocs(collection(db, "ventas"));
     const fSnap = await getDocs(collection(db, "fundas"));
@@ -117,14 +122,16 @@ async function cargarHistorial() {
     let t = `<table><tr><th>Cliente</th><th>Producto</th><th>Ganancia</th></tr>`;
     snap.docs.forEach(d => {
         const v = d.data();
-        t += `<tr><td>${v.cliente}</td><td>${v.producto}</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
+        t += `<tr><td>${v.cliente}</td><td>${v.producto} (${v.unidades})</td><td>$${v.ganancia.toFixed(2)}</td></tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
 }
 
-window.eliminarFunda = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
-window.editarFunda = (id) => { alert("Usa el formulario para actualizar."); };
+// --- ACCIONES ADICIONALES ---
+window.eliminarFunda = async (id) => { if(confirm("¿Seguro que deseas eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
+window.editarFunda = (id) => { alert("Por ahora usa el formulario para registrar nuevas entradas."); };
+
 document.getElementById("btnLogin").onclick = async () => {
     try { await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value); } 
-    catch(e) { alert("Error"); }
+    catch(e) { alert("Error de acceso"); }
 };
