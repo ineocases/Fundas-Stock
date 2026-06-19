@@ -22,10 +22,23 @@ async function cargarDatos() {
     await cargarHistorial();
 }
 
-// --- 2. BUSCADORES (Lógica Robusta) ---
+// --- 2. BUSCADORES (Con protección ante errores) ---
+document.addEventListener("DOMContentLoaded", () => {
+    const elNombre = document.getElementById("buscarNombre");
+    const elModelo = document.getElementById("buscarModelo");
+
+    if (elNombre) elNombre.addEventListener("input", window.aplicarFiltros);
+    if (elModelo) elModelo.addEventListener("input", window.aplicarFiltros);
+});
+
 window.aplicarFiltros = () => {
-    const textoNombre = document.getElementById("buscarNombre").value.toLowerCase().trim();
-    const textoModelo = document.getElementById("buscarModelo").value.toLowerCase().trim();
+    const elNombre = document.getElementById("buscarNombre");
+    const elModelo = document.getElementById("buscarModelo");
+    
+    if (!elNombre || !elModelo) return;
+
+    const textoNombre = elNombre.value.toLowerCase().trim();
+    const textoModelo = elModelo.value.toLowerCase().trim();
 
     const filtradas = todasLasFundas.filter(f => {
         const nombre = (f.nombre || "").toLowerCase();
@@ -40,10 +53,6 @@ window.aplicarFiltros = () => {
     });
     renderizarFundas(filtradas);
 };
-
-// Conexión de eventos
-document.getElementById("buscarNombre").addEventListener("input", window.aplicarFiltros);
-document.getElementById("buscarModelo").addEventListener("input", window.aplicarFiltros);
 
 // --- 3. RENDERIZADO DE TARJETAS ---
 function renderizarFundas(lista) {
