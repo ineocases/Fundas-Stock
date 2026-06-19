@@ -51,6 +51,11 @@ document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
+// Eventos del Gestor de Categorías Personalizadas
+document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
+document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
+document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
+
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
   document.getElementById("sidebarOverlay").classList.toggle("active");
@@ -93,14 +98,18 @@ onAuthStateChanged(auth, async (user) => {
     esAdmin = !user.isAnonymous;
     
     const btnCambiarRol = document.getElementById("btnCambiarRol");
+    const btnGestorCategorias = document.getElementById("btnGestorCategorias");
+
     if (esAdmin) {
       btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
       document.getElementById("btnNuevaFunda").style.display = "inline-block";
       document.getElementById("btnAsistente").style.display = "flex";
+      btnGestorCategorias.style.display = "block"; // Mostrar gestor solo al admin
     } else {
       btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
       document.getElementById("btnNuevaFunda").style.display = "none";
       document.getElementById("btnAsistente").style.display = "none";
+      btnGestorCategorias.style.display = "none";
     }
     
     await cargarCategorias();
@@ -131,27 +140,19 @@ async function loginCliente() {
   }
 }
 
-// 📂 GESTIÓN Y CARGA DE CATEGORÍAS (FIRESTORE)
+// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS (FIRESTORE)
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
     let lista = [];
     snapshot.forEach(doc => {
-      lista.push(doc.data().nombre);
+      lista.push({ id: doc.id, nombre: doc.data().nombre });
     });
-
-    // ✨ CATEGORÍAS COMERCIALES SOLICITADAS
-    if (lista.length === 0) {
-      const predeterminadas = ["Fundas", "Auriculares", "Cargadores", "Hidrogel", "Protectores"];
-      for (const cat of predeterminadas) {
-        await addDoc(collection(db, "categorias"), { nombre: cat });
-        lista.push(cat);
-      }
-    }
     
     listaCategorias = lista;
     renderizarPildorasCategorias();
     actualizarSelectFormulario();
+    renderizarListaCrudCategorias();
   } catch (error) {
     console.error("Error al cargar categorías:", error);
   }
@@ -164,7 +165,7 @@ function renderizarPildorasCategorias() {
   let html = `<div class="categoria-pill ${categoriaSeleccionadaFiltro === 'Todas' ? 'active' : ''}" data-cat="Todas">Todas</div>`;
   
   listaCategorias.forEach(cat => {
-    html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat ? 'active' : ''}" data-cat="${cat}">${cat}</div>`;
+    html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat.nombre ? 'active' : ''}" data-cat="${cat.nombre}">${cat.nombre}</div>`;
   });
 
   contenedor.innerHTML = html;
@@ -183,7 +184,77 @@ function renderizarPildorasCategorias() {
 function actualizarSelectFormulario() {
   const select = document.getElementById("categoriaSelect");
   if (!select) return;
-  select.innerHTML = listaCategorias.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+  select.innerHTML = listaCategorias.map(cat => `<option value="${cat.nombre}">${cat.nombre}</option>`).join("");
+}
+
+// Ventana del gestor de categorías
+function abrirModalCategorias() {
+  toggleSidebar();
+  document.getElementById("nuevoNombreCategoria").value = "";
+  document.getElementById("modalCategorias").style.display = "flex";
+}
+
+function cerrarModalCategorias() {
+  document.getElementById("modalCategorias").style.display = "none";
+}
+
+// Función para crear la categoría que vos quieras escribir
+async function crearNuevaCategoria() {
+  const input = document.getElementById("nuevoNombreCategoria");
+  const nombre = input.value.trim();
+
+  if (!nombre) return alert("Escribí un nombre para la categoría.");
+
+  // Evitar duplicados
+  const existe = listaCategorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase());
+  if (existe) return alert("Esa categoría ya existe.");
+
+  try {
+    await addDoc(collection(db, "categorias"), { nombre: nombre });
+    input.value = "";
+    await cargarCategorias(); 
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Función para eliminar una categoría creada
+async function eliminarCategoria(id, nombre) {
+  if (confirm(`¿Estás seguro que quieres eliminar la categoría "${nombre}"?`)) {
+    try {
+      await deleteDoc(doc(db, "categorias", id));
+      await cargarCategorias();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
+function renderizarListaCrudCategorias() {
+  const contenedor = document.getElementById("listaCategoriasCrud");
+  if (!contenedor) return;
+
+  if (listaCategorias.length === 0) {
+    contenedor.innerHTML = `<p style="text-align:center; color:#6e6e73; font-size:13px;">No hay categorías creadas aún.</p>`;
+    return;
+  }
+
+  let html = "";
+  listaCategorias.forEach(cat => {
+    html += `
+      <div class="item-crud-categoria">
+        <span>${cat.nombre}</span>
+        <button class="btn-eliminar-cat" data-id="${cat.id}" data-nombre="${cat.nombre}">🗑️</button>
+      </div>
+    `;
+  });
+  contenedor.innerHTML = html;
+
+  contenedor.querySelectorAll(".btn-eliminar-cat").forEach(btn => {
+    btn.onclick = function() {
+      eliminarCategoria(this.getAttribute("data-id"), this.getAttribute("data-nombre"));
+    };
+  });
 }
 
 // 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
@@ -356,14 +427,14 @@ function abrirModalReservar(id) {
   selectModelo.innerHTML = "";
 
   if (Array.isArray(funda.stockPorModelo)) {
-    const modelosDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
+    const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
 
-    if (modelosDisponibles.length === 0) {
+    if (modelsDisponibles.length === 0) {
       selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
       document.getElementById("btnConfirmarWhatsApp").disabled = true;
     } else {
       document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      modelosDisponibles.forEach(m => {
+      modelsDisponibles.forEach(m => {
         const option = document.createElement("option");
         option.value = m.modelo;
         option.innerText = `${m.modelo} (${m.stock} u.)`;
@@ -400,6 +471,11 @@ function enviarWhatsApp() {
 
 function mostrarFormulario() {
   if (!esAdmin) return;
+  if (listaCategorias.length === 0) {
+    alert("⚠️ Primero debés crear al menos una categoría desde el menú lateral.");
+    return;
+  }
+  
   idFundaEditando = null;
   fotoBase64 = ""; 
   document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
@@ -564,7 +640,7 @@ function abrirEditarFunda(id) {
   document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
 
   document.getElementById("nombre").value = funda.nombre || "";
-  document.getElementById("categoriaSelect").value = funda.categoria || listaCategorias[0];
+  document.getElementById("categoriaSelect").value = funda.categoria || (listaCategorias[0] ? listaCategorias[0].nombre : "");
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
 
@@ -662,7 +738,7 @@ function renderizarFundas(arrayDeFundas) {
 
     html += `
     <div class="card">
-      <div class="badge-categoria">${f.categoria || "Fundas"}</div>
+      <div class="badge-categoria">${f.categoria || "Varios"}</div>
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
         <h2>${f.nombre || "Sin nombre"}</h2>
