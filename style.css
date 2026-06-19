@@ -25,3 +25,8 @@ button { padding: 10px; border: none; border-radius: 8px; cursor: pointer; color
 table { width: 100%; border-collapse: collapse; }
 th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
 th { background-color: #f8f9fa; }
+/* Esto le da el estilo azul a todos los botones que no sean Vender/Editar/Eliminar */
+button { 
+    background-color: #007AFF !important; 
+    color: white !important;
+}
