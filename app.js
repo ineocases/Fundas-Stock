@@ -4,6 +4,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy 
 
 let todasLasFundas = [];
 let idEdicion = null;
+let ventaEnCurso = false; // Bloqueo para evitar que los prompts se tilden
 
 // --- 1. GESTIÓN DE SESIÓN ---
 onAuthStateChanged(auth, (user) => {
@@ -94,43 +95,44 @@ window.editarFunda = (id) => {
     document.getElementById("agregar").style.display = "block";
 };
 
-// --- 4. LÓGICA DE VENTAS ---
+// --- 4. LÓGICA DE VENTAS (CONTROLADA) ---
 window.venderFunda = async (fJson) => {
-    const f = JSON.parse(decodeURIComponent(fJson));
-    
-    const cliente = prompt("Nombre del cliente:");
-    if (!cliente) return;
-    
-    const modelo = prompt("Modelo (ej: 11):", f.compatibles.split(',')[0]);
-    if (!modelo) return;
-    
-    const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
-    if (isNaN(unidades) || unidades <= 0) return;
-    
-    const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
-    const envio = parseFloat(prompt("Costo de envío:", "0"));
-    
-    if (isNaN(precioTotal)) return;
-    
-    // Guardar venta detallada
-    await addDoc(collection(db, "ventas"), { 
-        producto: f.nombre,
-        cliente: cliente, 
-        modelo: modelo,
-        unidades: unidades, 
-        costoUnitario: Number(f.costo),
-        precioVenta: precioTotal / unidades, 
-        envio: Number(envio), 
-        ganancia: (Number(precioTotal) - (Number(f.costo) * unidades) - Number(envio)),
-        fecha: new Date().toLocaleDateString(), 
-        fechaCompleta: new Date().toISOString() 
-    });
-    
-    // Actualizar Stock
-    await updateDoc(doc(db, "fundas", f.id), { stock: Number(f.stock) - unidades });
-    
-    alert("Venta registrada con éxito");
-    cargarDatos();
+    if (ventaEnCurso) return; 
+    ventaEnCurso = true;
+
+    try {
+        const f = JSON.parse(decodeURIComponent(fJson));
+        const cliente = prompt("Nombre del cliente:");
+        if (!cliente) return;
+        
+        const modelo = prompt("Modelo (ej: 11):", f.compatibles.split(',')[0]);
+        if (!modelo) return;
+        
+        const unidades = parseInt(prompt("Cantidad de unidades:", "1"));
+        if (isNaN(unidades) || unidades <= 0) return;
+        
+        const precioTotal = parseFloat(prompt("Precio total cobrado:", f.venta * unidades));
+        const envio = parseFloat(prompt("Costo de envío:", "0"));
+        
+        if (isNaN(precioTotal)) return;
+
+        await addDoc(collection(db, "ventas"), { 
+            producto: f.nombre,
+            cliente: cliente, 
+            modelo: modelo,
+            unidades: unidades, 
+            costoUnitario: Number(f.costo),
+            precioVenta: precioTotal / unidades, 
+            envio: Number(envio), 
+            ganancia: (Number(precioTotal) - (Number(f.costo) * unidades) - Number(envio)),
+            fecha: new Date().toLocaleDateString(), 
+            fechaCompleta: new Date().toISOString() 
+        });
+        
+        await updateDoc(doc(db, "fundas", f.id), { stock: Number(f.stock) - unidades });
+        alert("Venta registrada correctamente.");
+        await cargarDatos();
+    } catch (e) { console.error(e); } finally { ventaEnCurso = false; }
 };
 
 window.eliminarFunda = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "fundas", id)); cargarDatos(); } };
@@ -160,14 +162,9 @@ async function cargarHistorial() {
     snap.docs.forEach(d => {
         const v = d.data();
         t += `<tr>
-            <td>${v.cliente || '-'}</td>
-            <td>${v.producto || '-'}</td>
-            <td>${v.modelo || '-'}</td>
-            <td>${v.unidades || 0}</td>
-            <td>$${(v.costoUnitario || 0).toFixed(2)}</td>
-            <td>$${(v.precioVenta || 0).toFixed(2)}</td>
-            <td>$${(v.envio || 0).toFixed(2)}</td>
-            <td>$${(v.ganancia || 0).toFixed(2)}</td>
+            <td>${v.cliente || '-'}</td><td>${v.producto || '-'}</td><td>${v.modelo || '-'}</td>
+            <td>${v.unidades || 0}</td><td>$${(v.costoUnitario || 0).toFixed(2)}</td>
+            <td>$${(v.precioVenta || 0).toFixed(2)}</td><td>$${(v.envio || 0).toFixed(2)}</td><td>$${(v.ganancia || 0).toFixed(2)}</td>
         </tr>`;
     });
     document.getElementById("historial").innerHTML = t + `</table>`;
