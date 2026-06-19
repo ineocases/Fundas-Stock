@@ -1,51 +1,51 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IneoCases Stock</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IneoCases Stock</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="login">
-    <h2>IneoCases Stock</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Contraseña">
-    <button id="btnLogin">Ingresar</button>
-  </div>
-
-  <div id="app" style="display:none;">
-    <h1>📱 IneoCases Stock</h1>
-    
-    <div id="panel" style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ddd;">
-      <h2>📊 Resumen</h2>
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <p>💰 Ganancia hoy: <strong id="gananciaHoy">$0</strong></p>
-        <p>📦 Stock total: <strong id="stockTotal">0</strong></p>
-        <p>🛒 Ventas del mes: <strong id="ventasMes">0</strong></p>
-      </div>
+    <div id="login">
+        <h2>IneoCases Stock</h2>
+        <input id="email" type="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Contraseña">
+        <button id="btnLogin">Ingresar</button>
     </div>
 
-    <input id="buscar" placeholder="Buscar funda...">
-<button id="btnNuevaFunda" style="background-color: #007AFF; color: white;">➕ Nueva funda</button>
+    <div id="app" style="display:none;">
+        <h1>📱 IneoCases Stock</h1>
+        
+        <div id="panel">
+            <h2>📊 Resumen</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <p>💰 Ganancia hoy: <strong id="gananciaHoy">$0.00</strong></p>
+                <p>📦 Stock total: <strong id="stockTotal">0</strong></p>
+                <p>🛒 Ventas del mes: <strong id="ventasMes">0</strong></p>
+            </div>
+        </div>
 
-    <div id="agregar" style="display:none">
-      <input id="nombre" placeholder="Nombre">
-      <input id="stock" type="number" placeholder="Stock">
-      <input id="compatibles" placeholder="Modelos (ej: 11, 12, 13)">
-      <input id="costo" type="number" placeholder="Costo">
-      <input id="venta" type="number" placeholder="Precio de venta">
-      <button id="guardarFunda">Guardar</button>
-    </div>  
+        <input id="buscar" placeholder="Buscar funda...">
+        <button id="btnNuevaFunda">➕ Nueva funda</button>
 
-    <div id="fundas"></div>
+        <div id="agregar" style="display:none">
+            <input id="nombre" placeholder="Nombre de la funda">
+            <input id="stock" type="number" placeholder="Stock disponible">
+            <input id="compatibles" placeholder="Modelos (ej: 11, 12, 13)">
+            <input id="costo" type="number" placeholder="Precio de costo">
+            <input id="venta" type="number" placeholder="Precio de venta">
+            <button id="guardarFunda">Guardar Funda</button>
+        </div>  
 
-    <hr style="margin: 40px 0;">
-    <h2>📜 Historial de Ventas</h2>
-    <div id="historial"></div>
-  </div>
+        <div id="fundas"></div>
 
-  <script type="module" src="app.js"></script>
+        <hr style="margin: 40px 0;">
+        <h2>📜 Historial de Ventas</h2>
+        <div id="historial"></div>
+    </div>
+
+    <script type="module" src="app.js"></script>
 </body>
 </html>
