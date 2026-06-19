@@ -4,21 +4,7 @@ import { collection, getDocs, addDoc, doc, deleteDoc } from "https://www.gstatic
 
 let todasLasFundas = [];
 
-// Eventos iniciales
-document.getElementById("btnLogin").onclick = login;
-document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
-document.getElementById("guardarFunda").onclick = guardarFunda;
-
-// Buscador
-document.getElementById("buscar").addEventListener("input", (e) => {
-    const texto = e.target.value.toLowerCase();
-    const filtradas = todasLasFundas.filter(f => 
-        (f.nombre || "").toLowerCase().includes(texto) || 
-        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
-    );
-    renderizarFundas(filtradas);
-});
-
+// 1. DEFINIMOS LAS FUNCIONES PRIMERO
 async function login() {
     try {
         await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("password").value);
@@ -41,8 +27,7 @@ async function cargarFundas() {
 
 function renderizarFundas(lista) {
     const contenedor = document.getElementById("fundas");
-    contenedor.innerHTML = ""; // Limpiar
-    
+    contenedor.innerHTML = "";
     lista.forEach((f) => {
         const card = document.createElement("div");
         card.className = "card";
@@ -52,10 +37,7 @@ function renderizarFundas(lista) {
             <p>📱 ${Array.isArray(f.compatibles) ? f.compatibles.join(" • ") : f.compatibles}</p>
             <button class="btn-eliminar">🗑️ Eliminar</button>
         `;
-        
-        // AQUÍ ESTÁ EL TRUCO: Conectamos el botón apenas se crea
         card.querySelector(".btn-eliminar").onclick = () => eliminarFunda(f.id);
-        
         contenedor.appendChild(card);
     });
 }
@@ -81,3 +63,17 @@ async function guardarFunda() {
     document.getElementById("agregar").style.display = "none";
     cargarFundas();
 }
+
+// 2. ASIGNAMOS LOS EVENTOS AL FINAL (Cuando las funciones ya existen)
+document.getElementById("btnLogin").onclick = login;
+document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+document.getElementById("guardarFunda").onclick = guardarFunda;
+
+document.getElementById("buscar").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase();
+    const filtradas = todasLasFundas.filter(f => 
+        (f.nombre || "").toLowerCase().includes(texto) || 
+        (f.compatibles || []).join(" ").toLowerCase().includes(texto)
+    );
+    renderizarFundas(filtradas);
+});
