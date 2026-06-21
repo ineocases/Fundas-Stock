@@ -34,8 +34,8 @@ let fundaReservando = null;
 let imagenRecortadaTemporal = null; 
 let porcentajeEscala = 0.72; 
 let anguloRotacion = 0; 
-let sortableInstance = null; // Instancia global para el Drag and Drop
-let esProductoSinModelo = false; // Variable global para controlar el modo del producto actual
+let sortableInstance = null; 
+let esProductoSinModelo = false; 
 
 // 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
 const inputBuscar = document.getElementById("buscar");
@@ -64,21 +64,17 @@ document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-// Evento para el botón dinámico "No Modelo"
 document.getElementById("btnToggleModelo").onclick = toggleModoModelo;
 
-// Eventos del Gestor de Categorías Personalizadas
 document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
 document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
 document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
 
-// Evento para activar importación por Excel
 document.getElementById("btnImportarExcel").onclick = () => {
   document.getElementById("inputExcel").click();
 };
 document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
-// Eventos para el Menú IA y Formateador
 document.getElementById("btnAccionesIA").onclick = toggleMenuMenuIA;
 document.getElementById("btnMenuFormatear").onclick = () => {
   document.getElementById("menuAccionesIA").style.display = "none";
