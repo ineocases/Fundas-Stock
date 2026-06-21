@@ -244,6 +244,7 @@ button:active {
 .btn-secundario {
     background: #e8e8ed;
     color: #1d1d1f;
+    width: 100%;
 }
 
 /* --- REPOSITORIO DE TARJETAS (ESCRITORIO) --- */
@@ -388,7 +389,7 @@ button:active {
     to { opacity: 1; }
 }
 
-/* --- PANTALLA DE CARGA PRO (DISEÑO IA E INTELIGENTE) --- */
+/* --- PANTALLA DE CARGA PRO --- */
 #cargando {
     position: fixed;
     top: 0;
@@ -440,7 +441,7 @@ button:active {
     100% { transform: rotate(360deg); }
 }
 
-/* --- SECCIÓN DE LOGIN --- */
+/* --- SECCIÓN DE LOGIN GENERAL --- */
 #login { 
     background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=80') no-repeat center center; 
     background-size: cover; 
@@ -492,13 +493,11 @@ button:active {
     image-rendering: crisp-edges;
 }
 
-.login-container label {
-    margin-bottom: 6px;
-    font-size: 13px;
-}
-
-.login-container input {
-    margin-bottom: 18px; 
+.subtitle {
+    font-size: 14px;
+    color: #6e6e73;
+    margin-top: 5px;
+    line-height: 1.4;
 }
 
 .btn-principal-welcome { 
@@ -523,6 +522,97 @@ button:active {
     margin: 0 auto;
     display: block;
     width: max-content;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-link-admin:hover {
+    background: rgba(0, 0, 0, 0.09);
+}
+
+/* --- 🔒 MODAL LOGIN ADMINISTRATIVO (CORREGIDO Y ORDENADO) --- */
+.modal-admin-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Oscurece el fondo elegantemente */
+    backdrop-filter: blur(14px); /* Difumina de fondo la pantalla de bienvenida */
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Centrado absoluto impecable */
+    z-index: 9999; /* Por encima de cualquier interfaz */
+    padding: 20px;
+    box-sizing: border-box;
+    animation: fadeInAdmin 0.25s ease-out;
+}
+
+.modal-admin-content {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 28px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-sizing: border-box;
+    animation: scaleInAdmin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInAdmin {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleInAdmin {
+    from { transform: scale(0.94); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-admin-header {
+    text-align: center;
+    margin-bottom: 22px;
+}
+
+.modal-admin-header h3 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+.modal-admin-header p {
+    margin: 0;
+    font-size: 13px;
+    color: #6e6e73;
+}
+
+.modal-admin-body label {
+    margin-bottom: 6px;
+}
+
+.modal-admin-body input {
+    margin-bottom: 18px;
+}
+
+.btn-admin-submit {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 14px;
+    background: #0071e3;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 5px;
+    transition: background 0.2s;
+}
+.btn-admin-submit:hover {
+    background: #0077ed;
 }
 
 
@@ -602,5 +692,9 @@ button:active {
         right: 20px;
         padding: 12px 18px;
         font-size: 14px;
+    }
+    
+    .modal-admin-overlay {
+        align-items: center; /* Mantiene el login administrativo al centro también en móvil */
     }
 }
