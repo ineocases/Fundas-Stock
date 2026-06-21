@@ -894,28 +894,26 @@ function coincideModelo(modelo, textoBuscado) {
 }
 
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
+  const contenedor = document.getElementById("fundas");
   let html = "";
+
   arrayDeFundas.forEach((f) => {
-    let listaModelosHTML = "";
-    let totalStock = 0;
-    let modelosAMostrar = [];
+    const modelosTotales = f.stockPorModelo || [];
+    
+    // Filtramos modelos si hay texto buscado
+    const modelosFiltrados = (textoBuscado !== "")
+      ? modelosTotales.filter(m => coincideModelo(m.modelo, textoBuscado))
+      : modelosTotales;
 
-    if (Array.isArray(f.stockPorModelo)) {
-      modelosAMostrar = f.stockPorModelo;
+    const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
+    
+    // Lógica para saber si expandir automáticamente:
+    // Se expande solo si el usuario escribió algo y encontramos coincidencias en los modelos
+    const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
 
-      if (textoBuscado !== "") {
-        const modelosCoincidentes = f.stockPorModelo.filter(m => coincideModelo(m.modelo, textoBuscado));
-        
-        if (modelosCoincidentes.length > 0) {
-          modelosAMostrar = modelosCoincidentes;
-        }
-      }
-
-      totalStock = modelosAMostrar.reduce((acc, item) => acc + item.stock, 0);
-      listaModelosHTML = modelosAMostrar
-        .map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`)
-        .join("<br>");
-    }
+    const listaModelosHTML = modelosFiltrados
+      .map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`)
+      .join("<br>");
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     let bloqueAcciones = "";
@@ -923,24 +921,20 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     if (esAdmin) {
       bloqueAcciones = `
         <p style="margin-top:8px; color:#1d1d1f;">💵 Costo: <b>$${f.costo ?? 0}</b></p>
-        <div style="margin-top: 15px;">
-          <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
-          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
+        <div style="margin-top: 15px; display: flex; gap: 5px;">
+          <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
+          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>
       `;
     } else {
       bloqueAcciones = `
         <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px;">
-            Reservar Artículo
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Reservar Artículo
           </button>
         </div>
       `;
     }
-
-    const etiquetaStock = (textoBuscado !== "" && modelosAMostrar.length !== f.stockPorModelo.length) 
-                          ? 'Stock de esta variante' 
-                          : 'Stock Total';
 
     html += `
     <div class="card">
@@ -948,9 +942,14 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
         <h2>${f.nombre || "Sin nombre"}</h2>
-        <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>${etiquetaStock}: ${totalStock} u.</b></p>
+        <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
         
-        <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
+        <button onclick="this.style.display='none'; this.nextElementSibling.style.display='block'" 
+                style="width:100%; margin-bottom:10px; background:#f0f0f0; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:500; display: ${mostrarDirecto ? 'none' : 'block'}">
+          🔍 Ver Stock por Modelo
+        </button>
+
+        <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5; display: ${mostrarDirecto ? 'block' : 'none'};">
           ${listaModelosHTML}
         </div>
 
@@ -964,23 +963,31 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 }
 
 function filtrarFundas() {
+  // 1. Capturamos el texto de búsqueda
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
-  
+
+  // 2. Filtramos la lista global
   const fundasFiltradas = todasLasFundas.filter((f) => {
-    if (categoriaSeleccionadaFiltro !== "Todas") {
-      if (f.categoria !== categoriaSeleccionadaFiltro) return false;
+    // Si hay una categoría seleccionada, la aplicamos
+    if (categoriaSeleccionadaFiltro !== "Todas" && f.categoria !== categoriaSeleccionadaFiltro) {
+      return false;
     }
 
+    // Buscamos coincidencia en el nombre de la funda
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     
+    // Buscamos coincidencia en los modelos (usando tu función 'coincideModelo')
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     
+    // La funda pasa el filtro si coincide el nombre O si coincide algún modelo
     return nombreCoincide || compatibleCoincide;
   });
-  
+
+  // 3. Renderizamos pasando el textoBuscado para que la lógica de visualización 
+  // decida si expandir el stock automáticamente o mostrar el botón "Ver Stock"
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
