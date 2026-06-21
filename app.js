@@ -41,7 +41,6 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnCrearFoto").onclick = procesarImagenPro; 
 document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
 document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
@@ -61,6 +60,19 @@ document.getElementById("btnImportarExcel").onclick = () => {
   document.getElementById("inputExcel").click();
 };
 document.getElementById("inputExcel").onchange = procesarImportacionExcel;
+
+// NUEVO: Eventos para el Menú IA y Formateador
+document.getElementById("btnAccionesIA").onclick = toggleMenuIA;
+document.getElementById("btnMenuFormatear").onclick = () => {
+  document.getElementById("menuAccionesIA").style.display = "none";
+  toggleFormateador();
+};
+document.getElementById("btnCrearFoto").onclick = () => {
+  document.getElementById("menuAccionesIA").style.display = "none";
+  procesarImagenPro();
+};
+document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
+
 
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
@@ -110,13 +122,13 @@ onAuthStateChanged(auth, async (user) => {
     if (esAdmin) {
       btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
       document.getElementById("btnNuevaFunda").style.display = "inline-block";
-      btnImportarExcel.style.display = "inline-block"; // Mostrar botón de Excel al administrador
+      btnImportarExcel.style.display = "inline-block"; 
       document.getElementById("btnAsistente").style.display = "flex";
       btnGestorCategorias.style.display = "block";
     } else {
       btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
       document.getElementById("btnNuevaFunda").style.display = "none";
-      btnImportarExcel.style.display = "none"; // Ocultar botón de Excel a clientes
+      btnImportarExcel.style.display = "none"; 
       document.getElementById("btnAsistente").style.display = "none";
       btnGestorCategorias.style.display = "none";
     }
@@ -326,13 +338,13 @@ function procesarImportacionExcel(evento) {
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Por favor, selecciona un archivo primero.");
+    alert("Por favor, selecciona un archivo de imagen primero.");
     return;
   }
 
   const btnCrear = document.getElementById("btnCrearFoto");
   btnCrear.disabled = true;
-  btnCrear.innerText = "🚀 Recortando con Remove.bg...";
+  btnCrear.innerText = "🚀 Recortando...";
 
   const file = fileInput.files[0];
 
@@ -396,7 +408,7 @@ async function procesarImagenPro() {
     alert("Hubo un problema al conectar con Remove.bg.");
   } finally {
     btnCrear.disabled = false;
-    btnCrear.innerText = "Crear foto Pro";
+    btnCrear.innerText = "📷 Crear foto Pro";
   }
 }
 
@@ -534,6 +546,61 @@ function enviarWhatsApp() {
   cerrarModalReservar();
 }
 
+// NUEVO: Funciones de IA y Formateo
+function toggleMenuIA() {
+  const menu = document.getElementById("menuAccionesIA");
+  if(menu) {
+    menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+  }
+}
+
+function toggleFormateador() {
+  const caja = document.getElementById("cajaFormateador");
+  if(caja) {
+    caja.style.display = (caja.style.display === "none" || caja.style.display === "") ? "block" : "none";
+  }
+}
+
+function procesarTextoStock() {
+  const textoCrudo = document.getElementById("textoCrudoStock").value;
+  if (!textoCrudo.trim()) return alert("Pegá una lista primero.");
+
+  const lineas = textoCrudo.split('\n');
+  const resultado = [];
+
+  lineas.forEach(linea => {
+    let str = linea.trim();
+    if (!str) return;
+
+    // 1. Extraer la cantidad (busca "x1", "x 2", etc. al final)
+    let cantidad = 1; 
+    const matchCant = str.match(/x\s*(\d+)$/i);
+    if (matchCant) {
+      cantidad = matchCant[1];
+      str = str.replace(/x\s*\d+$/i, '').trim(); 
+    }
+
+    // 2. Limpiar prefijos
+    str = str.replace(/^(Iph|iphone|i)\s*/i, '');
+    
+    // 3. Traducir abreviaciones
+    str = str.replace(/\bpm\b/ig, 'Pro Max');
+    str = str.replace(/\bp\b/ig, 'Pro');
+    str = str.replace(/\bplus\b/ig, 'Plus');
+
+    // 4. Asegurar mayúscula inicial
+    if (str.length > 0) {
+      str = str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    resultado.push(`${str}:${cantidad}`);
+  });
+
+  document.getElementById("stockPorModelo").value = resultado.join(', ');
+  document.getElementById("textoCrudoStock").value = "";
+  document.getElementById("cajaFormateador").style.display = "none";
+}
+
 function mostrarFormulario() {
   if (!esAdmin) return;
   if (listaCategorias.length === 0) {
@@ -557,6 +624,12 @@ function mostrarFormulario() {
   document.getElementById("previewFoto").style.display = "none";
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
+  
+  // Limpiar menús de IA
+  if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
+  if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
+  if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
+
   document.getElementById("agregar").style.display = "flex";
 }
 
@@ -727,6 +800,12 @@ function abrirEditarFunda(id) {
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
+  
+  // Limpiar menús de IA
+  if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
+  if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
+  if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
+
   document.getElementById("guardarFunda").innerText = "Actualizar";
   document.getElementById("agregar").style.display = "flex";
 }
