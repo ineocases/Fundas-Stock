@@ -720,19 +720,48 @@ function actualizarDatalistBuscador() {
 }
 
 // MODIFICADA PARA CARGAR LAS FUNDAS CON EL NUEVO QUERY DE ORDENAMIENTO
+// Reemplazá esta función en tu app.js para recuperar tus productos
 async function cargarFundas() {
   try {
-    const q = query(collection(db, "fundas"), orderBy("orden", "asc"));
-    const snapshot = await getDocs(q);
+    // 1. Leemos de forma cruda (sin orderBy) para que Firebase NO ignore los productos viejos
+    const snapshot = await getDocs(collection(db, "fundas"));
     todasLasFundas = []; 
+    let necesitaMigracion = false;
+
     snapshot.forEach((doc) => {
-      todasLasFundas.push({ id: doc.id, ...doc.data() });
+      const datos = doc.data();
+      // Si el producto no tiene orden, levantamos una bandera para arreglarlo
+      if (datos.orden === undefined) {
+        necesitaMigracion = true;
+      }
+      todasLasFundas.push({ id: doc.id, ...datos });
     });
+
+    // 2. AUTO-CORRECTOR: Si encontramos productos viejos, les asignamos un orden masivo ahora mismo
+    if (necesitaMigracion) {
+      console.log("⚙️ Detectamos productos viejos sin índice de orden. Corrigiendo base de datos...");
+      const batch = writeBatch(db);
+      
+      todasLasFundas.forEach((funda, index) => {
+        if (funda.orden === undefined) {
+          const docRef = doc(db, "fundas", funda.id);
+          batch.update(docRef, { orden: index });
+          funda.orden = index; // Lo corregimos en la memoria local también
+        }
+      });
+
+      await batch.commit();
+      console.log("✅ ¡Base de datos actualizada! Todos tus productos viejos ya tienen su propiedad de orden.");
+    }
+
+    // 3. Los ordenamos de forma local para que SortableJS trabaje impecable
+    todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+    
     actualizarDatalistAsistente();
     actualizarDatalistBuscador(); 
     filtrarFundas();
   } catch (error) {
-    console.error("Error al cargar fundas ordenadas:", error);
+    console.error("Error al cargar o migrar fundas:", error);
   }
 }
 
