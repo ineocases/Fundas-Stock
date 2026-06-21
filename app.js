@@ -12,9 +12,9 @@ import {
   doc,
   deleteDoc,
   updateDoc,
-  query,      // <-- IMPORTADO PARA ORDENAR CONSULTAS
-  orderBy,    // <-- IMPORTADO PARA FILTRAR POR ÍNDICE
-  writeBatch  // <-- IMPORTADO PARA SUBIDAS MASIVAS ATÓMICAS
+  query,
+  orderBy,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 console.log("DB conectada con éxito:", db);
@@ -34,9 +34,9 @@ let fundaReservando = null;
 let imagenRecortadaTemporal = null; 
 let porcentajeEscala = 0.72; 
 let anguloRotacion = 0; 
-let sortableInstance = null; // Instancia global para el Drag and Drop
+let sortableInstance = null; 
 
-// NUEVA VARIABLE GLOBAL: Almacenamiento local de productos del cliente
+// Almacenamiento local de productos del cliente
 let carrito = []; 
 
 // 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
@@ -58,7 +58,6 @@ document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
 
-// Validamos el viejo botón de reservas de WhatsApp por si quedó en caché
 const btnOldWA = document.getElementById("btnConfirmarWhatsApp");
 if (btnOldWA) btnOldWA.onclick = enviarWhatsApp;
 
@@ -69,18 +68,15 @@ document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-// Eventos del Gestor de Categorías Personalizadas
 document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
 document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
 document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
 
-// Evento para activar importación por Excel
 document.getElementById("btnImportarExcel").onclick = () => {
   document.getElementById("inputExcel").click();
 };
 document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
-// Eventos para el Menú IA y Formateador
 document.getElementById("btnAccionesIA").onclick = toggleMenuIA;
 document.getElementById("btnMenuFormatear").onclick = () => {
   document.getElementById("menuAccionesIA").style.display = "none";
@@ -96,7 +92,7 @@ document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
 function toggleSidebar() {
   document.getElementById("sidebarMenu").classList.toggle("active");
   document.getElementById("sidebarOverlay").classList.toggle("active");
-  document.getElementById("btnMenuHamburguesa").classList.toggle("active");
+  // Ajuste: Se removió el toggle active del botón para que no se transforme en una X fea.
 }
 
 function abrirModalAdmin() {
@@ -154,7 +150,7 @@ onAuthStateChanged(auth, async (user) => {
     
     await cargarCategorias();
     await cargarFundas(); 
-    actualizarCarritoUI(); // Refresca visibilidad del carrito según el rol cargado
+    actualizarCarritoUI(); 
   } else {
     document.getElementById("login").style.display = "flex";
     document.getElementById("app").style.display = "none";
@@ -513,7 +509,6 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   }
 }
 
-// MODIFICADA PARA INTERCEPTAR LA INTERFAZ CON EL NUEVO BOTÓN COMPATIBLE DEL CARRITO
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
@@ -555,7 +550,6 @@ function cerrarModalReservar() {
   document.getElementById("modalReservar").style.display = "none";
 }
 
-// Mantenido por retrocompatibilidad por si se ejecuta de forma directa
 function enviarWhatsApp() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
   if (!modeloSeleccionado) return;
@@ -571,12 +565,11 @@ function enviarWhatsApp() {
   cerrarModalReservar();
 }
 
-// 🛒 NUEVAS FUNCIONES COMPLETAS DEL SISTEMA DE CARRITO DE COMPRAS CLIENTE
+// 🛒 SISTEMA DE CARRITO DE COMPRAS CLIENTE
 function confirmarAgregarAlCarrito() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
   if (!modeloSeleccionado || modeloSeleccionado.includes("⚠️")) return;
 
-  // Evaluar si ya existía el mismo producto y variante exacta para acumular su contador
   const itemExistente = carrito.find(item => item.idProducto === fundaReservando.id && item.modelo === modeloSeleccionado);
 
   if (itemExistente) {
@@ -602,13 +595,14 @@ function abrirModalCarrito() {
 }
 
 function cerrarModalCarrito() {
+  document.getElementById("modalCarrito").style.none = "none";
   document.getElementById("modalCarrito").style.display = "none";
 }
 
 function cambiarCantidadCarrito(index, cambio) {
   carrito[index].cantidad += cambio;
   if (carrito[index].cantidad <= 0) {
-    carrito.splice(index, 1); // Remover del listado por completo si llega a cero
+    carrito.splice(index, 1); 
   }
   actualizarCarritoUI();
 }
@@ -616,11 +610,9 @@ function cambiarCantidadCarrito(index, cambio) {
 function actualizarCarritoUI() {
   const totalItems = carrito.reduce((acc, item) => acc + item.cantidad, 0);
   
-  // Actualizar indicadores numéricos flotantes del Badge
   const carritoBadge = document.getElementById("carritoBadge");
   if (carritoBadge) carritoBadge.innerText = totalItems;
 
-  // Bloquear visualización del carrito si estás logueado en modo administrador
   const btnVerCarrito = document.getElementById("btnVerCarrito");
   if (btnVerCarrito) {
     btnVerCarrito.style.display = (!esAdmin && totalItems > 0) ? "flex" : "none";
@@ -641,6 +633,7 @@ function actualizarCarritoUI() {
     const imgUrl = item.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     const subtotal = item.precio * item.cantidad;
 
+    // Ajuste: Botones '-' y '+' ahora tienen fondo #e5e5ea y texto #1d1d1f para máxima visibilidad
     html += `
       <div style="display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #e5e5ea;">
         <img src="${imgUrl}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 10px; border: 1px solid #d2d2d7; background: #f5f5f7;">
@@ -649,10 +642,10 @@ function actualizarCarritoUI() {
           <p style="margin: 2px 0 0 0; font-size: 13px; color: #6e6e73;">Modelo: ${item.modelo}</p>
           <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #0071e3;">$${item.precio}</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <button onclick="cambiarCantidadCarrito(${index}, -1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d2d2d7; background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">-</button>
-          <span style="font-size: 15px; font-weight: 600; min-width: 15px; text-align: center;">${item.cantidad}</span>
-          <button onclick="cambiarCantidadCarrito(${index}, 1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d2d2d7; background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">+</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button onclick="cambiarCantidadCarrito(${index}, -1)" style="width: 32px; height: 32px; border-radius: 50%; border: none; background: #e5e5ea; color: #1d1d1f; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">-</button>
+          <span style="font-size: 15px; font-weight: 600; min-width: 15px; text-align: center; color: #1d1d1f;">${item.cantidad}</span>
+          <button onclick="cambiarCantidadCarrito(${index}, 1)" style="width: 32px; height: 32px; border-radius: 50%; border: none; background: #e5e5ea; color: #1d1d1f; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">+</button>
         </div>
         <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; min-width: 75px; text-align: right;">
           $${subtotal}
@@ -666,6 +659,18 @@ function actualizarCarritoUI() {
   const totalPrecio = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
   const carritoTotal = document.getElementById("carritoTotal");
   if (carritoTotal) carritoTotal.innerText = `$${totalPrecio}`;
+
+  // Ajuste: Inyectar el logotipo oficial de WhatsApp de manera dinámica en el botón de salida
+  setTimeout(() => {
+    const btnPedidoWA = document.getElementById("btnEnviarPedido") || document.querySelector("button[onclick*='enviarPedidoWhatsApp']");
+    if (btnPedidoWA) {
+      btnPedidoWA.style.display = "flex";
+      btnPedidoWA.style.alignItems = "center";
+      btnPedidoWA.style.justifyContent = "center";
+      btnPedidoWA.style.gap = "10px";
+      btnPedidoWA.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;"><path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.69-4.936c-.202-.101-1.192-.588-1.378-.656-.185-.067-.32-.101-.454.101-.134.2-.522.656-.641.789-.118.134-.237.151-.439.051-2-.1-3.554-.737-4.665-1.723-.13-.114-.13-.183-.02-.283.093-.085.203-.238.304-.358.101-.12.134-.2.201-.336.067-.134.034-.253-.017-.355-.05-.101-.454-1.093-.622-1.499-.163-.393-.332-.34-.454-.341h-.388c-.134 0-.353.05-.538.254-.185.203-.708.692-.708 1.688s.72 1.954.82 2.088c.101.134 1.417 2.167 3.432 3.036.48.207.854.33 1.146.422.482.153.92.131 1.267.081.387-.056 1.192-.487 1.358-.957.166-.47.166-.874.118-.957-.05-.083-.185-.134-.387-.235"/></svg> Pedir por WhatsApp`;
+    }
+  }, 50);
 }
 
 function enviarPedidoWhatsApp() {
@@ -687,7 +692,6 @@ function enviarPedidoWhatsApp() {
   const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, "_blank");
 
-  // Vaciar carrito y cerrar modales preventivamente de forma limpia
   carrito = [];
   actualizarCarritoUI();
   cerrarModalCarrito();
@@ -831,7 +835,6 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
-// 🪄 FUNCION QUE ACTUALIZA LAS SUGERENCIAS DEL BUSCADOR PRINCIPAL
 function actualizarDatalistBuscador() {
   const datalist = document.getElementById("sugerenciasBuscador");
   if (!datalist) return;
@@ -852,7 +855,6 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
-// RECUPERAR PRODUCTOS Y HACER AUTO-MIGRACIÓN MASIVA DE ELEMENTOS SIN ORDEN ESPECÍFICO
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -868,9 +870,8 @@ async function cargarFundas() {
     });
 
     if (necesitaMigracion) {
-      console.log("⚙️ Detectamos productos viejos sin índice de orden. Corrigiendo base de datos...");
+      console.log("⚙️ Sincronizando índices correlativos...");
       const batch = writeBatch(db);
-      
       todasLasFundas.forEach((funda, index) => {
         if (funda.orden === undefined) {
           const docRef = doc(db, "fundas", funda.id);
@@ -878,9 +879,7 @@ async function cargarFundas() {
           funda.orden = index; 
         }
       });
-
       await batch.commit();
-      console.log("✅ ¡Base de datos actualizada! Todos tus productos viejos ya tienen su propiedad de orden.");
     }
 
     todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
@@ -1031,7 +1030,6 @@ async function procesarVentaAsistente() {
   }
 }
 
-// INICIALIZADOR DE SORTABLEJS OPTIMIZADO
 function habilitarReordenamiento() {
     if (!esAdmin) return; 
 
@@ -1048,13 +1046,11 @@ function habilitarReordenamiento() {
         ghostClass: 'sortable-ghost', 
         onEnd: async (evt) => {
             if (evt.oldIndex === evt.newIndex) return;
-            console.log("Se detectó cambio de posición visual. Sincronizando con base de datos...");
             await actualizarOrdenEnFirebase();
         }
     });
 }
 
-// CONTROLADOR DE ESCRITURA EN LOTES (BATCH) PARA FIRESTORE
 async function actualizarOrdenEnFirebase() {
     const tarjetas = document.querySelectorAll('#fundas .card');
     const batch = writeBatch(db); 
@@ -1069,8 +1065,6 @@ async function actualizarOrdenEnFirebase() {
 
     try {
         await batch.commit();
-        console.log("¡El nuevo orden se sincronizó exitosamente en Firestore! 🚀");
-        
         tarjetas.forEach((tarjeta, index) => {
             const id = tarjeta.dataset.id;
             const fundaLocal = todasLasFundas.find(f => f.id === id);
@@ -1078,8 +1072,7 @@ async function actualizarOrdenEnFirebase() {
         });
         todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     } catch (error) {
-        console.error("Error crítico guardando el lote de ordenamiento:", error);
-        alert("No se pudo persistir el orden en la base de datos.");
+        console.error("Error al reordenar:", error);
     }
 }
 
@@ -1102,6 +1095,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
+    // Ajuste: Se simplificó la etiqueta del botón de cliente de "Ver variantes / Comprar 🛒" a "Comprar 🛒"
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
@@ -1109,7 +1103,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         </div>` : `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #1d1d1f; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer; user-select:none;">
-            Ver variantes / Comprar 🛒
+            Comprar 🛒
           </button>
         </div>`;
 
@@ -1192,7 +1186,7 @@ function coincideModelo(modelo, textoBuscado) {
   return true;
 }
 
-// EXPOSICIÓN DE MÉTODOS AL OBJETO WINDOW DE FORMA EXPLÍCITA (Nativo en módulos)
+// EXPOSICIÓN DE MÉTODOS AL OBJETO WINDOW
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
@@ -1200,7 +1194,6 @@ window.ocultarAsistente = ocultarAsistente;
 window.abrirModalReservar = abrirModalReservar;
 window.cerrarModalReservar = cerrarModalReservar;
 
-// Exposición de las nuevas utilidades interactivas del Carrito
 window.confirmarAgregarAlCarrito = confirmarAgregarAlCarrito;
 window.abrirModalCarrito = abrirModalCarrito;
 window.cerrarModalCarrito = cerrarModalCarrito;
