@@ -22,6 +22,7 @@ console.log("DB conectada con éxito:", db);
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
 const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
+const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94"; // API KEY PARA IMGBB
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -118,7 +119,6 @@ async function ejecutarCambioRol() {
   }
 }
 
-// OBSERVADOR DE SESIÓN NATIVO (Firebase Auth)
 onAuthStateChanged(auth, async (user) => {
   document.getElementById("cargando").style.display = "none";
   if (user) {
@@ -174,7 +174,6 @@ async function loginCliente() {
   }
 }
 
-// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS (FIRESTORE)
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
@@ -287,7 +286,6 @@ function renderizarListaCrudCategorias() {
   });
 }
 
-// 📥 PROCESADOR LECTOR DE EXCEL A FIRESTORE
 function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -348,7 +346,6 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -646,7 +643,6 @@ function toggleModoModelo() {
   }
 }
 
-// OPTIMIZACIÓN EXCLUSIVA PARA EVITAR ERRORES DE DOCUMENTO DE MÁS DE 1MB AL SUBIR IMÁGENES
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -812,10 +808,39 @@ function actualizarDatalistAsistente() {
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
 
+// --- FUNCIÓN GUARDARFUNDA (ACTUALIZADA CON IMGBB) ---
 async function guardarFunda() {
   if (!esAdmin) return;
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
+
+  let urlImagenFinal = fotoBase64; 
+
+  // 1. SI LA IMAGEN ES NUEVA (Base64), SUBIR A IMGBB
+  if (fotoBase64 && fotoBase64.startsWith("data:image")) {
+    try {
+      const base64Clean = fotoBase64.split(',')[1];
+      const formData = new FormData();
+      formData.append("image", base64Clean);
+
+      const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: "POST",
+        body: formData
+      });
+
+      const resultado = await respuesta.json();
+      if (resultado.success) {
+        urlImagenFinal = resultado.data.url; // URL PÚBLICA DE LA IMAGEN
+      } else {
+        throw new Error("Error en ImgBB");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
+      btnGuardar.disabled = false;
+      return;
+    }
+  }
 
   let stockPorModeloArray = [];
 
@@ -841,7 +866,7 @@ async function guardarFunda() {
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
-    foto: fotoBase64,
+    foto: urlImagenFinal, // SE GUARDA LA URL, NO EL BASE64
     sinModelo: esProductoSinModelo 
   };
 
@@ -851,9 +876,10 @@ async function guardarFunda() {
 
   try {
     if (idFundaEditando) {
-      if (!fotoBase64) {
-        const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-        datosFunda.foto = vieja ? (vieja.foto || "") : "";
+      // Si editamos y no se cambió la foto, mantenemos la anterior
+      if (urlImagenFinal === "" && !fotoBase64) {
+         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+         datosFunda.foto = vieja ? (vieja.foto || "") : "";
       }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
       alert("Artículo actualizado 🎉");
@@ -865,6 +891,7 @@ async function guardarFunda() {
     cargarFundas();
   } catch (error) {
     console.error(error);
+    alert("Error al guardar en base de datos.");
   } finally {
     btnGuardar.disabled = false;
   }
@@ -928,7 +955,7 @@ function abrirEditarFunda(id) {
 
   const preview = document.getElementById("previewFoto");
   if (funda.foto) {
-    fotoBase64 = funda.foto;
+    fotoBase64 = funda.foto; // Cargamos la URL o el Base64 que viene de la DB
     preview.src = funda.foto;
     preview.style.display = "block";
   } else {
@@ -1086,7 +1113,6 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-// 👁️ RENDERIZADO CON INFORMACIÓN FINANCIERA INTEGRADA PARA EL ADMIN
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1132,7 +1158,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       `;
     }
 
-    // 📈 CÁLCULO DE MÉTRICAS ECONÓMICAS EN TIEMPO REAL (SOLO ADMIN)
     let bloqueMétricasAdmin = "";
     if (esAdmin) {
       const costo = f.costo || 0;
