@@ -56,8 +56,16 @@
 
   <div id="app" style="display:none;">
     <div class="header-logo">
-      <img src="logo.svg" alt="Logo" class="app-logo">
-      <h1>iNeo Cases</h1>
+      <div class="header-logo-left">
+        <img src="logo.svg" alt="Logo" class="app-logo">
+        <h1>iNeo Cases</h1>
+      </div>
+      
+      <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
     
     <div class="top-bar">
@@ -66,12 +74,6 @@
       
       <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar Excel</button>
       <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-      
-      <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
     </div>
 
     <div id="filtrosCategorias" class="categorias-container"></div>
