@@ -869,7 +869,22 @@ window.ocultarFormulario = ocultarFormulario;
 window.ocultarAsistente = ocultarAsistente;
 window.abrirModalReservar = abrirModalReservar;
 window.cerrarModalReservar = cerrarModalReservar;
+window.toggleStock = (btn, action) => {
+  const card = btn.closest('.card');
+  const stockDiv = card.querySelector('.stock-list');
+  const btnVer = card.querySelector('.btn-ver-stock');
+  const btnOcultar = card.querySelector('.btn-ocultar-stock');
 
+  if (action === 'show') {
+    stockDiv.style.display = 'block';
+    btnVer.style.display = 'none';
+    btnOcultar.style.display = 'block';
+  } else {
+    stockDiv.style.display = 'none';
+    btnVer.style.display = 'block';
+    btnOcultar.style.display = 'none';
+  }
+};
 // 🪄 NUEVA FUNCIÓN MAGICA: Filtra inteligentemente aislando los modelos
 function coincideModelo(modelo, textoBuscado) {
   const mod = String(modelo).toLowerCase().trim();
@@ -899,15 +914,11 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
   arrayDeFundas.forEach((f) => {
     const modelosTotales = f.stockPorModelo || [];
-    
-    // Filtramos modelos si hay texto buscado
     const modelosFiltrados = (textoBuscado !== "")
       ? modelosTotales.filter(m => coincideModelo(m.modelo, textoBuscado))
       : modelosTotales;
 
     const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
-    
-    // Lógica para saber si expandir automáticamente
     const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
 
     const listaModelosHTML = modelosFiltrados
@@ -915,25 +926,17 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       .join("<br>");
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-    let bloqueAcciones = "";
     
-    if (esAdmin) {
-      bloqueAcciones = `
-        <p style="margin-top:8px; color:#1d1d1f;">💵 Costo: <b>$${f.costo ?? 0}</b></p>
+    let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
-        </div>
-      `;
-    } else {
-      bloqueAcciones = `
+        </div>` : `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Reservar Artículo
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Reservar
           </button>
-        </div>
-      `;
-    }
+        </div>`;
 
     html += `
     <div class="card">
@@ -943,12 +946,19 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         <h2>${f.nombre || "Sin nombre"}</h2>
         <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
         
-        <button onclick="this.style.display='none'; this.nextElementSibling.style.display='block'" 
+        <button onclick="toggleStock(this, 'show')" 
+                class="btn-ver-stock"
                 style="width:100%; margin-bottom:10px; background:#28a745; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'none' : 'block'}">
           🔍 Ver Stock por Modelo
         </button>
 
-        <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5; display: ${mostrarDirecto ? 'block' : 'none'};">
+        <button onclick="toggleStock(this, 'hide')" 
+                class="btn-ocultar-stock"
+                style="width:100%; margin-bottom:10px; background:#6c757d; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'block' : 'none'}">
+          ⬆️ Ocultar Stock
+        </button>
+
+        <div class="stock-list" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5; display: ${mostrarDirecto ? 'block' : 'none'};">
           ${listaModelosHTML}
         </div>
 
@@ -960,6 +970,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   });
   document.getElementById("fundas").innerHTML = html;
 }
+
 function filtrarFundas() {
   // 1. Capturamos el texto de búsqueda
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
