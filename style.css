@@ -167,12 +167,15 @@ button:active {
     line-height: 1;
 }
 
+/* OPTIMIZACIÓN RETINA: Evita logos pixelados en iOS/iPhone */
 .app-logo {
     width: 50px;
     height: 50px;
     display: block;
     object-fit: contain;
     flex-shrink: 0;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 /* --- BOTÓN FLOTANTE (FAB) ASISTENTE --- */
@@ -413,6 +416,8 @@ button:active {
     height: 75px;
     object-fit: contain;
     animation: pulsoRenderIA 2s infinite ease-in-out;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .spinner-apple {
@@ -435,7 +440,7 @@ button:active {
     100% { transform: rotate(360deg); }
 }
 
-/* --- SECCIÓN DE LOGIN CORREGIDA --- */
+/* --- SECCIÓN DE LOGIN --- */
 #login { 
     background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=80') no-repeat center center; 
     background-size: cover; 
@@ -477,11 +482,14 @@ button:active {
     margin-bottom: 25px; 
 }
 
+/* OPTIMIZACIÓN RETINA: Corrección para logo nítido en bienvenida */
 .app-logo-welcome { 
     width: 80px; 
     height: 80px; 
     margin-bottom: 10px; 
     object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .login-container label {
@@ -490,7 +498,7 @@ button:active {
 }
 
 .login-container input {
-    margin-bottom: 18px; /* Control de espaciado fijo y limpio para que no colapse */
+    margin-bottom: 18px; 
 }
 
 .btn-principal-welcome { 
