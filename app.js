@@ -762,42 +762,84 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
-async function cargarFundas() {
-  try {
-    const snapshot = await getDocs(collection(db, "fundas"));
-    todasLasFundas = []; 
-    let necesitaMigracion = false;
+async function guardarFunda() {
+  if (!esAdmin) return;
+  const btnGuardar = document.getElementById("guardarFunda");
+  const textoOriginal = btnGuardar.innerText;
+  
+  btnGuardar.disabled = true;
+  btnGuardar.innerText = "⏳ Subiendo imagen..."; // Feedback visual
 
-    snapshot.forEach((doc) => {
-      const datos = doc.data();
-      if (datos.orden === undefined) {
-        necesitaMigracion = true;
-      }
-      todasLasFundas.push({ id: doc.id, ...datos });
-    });
+  let urlImagenFinal = fotoBase64; 
 
-    if (necesitaMigracion) {
-      console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
-      const batch = writeBatch(db);
-      
-      todasLasFundas.forEach((funda, index) => {
-        if (funda.orden === undefined) {
-          const docRef = doc(db, "fundas", funda.id);
-          batch.update(docRef, { orden: index });
-          funda.orden = index; 
-        }
+  if (fotoBase64 && fotoBase64.startsWith("data:image")) {
+    try {
+      const base64Clean = fotoBase64.split(',')[1];
+      const formData = new FormData();
+      formData.append("image", base64Clean);
+
+      const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: "POST",
+        body: formData
       });
 
-      await batch.commit();
+      const resultado = await respuesta.json();
+      if (resultado.success) {
+        urlImagenFinal = resultado.data.url;
+        btnGuardar.innerText = "💾 Guardando datos..."; // Siguiente paso
+      } else {
+        throw new Error("Error en ImgBB");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al subir la foto. Revisa tu conexión.");
+      btnGuardar.disabled = false;
+      btnGuardar.innerText = textoOriginal;
+      return;
     }
+  }
 
-    todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    
-    actualizarDatalistAsistente();
-    actualizarDatalistBuscador(); 
-    filtrarFundas();
+  // Lógica de stock (se mantiene igual)
+  let stockPorModeloArray = [];
+  if (esProductoSinModelo) {
+    const unidadesTotales = Number(document.getElementById("stockTotalSencillo").value) || 0;
+    stockPorModeloArray = [{ modelo: "Único", stock: unidadesTotales }];
+  } else {
+    const compatiblesInput = document.getElementById("stockPorModelo").value;
+    stockPorModeloArray = compatiblesInput.split(",").map(item => {
+      const [modelo, cantidad] = item.split(":");
+      return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 };
+    }).filter(item => item.modelo !== "");
+  }
+
+  const datosFunda = {
+    nombre: document.getElementById("nombre").value,
+    categoria: document.getElementById("categoriaSelect").value, 
+    stockPorModelo: stockPorModeloArray,
+    costo: Number(document.getElementById("costo").value),
+    venta: Number(document.getElementById("venta").value),
+    foto: urlImagenFinal,
+    sinModelo: esProductoSinModelo 
+  };
+
+  if (!idFundaEditando) datosFunda.orden = todasLasFundas.length;
+
+  try {
+    if (idFundaEditando) {
+      await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
+      alert("Artículo actualizado 🎉");
+    } else {
+      await addDoc(collection(db, "fundas"), datosFunda);
+      alert("Artículo guardado 🎉");
+    }
+    ocultarFormulario();
+    cargarFundas();
   } catch (error) {
-    console.error("Error al cargar o migrar fundas:", error);
+    console.error(error);
+    alert("Error al guardar en base de datos.");
+  } finally {
+    btnGuardar.disabled = false;
+    btnGuardar.innerText = textoOriginal;
   }
 }
 
