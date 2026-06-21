@@ -36,6 +36,9 @@ let porcentajeEscala = 0.72;
 let anguloRotacion = 0; 
 let sortableInstance = null; // Instancia global para el Drag and Drop
 
+// NUEVA VARIABLE GLOBAL: Almacenamiento local de productos del cliente
+let carrito = []; 
+
 // 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
 const inputBuscar = document.getElementById("buscar");
 if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
@@ -54,7 +57,10 @@ document.getElementById("buscar").addEventListener("input", filtrarFundas);
 document.getElementById("btnAsistente").onclick = mostrarAsistente;
 document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
 document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
+
+// Validamos el viejo botón de reservas de WhatsApp por si quedó en caché
+const btnOldWA = document.getElementById("btnConfirmarWhatsApp");
+if (btnOldWA) btnOldWA.onclick = enviarWhatsApp;
 
 document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
 document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
@@ -147,7 +153,8 @@ onAuthStateChanged(auth, async (user) => {
     }
     
     await cargarCategorias();
-    cargarFundas(); 
+    await cargarFundas(); 
+    actualizarCarritoUI(); // Refresca visibilidad del carrito según el rol cargado
   } else {
     document.getElementById("login").style.display = "flex";
     document.getElementById("app").style.display = "none";
@@ -329,7 +336,7 @@ function procesarImportacionExcel(evento) {
             venta: Number(fila.Venta || 0),
             stockPorModelo: stockPorModeloArray,
             foto: "",
-            orden: todasLasFundas.length + importados // Se le asigna el índice secuencial inicial al final
+            orden: todasLasFundas.length + importados
           };
 
           await addDoc(collection(db, "fundas"), nuevoProducto);
@@ -506,6 +513,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   }
 }
 
+// MODIFICADA PARA INTERCEPTAR LA INTERFAZ CON EL NUEVO BOTÓN COMPATIBLE DEL CARRITO
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
@@ -517,14 +525,16 @@ function abrirModalReservar(id) {
   const selectModelo = document.getElementById("reservaModelo");
   selectModelo.innerHTML = "";
 
+  const btnConfirmarCarrito = document.getElementById("btnConfirmarCarrito");
+
   if (Array.isArray(funda.stockPorModelo)) {
     const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
 
     if (modelsDisponibles.length === 0) {
       selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
-      document.getElementById("btnConfirmarWhatsApp").disabled = true;
+      if (btnConfirmarCarrito) btnConfirmarCarrito.disabled = true;
     } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
+      if (btnConfirmarCarrito) btnConfirmarCarrito.disabled = false;
       modelsDisponibles.forEach(m => {
         const option = document.createElement("option");
         option.value = m.modelo;
@@ -534,7 +544,7 @@ function abrirModalReservar(id) {
     }
   } else {
     selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
-    document.getElementById("btnConfirmarWhatsApp").disabled = false;
+    if (btnConfirmarCarrito) btnConfirmarCarrito.disabled = false;
   }
 
   document.getElementById("modalReservar").style.display = "flex";
@@ -545,6 +555,7 @@ function cerrarModalReservar() {
   document.getElementById("modalReservar").style.display = "none";
 }
 
+// Mantenido por retrocompatibilidad por si se ejecuta de forma directa
 function enviarWhatsApp() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
   if (!modeloSeleccionado) return;
@@ -558,6 +569,128 @@ function enviarWhatsApp() {
   const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, "_blank");
   cerrarModalReservar();
+}
+
+// 🛒 NUEVAS FUNCIONES COMPLETAS DEL SISTEMA DE CARRITO DE COMPRAS CLIENTE
+function confirmarAgregarAlCarrito() {
+  const modeloSeleccionado = document.getElementById("reservaModelo").value;
+  if (!modeloSeleccionado || modeloSeleccionado.includes("⚠️")) return;
+
+  // Evaluar si ya existía el mismo producto y variante exacta para acumular su contador
+  const itemExistente = carrito.find(item => item.idProducto === fundaReservando.id && item.modelo === modeloSeleccionado);
+
+  if (itemExistente) {
+    itemExistente.cantidad++;
+  } else {
+    carrito.push({
+      idProducto: fundaReservando.id,
+      nombre: fundaReservando.nombre,
+      modelo: modeloSeleccionado,
+      precio: fundaReservando.venta ?? 0,
+      foto: fundaReservando.foto || "",
+      cantidad: 1
+    });
+  }
+
+  actualizarCarritoUI();
+  cerrarModalReservar();
+}
+
+function abrirModalCarrito() {
+  document.getElementById("modalCarrito").style.display = "flex";
+  actualizarCarritoUI();
+}
+
+function cerrarModalCarrito() {
+  document.getElementById("modalCarrito").style.display = "none";
+}
+
+function cambiarCantidadCarrito(index, cambio) {
+  carrito[index].cantidad += cambio;
+  if (carrito[index].cantidad <= 0) {
+    carrito.splice(index, 1); // Remover del listado por completo si llega a cero
+  }
+  actualizarCarritoUI();
+}
+
+function actualizarCarritoUI() {
+  const totalItems = carrito.reduce((acc, item) => acc + item.cantidad, 0);
+  
+  // Actualizar indicadores numéricos flotantes del Badge
+  const carritoBadge = document.getElementById("carritoBadge");
+  if (carritoBadge) carritoBadge.innerText = totalItems;
+
+  // Bloquear visualización del carrito si estás logueado en modo administrador
+  const btnVerCarrito = document.getElementById("btnVerCarrito");
+  if (btnVerCarrito) {
+    btnVerCarrito.style.display = (!esAdmin && totalItems > 0) ? "flex" : "none";
+  }
+
+  const contenedorItems = document.getElementById("listaCarritoItems");
+  if (!contenedorItems) return;
+
+  if (carrito.length === 0) {
+    contenedorItems.innerHTML = `<p style="text-align:center; color:#6e6e73; padding: 40px 0; font-size:15px;">Tu carrito está vacío.<br>¡Elegí los mejores accesorios e inicialo!</p>`;
+    const carritoTotal = document.getElementById("carritoTotal");
+    if (carritoTotal) carritoTotal.innerText = "$0";
+    return;
+  }
+
+  let html = "";
+  carrito.forEach((item, index) => {
+    const imgUrl = item.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
+    const subtotal = item.precio * item.cantidad;
+
+    html += `
+      <div style="display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #e5e5ea;">
+        <img src="${imgUrl}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 10px; border: 1px solid #d2d2d7; background: #f5f5f7;">
+        <div style="flex: 1;">
+          <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: #1d1d1f;">${item.nombre}</h4>
+          <p style="margin: 2px 0 0 0; font-size: 13px; color: #6e6e73;">Modelo: ${item.modelo}</p>
+          <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #0071e3;">$${item.precio}</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button onclick="cambiarCantidadCarrito(${index}, -1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d2d2d7; background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">-</button>
+          <span style="font-size: 15px; font-weight: 600; min-width: 15px; text-align: center;">${item.cantidad}</span>
+          <button onclick="cambiarCantidadCarrito(${index}, 1)" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d2d2d7; background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select:none;">+</button>
+        </div>
+        <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; min-width: 75px; text-align: right;">
+          $${subtotal}
+        </div>
+      </div>
+    `;
+  });
+
+  contenedorItems.innerHTML = html;
+
+  const totalPrecio = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+  const carritoTotal = document.getElementById("carritoTotal");
+  if (carritoTotal) carritoTotal.innerText = `$${totalPrecio}`;
+}
+
+function enviarPedidoWhatsApp() {
+  if (carrito.length === 0) return;
+
+  let mensaje = `¡Hola iNeo Cases! 👋 Te paso mi pedido listo para coordinar:\n\n`;
+  
+  carrito.forEach((item, idx) => {
+    mensaje += `${idx + 1}. *${item.nombre}*\n`;
+    mensaje += `   ⚙️ Modelo/Variante: ${item.modelo}\n`;
+    mensaje += `   🔢 Cantidad: ${item.cantidad} unidad/es\n`;
+    mensaje += `   💰 Valor total: $${item.precio * item.cantidad}\n\n`;
+  });
+
+  const totalFinal = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+  mensaje += `📊 *Monto Total Estimado:* $${totalFinal}\n\n`;
+  mensaje += `¿Tienen disponibilidad para confirmar stock de la lista y coordinar? ¡Muchas gracias!`;
+
+  const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, "_blank");
+
+  // Vaciar carrito y cerrar modales preventivamente de forma limpia
+  carrito = [];
+  actualizarCarritoUI();
+  cerrarModalCarrito();
 }
 
 // Funciones de IA y Formateo
@@ -719,25 +852,21 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
-// MODIFICADA PARA CARGAR LAS FUNDAS CON EL NUEVO QUERY DE ORDENAMIENTO
-// Reemplazá esta función en tu app.js para recuperar tus productos
+// RECUPERAR PRODUCTOS Y HACER AUTO-MIGRACIÓN MASIVA DE ELEMENTOS SIN ORDEN ESPECÍFICO
 async function cargarFundas() {
   try {
-    // 1. Leemos de forma cruda (sin orderBy) para que Firebase NO ignore los productos viejos
     const snapshot = await getDocs(collection(db, "fundas"));
     todasLasFundas = []; 
     let necesitaMigracion = false;
 
     snapshot.forEach((doc) => {
       const datos = doc.data();
-      // Si el producto no tiene orden, levantamos una bandera para arreglarlo
       if (datos.orden === undefined) {
         necesitaMigracion = true;
       }
       todasLasFundas.push({ id: doc.id, ...datos });
     });
 
-    // 2. AUTO-CORRECTOR: Si encontramos productos viejos, les asignamos un orden masivo ahora mismo
     if (necesitaMigracion) {
       console.log("⚙️ Detectamos productos viejos sin índice de orden. Corrigiendo base de datos...");
       const batch = writeBatch(db);
@@ -746,7 +875,7 @@ async function cargarFundas() {
         if (funda.orden === undefined) {
           const docRef = doc(db, "fundas", funda.id);
           batch.update(docRef, { orden: index });
-          funda.orden = index; // Lo corregimos en la memoria local también
+          funda.orden = index; 
         }
       });
 
@@ -754,7 +883,6 @@ async function cargarFundas() {
       console.log("✅ ¡Base de datos actualizada! Todos tus productos viejos ya tienen su propiedad de orden.");
     }
 
-    // 3. Los ordenamos de forma local para que SortableJS trabaje impecable
     todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     
     actualizarDatalistAsistente();
@@ -797,7 +925,6 @@ async function guardarFunda() {
     foto: fotoBase64 
   };
 
-  // ASIGNAR ORDEN INICIAL AL CREAR UN NUEVO ARTÍCULO
   if (!idFundaEditando) {
     datosFunda.orden = todasLasFundas.length;
   }
@@ -904,49 +1031,6 @@ async function procesarVentaAsistente() {
   }
 }
 
-window.eliminarFunda = eliminarFunda;
-window.abrirEditarFunda = abrirEditarFunda;
-window.ocultarFormulario = ocultarFormulario;
-window.ocultarAsistente = ocultarAsistente;
-window.abrirModalReservar = abrirModalReservar;
-window.cerrarModalReservar = cerrarModalReservar;
-window.toggleStock = (btn, action) => {
-  const card = btn.closest('.card');
-  const stockDiv = card.querySelector('.stock-list');
-  const btnVer = card.querySelector('.btn-ver-stock');
-  const btnOcultar = card.querySelector('.btn-ocultar-stock');
-
-  if (action === 'show') {
-    stockDiv.style.display = 'block';
-    btnVer.style.display = 'none';
-    btnOcultar.style.display = 'block';
-  } else {
-    stockDiv.style.display = 'none';
-    btnVer.style.display = 'block';
-    btnOcultar.style.display = 'none';
-  }
-};
-
-// 🪄 NUEVA FUNCIÓN MAGICA: Filtra inteligentemente aislando los modelos
-function coincideModelo(modelo, textoBuscado) {
-  const mod = String(modelo).toLowerCase().trim();
-  const txt = textoBuscado.toLowerCase().trim();
-  
-  if (!mod.includes(txt)) return false;
-
-  if (/\d/.test(txt)) {
-    const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
-    
-    for (let variante of variantes) {
-      if (mod.includes(variante) && !txt.includes(variante)) {
-        return false;
-      }
-    }
-  }
-  
-  return true;
-}
-
 // INICIALIZADOR DE SORTABLEJS OPTIMIZADO
 function habilitarReordenamiento() {
     if (!esAdmin) return; 
@@ -960,7 +1044,7 @@ function habilitarReordenamiento() {
     
     sortableInstance = new Sortable(contenedor, {
         animation: 150,
-        handle: '.drag-handle', // Arrastre limitado exclusivamente al botón handle
+        handle: '.drag-handle', 
         ghostClass: 'sortable-ghost', 
         onEnd: async (evt) => {
             if (evt.oldIndex === evt.newIndex) return;
@@ -973,7 +1057,7 @@ function habilitarReordenamiento() {
 // CONTROLADOR DE ESCRITURA EN LOTES (BATCH) PARA FIRESTORE
 async function actualizarOrdenEnFirebase() {
     const tarjetas = document.querySelectorAll('#fundas .card');
-    const batch = writeBatch(db); // Inicializamos el lote masivo
+    const batch = writeBatch(db); 
 
     tarjetas.forEach((tarjeta, index) => {
         const id = tarjeta.dataset.id;
@@ -987,7 +1071,6 @@ async function actualizarOrdenEnFirebase() {
         await batch.commit();
         console.log("¡El nuevo orden se sincronizó exitosamente en Firestore! 🚀");
         
-        // Sincronizar array local en memoria para mantener el orden exacto sin recargar
         tarjetas.forEach((tarjeta, index) => {
             const id = tarjeta.dataset.id;
             const fundaLocal = todasLasFundas.find(f => f.id === id);
@@ -1000,7 +1083,6 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-// MODIFICADA CON DATA-ID, DRAG-HANDLE VISUAL Y ACTIVADOR REACTIVO
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1026,12 +1108,11 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
         <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Reservar
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #1d1d1f; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer; user-select:none;">
+            Ver variantes / Comprar 🛒
           </button>
         </div>`;
 
-    // AGREGADO EL ATRIBUTO DATA-ID Y EL BOTÓN DRAG-HANDLE EXCLUSIVO PARA EL ADMIN
     html += `
     <div class="card" data-id="${f.id}" style="position: relative;">
       ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
@@ -1065,7 +1146,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   });
   document.getElementById("fundas").innerHTML = html;
 
-  // ACTIVAR EL ARRSTRAR SOLO SI NO ESTAMOS BUSCANDO O FILTRANDO POR CATEGORÍAS
   if (esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas") {
     habilitarReordenamiento();
   }
@@ -1092,3 +1172,54 @@ function filtrarFundas() {
 
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
+
+function coincideModelo(modelo, textoBuscado) {
+  const mod = String(modelo).toLowerCase().trim();
+  const txt = textoBuscado.toLowerCase().trim();
+  
+  if (!mod.includes(txt)) return false;
+
+  if (/\d/.test(txt)) {
+    const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
+    
+    for (let variante of variantes) {
+      if (mod.includes(variante) && !txt.includes(variante)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+// EXPOSICIÓN DE MÉTODOS AL OBJETO WINDOW DE FORMA EXPLÍCITA (Nativo en módulos)
+window.eliminarFunda = eliminarFunda;
+window.abrirEditarFunda = abrirEditarFunda;
+window.ocultarFormulario = ocultarFormulario;
+window.ocultarAsistente = ocultarAsistente;
+window.abrirModalReservar = abrirModalReservar;
+window.cerrarModalReservar = cerrarModalReservar;
+
+// Exposición de las nuevas utilidades interactivas del Carrito
+window.confirmarAgregarAlCarrito = confirmarAgregarAlCarrito;
+window.abrirModalCarrito = abrirModalCarrito;
+window.cerrarModalCarrito = cerrarModalCarrito;
+window.cambiarCantidadCarrito = cambiarCantidadCarrito;
+window.enviarPedidoWhatsApp = enviarPedidoWhatsApp;
+
+window.toggleStock = (btn, action) => {
+  const card = btn.closest('.card');
+  const stockDiv = card.querySelector('.stock-list');
+  const btnVer = card.querySelector('.btn-ver-stock');
+  const btnOcultar = card.querySelector('.btn-ocultar-stock');
+
+  if (action === 'show') {
+    stockDiv.style.display = 'block';
+    btnVer.style.display = 'none';
+    btnOcultar.style.display = 'block';
+  } else {
+    stockDiv.style.display = 'none';
+    btnVer.style.display = 'block';
+    btnOcultar.style.display = 'none';
+  }
+};
