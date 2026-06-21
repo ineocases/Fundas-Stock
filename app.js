@@ -32,6 +32,15 @@ let imagenRecortadaTemporal = null;
 let porcentajeEscala = 0.72; 
 let anguloRotacion = 0; 
 
+// 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
+const inputBuscar = document.getElementById("buscar");
+if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
+  const datalist = document.createElement("datalist");
+  datalist.id = "sugerenciasBuscador";
+  document.body.appendChild(datalist);
+  inputBuscar.setAttribute("list", "sugerenciasBuscador");
+}
+
 // Asignación de eventos de la interfaz
 document.getElementById("btnLogin").onclick = loginAdmin;
 document.getElementById("btnCliente").onclick = loginCliente; 
@@ -684,6 +693,27 @@ function procesarImagen(evento) {
   lector.readAsDataURL(archivo);
 }
 
+// 🪄 FUNCION QUE ACTUALIZA LAS SUGERENCIAS DEL BUSCADOR PRINCIPAL
+function actualizarDatalistBuscador() {
+  const datalist = document.getElementById("sugerenciasBuscador");
+  if (!datalist) return;
+  
+  const sugerencias = new Set();
+  todasLasFundas.forEach(f => {
+    if (f.nombre) sugerencias.add(f.nombre); // Sugerir el nombre de la funda
+    if (Array.isArray(f.stockPorModelo)) {
+      f.stockPorModelo.forEach(m => {
+        if (m.modelo) sugerencias.add(m.modelo.trim()); // Sugerir los modelos exactos
+      });
+    }
+  });
+  
+  datalist.innerHTML = Array.from(sugerencias)
+    .sort() // Los ordena alfabéticamente
+    .map(texto => `<option value="${texto}"></option>`)
+    .join("");
+}
+
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -692,6 +722,7 @@ async function cargarFundas() {
       todasLasFundas.push({ id: doc.id, ...doc.data() });
     });
     actualizarDatalistAsistente();
+    actualizarDatalistBuscador(); // <- Llenamos el autocompletado aquí
     filtrarFundas();
   } catch (error) {
     console.error(error);
@@ -839,6 +870,29 @@ window.ocultarAsistente = ocultarAsistente;
 window.abrirModalReservar = abrirModalReservar;
 window.cerrarModalReservar = cerrarModalReservar;
 
+// 🪄 NUEVA FUNCIÓN MAGICA: Filtra inteligentemente aislando los modelos
+function coincideModelo(modelo, textoBuscado) {
+  const mod = String(modelo).toLowerCase().trim();
+  const txt = textoBuscado.toLowerCase().trim();
+  
+  if (!mod.includes(txt)) return false;
+
+  // Si el usuario buscó algo que contiene números (Ej: 13)
+  if (/\d/.test(txt)) {
+    // Array de sufijos problemáticos que queremos aislar
+    const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
+    
+    for (let variante of variantes) {
+      // Si el modelo real tiene la palabra "pro", pero el usuario NO escribió "pro", descartamos ese modelo.
+      if (mod.includes(variante) && !txt.includes(variante)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   let html = "";
   arrayDeFundas.forEach((f) => {
@@ -850,9 +904,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       modelosAMostrar = f.stockPorModelo;
 
       if (textoBuscado !== "") {
-        const modelosCoincidentes = f.stockPorModelo.filter(m => 
-          String(m.modelo).toLowerCase().trim().includes(textoBuscado)
-        );
+        const modelosCoincidentes = f.stockPorModelo.filter(m => coincideModelo(m.modelo, textoBuscado));
         
         if (modelosCoincidentes.length > 0) {
           modelosAMostrar = modelosCoincidentes;
@@ -924,9 +976,7 @@ function filtrarFundas() {
     
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
-      compatibleCoincide = f.stockPorModelo.some((m) => 
-        String(m.modelo).toLowerCase().trim().includes(textoBuscado)
-      );
+      compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     
     return nombreCoincide || compatibleCoincide;
