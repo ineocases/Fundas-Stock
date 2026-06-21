@@ -55,13 +55,13 @@ document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
 document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
 document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
 
-// NUEVO: Evento para activar importación por Excel
+// Evento para activar importación por Excel
 document.getElementById("btnImportarExcel").onclick = () => {
   document.getElementById("inputExcel").click();
 };
 document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
-// NUEVO: Eventos para el Menú IA y Formateador
+// Eventos para el Menú IA y Formateador
 document.getElementById("btnAccionesIA").onclick = toggleMenuIA;
 document.getElementById("btnMenuFormatear").onclick = () => {
   document.getElementById("menuAccionesIA").style.display = "none";
@@ -274,7 +274,7 @@ function renderizarListaCrudCategorias() {
   });
 }
 
-// 📥 NUEVO: PROCESADOR LECTOR DE EXCEL A FIRESTORE
+// 📥 PROCESADOR LECTOR DE EXCEL A FIRESTORE
 function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -546,7 +546,7 @@ function enviarWhatsApp() {
   cerrarModalReservar();
 }
 
-// NUEVO: Funciones de IA y Formateo
+// Funciones de IA y Formateo
 function toggleMenuIA() {
   const menu = document.getElementById("menuAccionesIA");
   if(menu) {
@@ -572,7 +572,6 @@ function procesarTextoStock() {
     let str = linea.trim();
     if (!str) return;
 
-    // 1. Extraer la cantidad (busca "x1", "x 2", etc. al final)
     let cantidad = 1; 
     const matchCant = str.match(/x\s*(\d+)$/i);
     if (matchCant) {
@@ -580,15 +579,11 @@ function procesarTextoStock() {
       str = str.replace(/x\s*\d+$/i, '').trim(); 
     }
 
-    // 2. Limpiar prefijos
     str = str.replace(/^(Iph|iphone|i)\s*/i, '');
-    
-    // 3. Traducir abreviaciones
     str = str.replace(/\bpm\b/ig, 'Pro Max');
     str = str.replace(/\bp\b/ig, 'Pro');
     str = str.replace(/\bplus\b/ig, 'Plus');
 
-    // 4. Asegurar mayúscula inicial
     if (str.length > 0) {
       str = str.charAt(0).toUpperCase() + str.slice(1);
     }
@@ -625,7 +620,6 @@ function mostrarFormulario() {
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
   
-  // Limpiar menús de IA
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
@@ -801,7 +795,6 @@ function abrirEditarFunda(id) {
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
   
-  // Limpiar menús de IA
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
@@ -846,61 +839,6 @@ window.ocultarAsistente = ocultarAsistente;
 window.abrirModalReservar = abrirModalReservar;
 window.cerrarModalReservar = cerrarModalReservar;
 
-function renderizarFundas(arrayDeFundas) {
-  let html = "";
-  arrayDeFundas.forEach((f) => {
-    let listaModelosHTML = "";
-    let totalStock = 0;
-
-    if (Array.isArray(f.stockPorModelo)) {
-      totalStock = f.stockPorModelo.reduce((acc, item) => acc + item.stock, 0);
-      listaModelosHTML = f.stockPorModelo
-        .map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`)
-        .join("<br>");
-    }
-
-    const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-    let bloqueAcciones = "";
-    
-    if (esAdmin) {
-      bloqueAcciones = `
-        <p style="margin-top:8px; color:#1d1d1f;">💵 Costo: <b>$${f.costo ?? 0}</b></p>
-        <div style="margin-top: 15px;">
-          <button onclick="abrirEditarFunda('${f.id}')">✏️ Editar</button>
-          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30">🗑️ Eliminar</button>
-        </div>
-      `;
-    } else {
-      bloqueAcciones = `
-        <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px;">
-            Reservar Artículo
-          </button>
-        </div>
-      `;
-    }
-
-    html += `
-    <div class="card">
-      <div class="badge-categoria">${f.categoria || "Varios"}</div>
-      <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
-      <div class="card-body">
-        <h2>${f.nombre || "Sin nombre"}</h2>
-        <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
-        
-        <div style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
-          ${listaModelosHTML}
-        </div>
-
-        <p style="font-size: 17px; color:#0071e3; font-weight:700;">💰 Precio: $${f.venta ?? 0}</p>
-        ${bloqueAcciones}
-      </div>
-    </div>
-    `;
-  });
-  document.getElementById("fundas").innerHTML = html;
-}
-
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   let html = "";
   arrayDeFundas.forEach((f) => {
@@ -911,14 +849,11 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     if (Array.isArray(f.stockPorModelo)) {
       modelosAMostrar = f.stockPorModelo;
 
-      // 🔍 MAGIA DEL FILTRO: Si hay texto buscado, dejamos solo los modelos que coinciden
       if (textoBuscado !== "") {
         const modelosCoincidentes = f.stockPorModelo.filter(m => 
           String(m.modelo).toLowerCase().trim().includes(textoBuscado)
         );
         
-        // Si la búsqueda coincidió con un modelo (Ej: "13"), mostramos solo ese.
-        // Si buscaron por el nombre de la funda (Ej: "Gloss"), mostramos todos.
         if (modelosCoincidentes.length > 0) {
           modelosAMostrar = modelosCoincidentes;
         }
@@ -951,7 +886,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       `;
     }
 
-    // Cambiamos dinámicamente la etiqueta de stock si hay una búsqueda
     const etiquetaStock = (textoBuscado !== "" && modelosAMostrar.length !== f.stockPorModelo.length) 
                           ? 'Stock de esta variante' 
                           : 'Stock Total';
@@ -981,16 +915,13 @@ function filtrarFundas() {
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
   
   const fundasFiltradas = todasLasFundas.filter((f) => {
-    // 1. Filtro por categoría (Píldoras)
     if (categoriaSeleccionadaFiltro !== "Todas") {
       if (f.categoria !== categoriaSeleccionadaFiltro) return false;
     }
 
-    // 2. Filtro por coincidencia en el nombre
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     
-    // 3. Filtro por coincidencia en los modelos
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
       compatibleCoincide = f.stockPorModelo.some((m) => 
@@ -1001,6 +932,5 @@ function filtrarFundas() {
     return nombreCoincide || compatibleCoincide;
   });
   
-  // Pasamos el texto buscado a la función de renderizar
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
