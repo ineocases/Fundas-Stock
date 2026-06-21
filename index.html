@@ -8,9 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <!-- 1. Librería para arrastrar y soltar (SortableJS) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-  <!-- 2. Librería para leer archivos Excel (SheetJS) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -204,18 +202,40 @@
     </div>
 
     <div id="modalReservar" style="display:none;">
-      <div class="modal-content">
-        <h3>🛍️ Menú de Reserva</h3>
-        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
+      <div class="modal-content" style="min-height: auto; max-width: 420px; border-radius: 20px; margin-top: 10vh; padding: 30px 24px;">
+        <h3 style="font-size: 22px; font-weight: 700; margin-bottom: 5px;">📱 Elegí tu Modelo</h3>
+        <p id="reservaNombreFunda" style="font-weight: 500; font-size: 15px; margin-bottom: 20px; color: #6e6e73;"></p>
         
-        <label>Seleccioná tu variante / modelo</label>
-        <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
+        <label>Modelos disponibles con stock:</label>
+        <select id="reservaModelo" style="margin-bottom: 15px;"></select>
         
-        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
+        <p style="font-size: 18px; color:#1d1d1f; font-weight:700; margin-bottom: 25px;">Precio: <span id="reservaPrecio" style="color: #0071e3;"></span></p>
         
         <div class="modal-buttons">
-          <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
-          <button id="btnConfirmarWhatsApp" style="background: #25D366; color: white; font-weight: 600;">Confirmar en WhatsApp 💬</button>
+          <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Cancelar</button>
+          <button id="btnConfirmarCarrito" onclick="confirmarAgregarAlCarrito()" style="background: #1d1d1f;">Agregar al carrito 🛒</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalCarrito" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; justify-content: center; align-items: flex-start; z-index: 9999; overflow-y: auto;">
+      <div class="modal-content" style="max-width: 550px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+          <h2 style="font-size: 26px; font-weight: 700; margin: 0;">🛒 Tu Carrito</h2>
+          <button onclick="cerrarModalCarrito()" class="btn-secundario" style="padding: 8px 14px; border-radius: 20px; font-size: 13px;">Seguir viendo</button>
+        </div>
+
+        <div id="listaCarritoItems" style="margin-bottom: 30px;"></div>
+
+        <div style="border-top: 1px solid #e5e5ea; padding-top: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <span style="font-size: 16px; font-weight: 600; color: #6e6e73;">Total estimado:</span>
+            <span id="carritoTotal" style="font-size: 24px; font-weight: 700; color: #1d1d1f;">$0</span>
+          </div>
+          
+          <button onclick="enviarPedidoWhatsApp()" style="width: 100%; padding: 16px; font-size: 16px; font-weight: 600; background: #25D366; color: white; border-radius: 14px; display: flex; justify-content: center; align-items: center; gap: 10px; border: none; cursor: pointer;">
+            Pedir por WhatsApp 💬
+          </button>
         </div>
       </div>
     </div>
@@ -223,6 +243,12 @@
     <div id="fundas"></div>
 
     <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
+
+    <div id="btnVerCarrito" onclick="abrirModalCarrito()" style="position: fixed; bottom: 30px; left: 30px; background: #0071e3; color: white; border-radius: 30px; padding: 15px 22px; box-shadow: 0 8px 24px rgba(0, 71, 227, 0.3); z-index: 999; font-weight: 600; display: none; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+      🛒 Mi Carrito 
+      <span id="carritoBadge" style="background: white; color: #0071e3; padding: 2px 8px; border-radius: 10px; font-size: 13px; font-weight: 700;">0</span>
+    </div>
+
   </div>
 
   <script type="module" src="app.js"></script>
