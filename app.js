@@ -908,6 +908,54 @@ function coincideModelo(modelo, textoBuscado) {
   return true;
 }
 
+function habilitarReordenamiento() {
+    // Solo habilitar si es admin
+    if (!esAdmin) return; 
+
+    const contenedor = document.getElementById('fundas');
+    
+    new Sortable(contenedor, {
+        animation: 150,
+        ghostClass: 'blue-background-class', // Puedes definir esta clase en tu CSS para el efecto visual
+        onEnd: async (evt) => {
+            // Se ejecuta cuando el usuario suelta el elemento
+            const itemElement = evt.item;
+            const nuevoIndice = evt.newIndex;
+            
+            // Aquí obtenemos el ID del producto que se movió
+            // (Asumiendo que el ID está en un atributo data-id en tu HTML)
+            const idProducto = itemElement.dataset.id; 
+            
+            console.log(`Producto ${idProducto} movido a la posición ${nuevoIndice}`);
+            
+            // LOGICA PARA ACTUALIZAR FIREBASE
+            // Debes iterar sobre los elementos actuales del DOM y actualizar 
+            // el campo 'orden' en Firestore para todos los afectados
+            await actualizarOrdenEnFirebase();
+        }
+    });
+}
+
+async function actualizarOrdenEnFirebase() {
+    const tarjetas = document.querySelectorAll('.card');
+    const promesas = [];
+
+    tarjetas.forEach((tarjeta, index) => {
+        const id = tarjeta.dataset.id;
+        // Referencia a tu colección de productos
+        const docRef = doc(db, "fundas", id); 
+        // Actualizamos el campo 'orden' con el nuevo índice
+        promesas.push(updateDoc(docRef, { orden: index }));
+    });
+
+    try {
+        await Promise.all(promesas);
+        console.log("Orden actualizado en la base de datos");
+    } catch (error) {
+        console.error("Error al guardar el orden:", error);
+    }
+}
+
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
