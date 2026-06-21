@@ -356,3 +356,24 @@ button:hover {
 .app-logo-welcome { width: 90px; height: 90px; margin-bottom: 15px; }
 .btn-principal-welcome { width: 100%; padding: 16px; font-size: 16px; font-weight: 600; border-radius: 14px; background: #0071e3; }
 .btn-link-admin { background: rgba(0, 0, 0, 0.04); color: #515154; font-size: 13px; font-weight: 600; border: none; padding: 8px 16px; border-radius: 20px; }
+/* Evita que se seleccione texto azul mientras arrastrás (Clave para celulares) */
+.card {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Cambia el cursor a una mano abierta/cerrada al interactuar con el handle */
+.drag-handle {
+  cursor: grab !important;
+}
+.drag-handle:active {
+  cursor: grabbing !important;
+}
+
+/* Estilo estético para el hueco "fantasma" que queda vacío mientras movés una tarjeta */
+.sortable-ghost {
+  opacity: 0.3;
+  transform: scale(0.98);
+  border: 2px dashed #0071e3 !important;
+  box-shadow: none !important;
+}
