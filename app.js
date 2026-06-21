@@ -38,60 +38,70 @@ let anguloRotacion = 0;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
-// 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
-const inputBuscar = document.getElementById("buscar");
-if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
-  const datalist = document.createElement("datalist");
-  datalist.id = "sugerenciasBuscador";
-  document.body.appendChild(datalist);
-  inputBuscar.setAttribute("list", "sugerenciasBuscador");
-}
+// --- INICIALIZACIÓN DE EVENTOS Y PROTECCIÓN ---
+document.addEventListener("DOMContentLoaded", () => {
+  const inputBuscar = document.getElementById("buscar");
+  if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
+    const datalist = document.createElement("datalist");
+    datalist.id = "sugerenciasBuscador";
+    document.body.appendChild(datalist);
+    inputBuscar.setAttribute("list", "sugerenciasBuscador");
+  }
 
-// Asignación de eventos de la interfaz
-document.getElementById("btnLogin").onclick = loginAdmin;
-document.getElementById("btnCliente").onclick = loginCliente; 
-document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
-document.getElementById("guardarFunda").onclick = guardarFunda;
-document.getElementById("buscar").addEventListener("input", filtrarFundas);
-document.getElementById("btnAsistente").onclick = mostrarAsistente;
-document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
-document.getElementById("fotoInput").onchange = procesarImagen;
-document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
+  // Asignación de eventos de la interfaz
+  if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
+  if(document.getElementById("btnCliente")) document.getElementById("btnCliente").onclick = loginCliente; 
+  if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
+  if(document.getElementById("guardarFunda")) document.getElementById("guardarFunda").onclick = guardarFunda;
+  if(document.getElementById("buscar")) document.getElementById("buscar").addEventListener("input", filtrarFundas);
+  if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").onclick = mostrarAsistente;
+  if(document.getElementById("btnRegistrarVenta")) document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
+  if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagen;
+  if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
 
-document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
-document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
+  if(document.getElementById("btnAbrirAdminModal")) document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
+  if(document.getElementById("btnCerrarAdminModal")) document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
 
-document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
-document.getElementById("sidebarOverlay").onclick = toggleSidebar;
-document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
+  if(document.getElementById("btnMenuHamburguesa")) document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
+  if(document.getElementById("sidebarOverlay")) document.getElementById("sidebarOverlay").onclick = toggleSidebar;
+  if(document.getElementById("btnCambiarRol")) document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-document.getElementById("btnToggleModelo").onclick = toggleModoModelo;
+  if(document.getElementById("btnToggleModelo")) document.getElementById("btnToggleModelo").onclick = toggleModoModelo;
 
-document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
-document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
-document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
+  if(document.getElementById("btnGestorCategorias")) document.getElementById("btnGestorCategorias").onclick = abrirModalCategorias;
+  if(document.getElementById("btnCerrarCategorias")) document.getElementById("btnCerrarCategorias").onclick = cerrarModalCategorias;
+  if(document.getElementById("btnGuardarCategoria")) document.getElementById("btnGuardarCategoria").onclick = crearNuevaCategoria;
 
-document.getElementById("btnImportarExcel").onclick = () => {
-  document.getElementById("inputExcel").click();
-};
-document.getElementById("inputExcel").onchange = procesarImportacionExcel;
+  if(document.getElementById("btnImportarExcel")) document.getElementById("btnImportarExcel").onclick = () => document.getElementById("inputExcel").click();
+  if(document.getElementById("inputExcel")) document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
-document.getElementById("btnAccionesIA").onclick = toggleMenuMenuIA;
-document.getElementById("btnMenuFormatear").onclick = () => {
-  document.getElementById("menuAccionesIA").style.display = "none";
-  toggleFormateador();
-};
-document.getElementById("btnCrearFoto").onclick = () => {
-  document.getElementById("menuAccionesIA").style.display = "none";
-  procesarImagenPro();
-};
-document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
+  if(document.getElementById("btnAccionesIA")) document.getElementById("btnAccionesIA").onclick = toggleMenuMenuIA;
+  if(document.getElementById("btnMenuFormatear")) document.getElementById("btnMenuFormatear").onclick = () => {
+    document.getElementById("menuAccionesIA").style.display = "none";
+    toggleFormateador();
+  };
+  if(document.getElementById("btnCrearFoto")) document.getElementById("btnCrearFoto").onclick = () => {
+    document.getElementById("menuAccionesIA").style.display = "none";
+    procesarImagenPro();
+  };
+  if(document.getElementById("btnProcesarStock")) document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
+});
 
-
+// --- LÓGICA DE NAVEGACIÓN Y MENÚ ---
 function toggleSidebar() {
-  document.getElementById("sidebarMenu").classList.toggle("active");
-  document.getElementById("sidebarOverlay").classList.toggle("active");
-  document.getElementById("btnMenuHamburguesa").classList.toggle("active");
+  const menu = document.getElementById("sidebarMenu");
+  const overlay = document.getElementById("sidebarOverlay");
+  const btn = document.getElementById("btnMenuHamburguesa");
+
+  if(menu) menu.classList.toggle("active");
+  if(overlay) overlay.classList.toggle("active");
+
+  // Lógica solicitada: Ocultar el botón hamburguesa cuando el menú está abierto
+  if (menu && menu.classList.contains("active")) {
+    if(btn) btn.style.display = "none";
+  } else {
+    if(btn) btn.style.display = ""; // Restaura el valor original del CSS
+  }
 }
 
 function abrirModalAdmin() {
@@ -119,38 +129,45 @@ async function ejecutarCambioRol() {
   }
 }
 
+// --- AUTENTICACIÓN (PROTEGIDA CONTRA CUELGUES) ---
 onAuthStateChanged(auth, async (user) => {
-  document.getElementById("cargando").style.display = "none";
-  if (user) {
-    document.getElementById("modalAdminLogin").style.display = "none"; 
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    
-    esAdmin = !user.isAnonymous;
-    
-    const btnCambiarRol = document.getElementById("btnCambiarRol");
-    const btnGestorCategorias = document.getElementById("btnGestorCategorias");
-    const btnImportarExcel = document.getElementById("btnImportarExcel");
+  const loader = document.getElementById("cargando");
+  try {
+    if (user) {
+      document.getElementById("modalAdminLogin").style.display = "none"; 
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      
+      esAdmin = !user.isAnonymous;
+      
+      const btnCambiarRol = document.getElementById("btnCambiarRol");
+      const btnGestorCategorias = document.getElementById("btnGestorCategorias");
+      const btnImportarExcel = document.getElementById("btnImportarExcel");
 
-    if (esAdmin) {
-      btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
-      document.getElementById("btnNuevaFunda").style.display = "inline-block";
-      btnImportarExcel.style.display = "inline-block"; 
-      document.getElementById("btnAsistente").style.display = "flex";
-      btnGestorCategorias.style.display = "block";
+      if (esAdmin) {
+        if(btnCambiarRol) btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
+        if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").style.display = "inline-block";
+        if(btnImportarExcel) btnImportarExcel.style.display = "inline-block"; 
+        if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "flex";
+        if(btnGestorCategorias) btnGestorCategorias.style.display = "block";
+      } else {
+        if(btnCambiarRol) btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
+        if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").style.display = "none";
+        if(btnImportarExcel) btnImportarExcel.style.display = "none"; 
+        if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "none";
+        if(btnGestorCategorias) btnGestorCategorias.style.display = "none";
+      }
+      
+      await cargarCategorias();
+      await cargarFundas(); 
     } else {
-      btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
-      document.getElementById("btnNuevaFunda").style.display = "none";
-      btnImportarExcel.style.display = "none"; 
-      document.getElementById("btnAsistente").style.display = "none";
-      btnGestorCategorias.style.display = "none";
+      document.getElementById("login").style.display = "flex";
+      document.getElementById("app").style.display = "none";
     }
-    
-    await cargarCategorias();
-    cargarFundas(); 
-  } else {
-    document.getElementById("login").style.display = "flex";
-    document.getElementById("app").style.display = "none";
+  } catch (error) {
+    console.error("Error crítico durante el inicio:", error);
+  } finally {
+    if(loader) loader.style.display = "none"; // Oculta el cargando SIEMPRE
   }
 });
 
@@ -174,6 +191,7 @@ async function loginCliente() {
   }
 }
 
+// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS (FIRESTORE)
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
@@ -286,6 +304,7 @@ function renderizarListaCrudCategorias() {
   });
 }
 
+// 📥 PROCESADOR LECTOR DE EXCEL A FIRESTORE
 function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -346,6 +365,7 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
+// 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -762,84 +782,42 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
-async function guardarFunda() {
-  if (!esAdmin) return;
-  const btnGuardar = document.getElementById("guardarFunda");
-  const textoOriginal = btnGuardar.innerText;
-  
-  btnGuardar.disabled = true;
-  btnGuardar.innerText = "⏳ Subiendo imagen..."; // Feedback visual
+async function cargarFundas() {
+  try {
+    const snapshot = await getDocs(collection(db, "fundas"));
+    todasLasFundas = []; 
+    let necesitaMigracion = false;
 
-  let urlImagenFinal = fotoBase64; 
+    snapshot.forEach((doc) => {
+      const datos = doc.data();
+      if (datos.orden === undefined) {
+        necesitaMigracion = true;
+      }
+      todasLasFundas.push({ id: doc.id, ...datos });
+    });
 
-  if (fotoBase64 && fotoBase64.startsWith("data:image")) {
-    try {
-      const base64Clean = fotoBase64.split(',')[1];
-      const formData = new FormData();
-      formData.append("image", base64Clean);
-
-      const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-        method: "POST",
-        body: formData
+    if (necesitaMigracion) {
+      console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
+      const batch = writeBatch(db);
+      
+      todasLasFundas.forEach((funda, index) => {
+        if (funda.orden === undefined) {
+          const docRef = doc(db, "fundas", funda.id);
+          batch.update(docRef, { orden: index });
+          funda.orden = index; 
+        }
       });
 
-      const resultado = await respuesta.json();
-      if (resultado.success) {
-        urlImagenFinal = resultado.data.url;
-        btnGuardar.innerText = "💾 Guardando datos..."; // Siguiente paso
-      } else {
-        throw new Error("Error en ImgBB");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error al subir la foto. Revisa tu conexión.");
-      btnGuardar.disabled = false;
-      btnGuardar.innerText = textoOriginal;
-      return;
+      await batch.commit();
     }
-  }
 
-  // Lógica de stock (se mantiene igual)
-  let stockPorModeloArray = [];
-  if (esProductoSinModelo) {
-    const unidadesTotales = Number(document.getElementById("stockTotalSencillo").value) || 0;
-    stockPorModeloArray = [{ modelo: "Único", stock: unidadesTotales }];
-  } else {
-    const compatiblesInput = document.getElementById("stockPorModelo").value;
-    stockPorModeloArray = compatiblesInput.split(",").map(item => {
-      const [modelo, cantidad] = item.split(":");
-      return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 };
-    }).filter(item => item.modelo !== "");
-  }
-
-  const datosFunda = {
-    nombre: document.getElementById("nombre").value,
-    categoria: document.getElementById("categoriaSelect").value, 
-    stockPorModelo: stockPorModeloArray,
-    costo: Number(document.getElementById("costo").value),
-    venta: Number(document.getElementById("venta").value),
-    foto: urlImagenFinal,
-    sinModelo: esProductoSinModelo 
-  };
-
-  if (!idFundaEditando) datosFunda.orden = todasLasFundas.length;
-
-  try {
-    if (idFundaEditando) {
-      await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
-      alert("Artículo actualizado 🎉");
-    } else {
-      await addDoc(collection(db, "fundas"), datosFunda);
-      alert("Artículo guardado 🎉");
-    }
-    ocultarFormulario();
-    cargarFundas();
+    todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+    
+    actualizarDatalistAsistente();
+    actualizarDatalistBuscador(); 
+    filtrarFundas();
   } catch (error) {
-    console.error(error);
-    alert("Error al guardar en base de datos.");
-  } finally {
-    btnGuardar.disabled = false;
-    btnGuardar.innerText = textoOriginal;
+    console.error("Error al cargar o migrar fundas:", error);
   }
 }
 
@@ -850,15 +828,17 @@ function actualizarDatalistAsistente() {
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
 
-// --- FUNCIÓN GUARDARFUNDA (ACTUALIZADA CON IMGBB) ---
+// --- GUARDAR FUNDA CON IMGBB ---
 async function guardarFunda() {
   if (!esAdmin) return;
   const btnGuardar = document.getElementById("guardarFunda");
+  const textoOriginal = btnGuardar.innerText;
+  
   btnGuardar.disabled = true;
+  btnGuardar.innerText = "⏳ Subiendo imagen..."; 
 
   let urlImagenFinal = fotoBase64; 
 
-  // 1. SI LA IMAGEN ES NUEVA (Base64), SUBIR A IMGBB
   if (fotoBase64 && fotoBase64.startsWith("data:image")) {
     try {
       const base64Clean = fotoBase64.split(',')[1];
@@ -872,7 +852,8 @@ async function guardarFunda() {
 
       const resultado = await respuesta.json();
       if (resultado.success) {
-        urlImagenFinal = resultado.data.url; // URL PÚBLICA DE LA IMAGEN
+        urlImagenFinal = resultado.data.url; 
+        btnGuardar.innerText = "💾 Guardando datos..."; 
       } else {
         throw new Error("Error en ImgBB");
       }
@@ -880,6 +861,7 @@ async function guardarFunda() {
       console.error(err);
       alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
       btnGuardar.disabled = false;
+      btnGuardar.innerText = textoOriginal;
       return;
     }
   }
@@ -908,7 +890,7 @@ async function guardarFunda() {
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
-    foto: urlImagenFinal, // SE GUARDA LA URL, NO EL BASE64
+    foto: urlImagenFinal, 
     sinModelo: esProductoSinModelo 
   };
 
@@ -918,7 +900,6 @@ async function guardarFunda() {
 
   try {
     if (idFundaEditando) {
-      // Si editamos y no se cambió la foto, mantenemos la anterior
       if (urlImagenFinal === "" && !fotoBase64) {
          const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
          datosFunda.foto = vieja ? (vieja.foto || "") : "";
@@ -936,6 +917,7 @@ async function guardarFunda() {
     alert("Error al guardar en base de datos.");
   } finally {
     btnGuardar.disabled = false;
+    btnGuardar.innerText = textoOriginal;
   }
 }
 
@@ -997,7 +979,7 @@ function abrirEditarFunda(id) {
 
   const preview = document.getElementById("previewFoto");
   if (funda.foto) {
-    fotoBase64 = funda.foto; // Cargamos la URL o el Base64 que viene de la DB
+    fotoBase64 = funda.foto; 
     preview.src = funda.foto;
     preview.style.display = "block";
   } else {
