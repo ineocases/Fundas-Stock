@@ -35,7 +35,7 @@ let imagenRecortadaTemporal = null;
 let porcentajeEscala = 0.72; 
 let anguloRotacion = 0; 
 let sortableInstance = null; // Instancia global para el Drag and Drop
-let esProductoSinModelo = false; // 🔥 Variable global para controlar el modo del producto actual
+let esProductoSinModelo = false; // Variable global para controlar el modo del producto actual
 
 // 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
 const inputBuscar = document.getElementById("buscar");
@@ -64,7 +64,7 @@ document.getElementById("btnMenuHamburguesa").onclick = toggleSidebar;
 document.getElementById("sidebarOverlay").onclick = toggleSidebar;
 document.getElementById("btnCambiarRol").onclick = ejecutarCambioRol;
 
-// Evento para el nuevo botón dinámico "No Modelo"
+// Evento para el botón dinámico "No Modelo"
 document.getElementById("btnToggleModelo").onclick = toggleModoModelo;
 
 // Eventos del Gestor de Categorías Personalizadas
@@ -79,7 +79,7 @@ document.getElementById("btnImportarExcel").onclick = () => {
 document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
 // Eventos para el Menú IA y Formateador
-document.getElementById("btnAccionesIA").onclick = toggleMenuIA;
+document.getElementById("btnAccionesIA").onclick = toggleMenuMenuIA;
 document.getElementById("btnMenuFormatear").onclick = () => {
   document.getElementById("menuAccionesIA").style.display = "none";
   toggleFormateador();
@@ -521,7 +521,6 @@ function abrirModalReservar(id) {
   const selectModelo = document.getElementById("reservaModelo");
   selectModelo.innerHTML = "";
 
-  // 🔥 SI EL PRODUCTO NO TIENE MODELO, OCULTAMOS CUALQUIER CANTIDAD O STOCK DISPONIBLE
   if (funda.sinModelo) {
     const totalStock = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
     if (totalStock <= 0) {
@@ -563,7 +562,6 @@ function enviarWhatsApp() {
   const modeloSeleccionado = document.getElementById("reservaModelo").value;
   if (!modeloSeleccionado) return;
 
-  // Modificamos el mensaje si el artículo no tiene variantes específicas de modelo
   const bloqueModelo = fundaReservando.sinModelo ? "" : `⚙️ *Variante/Modelo:* ${modeloSeleccionado}\n`;
 
   const mensaje = `Hola iNeo Cases! 👋 Me gustaría reservar:\n\n` +
@@ -577,8 +575,7 @@ function enviarWhatsApp() {
   cerrarModalReservar();
 }
 
-// Funciones de IA y Formateo
-function toggleMenuIA() {
+function toggleMenuMenuIA() {
   const menu = document.getElementById("menuAccionesIA");
   if(menu) {
     menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
@@ -627,7 +624,6 @@ function procesarTextoStock() {
   document.getElementById("cajaFormateador").style.display = "none";
 }
 
-// 🔥 FUNCIÓN PARA INTERCAMBIAR EL MODO DE MODELO/VARIANTE EN EL FORMULARIO
 function toggleModoModelo() {
   esProductoSinModelo = !esProductoSinModelo;
   const labelStock = document.getElementById('labelStock');
@@ -654,6 +650,44 @@ function toggleModoModelo() {
   }
 }
 
+// OPTIMIZACIÓN EXCLUSIVA PARA EVITAR ERRORES DE DOCUMENTO DE MÁS DE 1MB AL SUBIR IMÁGENES
+function procesarImagen(evento) {
+  const archivo = evento.target.files[0];
+  if (!archivo) return;
+
+  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+  document.getElementById("controlCamposPro").style.display = "none";
+
+  const btnGuardar = document.getElementById("guardarFunda");
+  btnGuardar.disabled = true;
+
+  const lector = new FileReader();
+  lector.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      canvas.width = 500;
+      canvas.height = 500;
+      const ctx = canvas.getContext("2d");
+
+      const ladoMenor = Math.min(img.width, img.height);
+      const sx = (img.width - ladoMenor) / 2;
+      const sy = (img.height - ladoMenor) / 2;
+
+      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
+      fotoBase64 = canvas.toDataURL("image/jpeg", 0.4);
+
+      const preview = document.getElementById("previewFoto");
+      preview.src = fotoBase64;
+      preview.style.display = "block";
+
+      btnGuardar.disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  lector.readAsDataURL(archivo);
+}
+
 function mostrarFormulario() {
   if (!esAdmin) return;
   if (listaCategorias.length === 0) {
@@ -670,7 +704,6 @@ function mostrarFormulario() {
   document.getElementById("nombre").value = "";
   if(document.getElementById("categoriaSelect").options.length > 0) document.getElementById("categoriaSelect").selectedIndex = 0;
   
-  // Resetear estados y visuales del botón "No Modelo" de vuelta a Variantes por defecto
   esProductoSinModelo = false;
   document.getElementById('labelStock').textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
   document.getElementById('stockPorModelo').style.display = 'block';
@@ -717,44 +750,6 @@ function ocultarAsistente() {
   document.getElementById("modalAsistente").style.display = "none";
 }
 
-function procesarImagen(evento) {
-  const archivo = evento.target.files[0];
-  if (!archivo) return;
-
-  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlCamposPro").style.display = "none";
-
-  const btnGuardar = document.getElementById("guardarFunda");
-  btnGuardar.disabled = true;
-
-  const lector = new FileReader();
-  lector.onload = function (e) {
-    const img = new Image();
-    img.onload = function () {
-      const canvas = document.createElement("canvas");
-      canvas.width = 600;
-      canvas.height = 600;
-      const ctx = canvas.getContext("2d");
-
-      const ladoMenor = Math.min(img.width, img.height);
-      const sx = (img.width - ladoMenor) / 2;
-      const sy = (img.height - ladoMenor) / 2;
-
-      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 600, 600);
-      fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
-
-      const preview = document.getElementById("previewFoto");
-      preview.src = fotoBase64;
-      preview.style.display = "block";
-
-      btnGuardar.disabled = false;
-    };
-    img.src = e.target.result;
-  };
-  lector.readAsDataURL(archivo);
-}
-
-// 🪄 FUNCION QUE ACTUALIZA LAS SUGERENCIAS DEL BUSCADOR PRINCIPAL
 function actualizarDatalistBuscador() {
   const datalist = document.getElementById("sugerenciasBuscador");
   if (!datalist) return;
@@ -775,7 +770,6 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
-// MODIFICADA PARA CARGAR LAS FUNDAS CON EL NUEVO QUERY DE ORDENAMIENTO
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -791,7 +785,7 @@ async function cargarFundas() {
     });
 
     if (necesitaMigracion) {
-      console.log("⚙️ Detectamos productos viejos sin índice de orden. Corrigiendo base de datos...");
+      console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
       const batch = writeBatch(db);
       
       todasLasFundas.forEach((funda, index) => {
@@ -803,7 +797,6 @@ async function cargarFundas() {
       });
 
       await batch.commit();
-      console.log("✅ ¡Base de datos actualizada! Todos tus productos viejos ya tienen su propiedad de orden.");
     }
 
     todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
@@ -830,7 +823,6 @@ async function guardarFunda() {
 
   let stockPorModeloArray = [];
 
-  // 🔥 EVALUAR SI SE GUARDA EN MODO SIN MODELO O TRADICIONAL
   if (esProductoSinModelo) {
     const unidadesTotales = Number(document.getElementById("stockTotalSencillo").value) || 0;
     stockPorModeloArray = [{ modelo: "Único", stock: unidadesTotales }];
@@ -854,7 +846,7 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     foto: fotoBase64,
-    sinModelo: esProductoSinModelo // 🔥 Guardamos el estado del producto
+    sinModelo: esProductoSinModelo 
   };
 
   if (!idFundaEditando) {
@@ -907,7 +899,6 @@ function abrirEditarFunda(id) {
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
 
-  // 🔥 LEER LA BANDERA SIN MODELO PARA ACOMODAR LA INTERFAZ CORRECTAMENTE AL EDITAR
   esProductoSinModelo = !!funda.sinModelo;
   const labelStock = document.getElementById('labelStock');
   const stockPorModelo = document.getElementById('stockPorModelo');
@@ -969,7 +960,6 @@ async function procesarVentaAsistente() {
   const fundaEncontrada = todasLasFundas.find(f => f.nombre && f.nombre.toLowerCase() === prodBuscado);
   if (!fundaEncontrada) return alert("Producto no encontrado.");
 
-  // 🔥 LÓGICA DE DESCUENTO SI EL PRODUCTO ES "SIN MODELO"
   if (fundaEncontrada.sinModelo) {
     if (!fundaEncontrada.stockPorModelo || fundaEncontrada.stockPorModelo.length === 0) {
       fundaEncontrada.stockPorModelo = [{ modelo: "Único", stock: 0 }];
@@ -992,7 +982,6 @@ async function procesarVentaAsistente() {
     return;
   }
 
-  // Lógica tradicional de descuento por variante
   if (Array.isArray(fundaEncontrada.stockPorModelo)) {
     const modeloStock = fundaEncontrada.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
     if (!modeloStock) return alert("Variante/Modelo no encontrado.");
@@ -1044,14 +1033,12 @@ function coincideModelo(modelo, textoBuscado) {
 
   if (/\d/.test(txt)) {
     const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
-    
     for (let variante of variantes) {
       if (mod.includes(variante) && !txt.includes(variante)) {
         return false;
       }
     }
   }
-  
   return true;
 }
 
@@ -1071,7 +1058,7 @@ function habilitarReordenamiento() {
         ghostClass: 'sortable-ghost', 
         onEnd: async (evt) => {
             if (evt.oldIndex === evt.newIndex) return;
-            console.log("Se detectó cambio de posición visual. Sincronizando con base de datos...");
+            console.log("Sincronizando nuevo orden visual con Firebase...");
             await actualizarOrdenEnFirebase();
         }
     });
@@ -1091,8 +1078,6 @@ async function actualizarOrdenEnFirebase() {
 
     try {
         await batch.commit();
-        console.log("¡El nuevo orden se sincronizó exitosamente en Firestore! 🚀");
-        
         tarjetas.forEach((tarjeta, index) => {
             const id = tarjeta.dataset.id;
             const fundaLocal = todasLasFundas.find(f => f.id === id);
@@ -1100,12 +1085,12 @@ async function actualizarOrdenEnFirebase() {
         });
         todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     } catch (error) {
-        console.error("Error crítico guardando el lote de ordenamiento:", error);
+        console.error("Error guardando el ordenamiento:", error);
         alert("No se pudo persistir el orden en la base de datos.");
     }
 }
 
-// MODIFICADA PARA OCULTAR EL STOCK SEGÚN EL MODO DE PRODUCTO SELECCIONADO
+// 👁️ RENDERIZADO CON INFORMACIÓN FINANCIERA INTEGRADA PARA EL ADMIN
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1125,7 +1110,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
-    // 🔥 CONTROL DE LA SECCIÓN DE STOCK (SI ES SIN MODELO, SE OCULTA AL CLIENTE)
     let bloqueStockHTML = "";
     if (f.sinModelo) {
       if (esAdmin) {
@@ -1136,22 +1120,34 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     } else {
       bloqueStockHTML = `
         <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
-        
         <button onclick="toggleStock(this, 'show')" 
                 class="btn-ver-stock"
                 style="width:100%; margin-bottom:10px; background:#28a745; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'none' : 'block'}">
           🔍 Ver Stock por Modelo
         </button>
-
         <button onclick="toggleStock(this, 'hide')" 
                 class="btn-ocultar-stock"
                 style="width:100%; margin-bottom:10px; background:#6c757d; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'block' : 'none'}">
           ⬆️ Ocultar Stock
         </button>
-
         <div class="stock-list" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5; display: ${mostrarDirecto ? 'block' : 'none'};">
           ${listaModelosHTML}
         </div>
+      `;
+    }
+
+    // 📈 CÁLCULO DE MÉTRICAS ECONÓMICAS EN TIEMPO REAL (SOLO ADMIN)
+    let bloqueMétricasAdmin = "";
+    if (esAdmin) {
+      const costo = f.costo || 0;
+      const venta = f.venta || 0;
+      const gananciaPesos = venta - costo;
+      const porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
+
+      bloqueMétricasAdmin = `
+        <p style="font-size: 14px; color: #43a047; font-weight: 600; margin: 4px 0 12px 0;">
+          📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)
+        </p>
       `;
     }
 
@@ -1176,7 +1172,10 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         
         ${bloqueStockHTML}
 
-        <p style="font-size: 17px; color:#0071e3; font-weight:700;">💰 Precio: $${f.venta ?? 0}</p>
+        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 2px;">💰 Precio: $${f.venta ?? 0}</p>
+        
+        ${bloqueMétricasAdmin}
+        
         ${bloqueAcciones}
       </div>
     </div>
