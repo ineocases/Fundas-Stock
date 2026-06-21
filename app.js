@@ -14,7 +14,10 @@ import {
   updateDoc,
   query,      
   orderBy,    
-  writeBatch  
+  writeBatch,
+  setDoc,      
+  getDoc,      
+  arrayUnion   
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 console.log("DB conectada con éxito:", db);
@@ -22,7 +25,7 @@ console.log("DB conectada con éxito:", db);
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
 const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
-const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94"; // API KEY PARA IMGBB
+const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94";
 
 // Variables globales de control
 let todasLasFundas = [];
@@ -85,6 +88,14 @@ document.addEventListener("DOMContentLoaded", () => {
     procesarImagenPro();
   };
   if(document.getElementById("btnProcesarStock")) document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
+
+  // Nuevos eventos para Base de Datos de Clientes
+  if(document.getElementById("btnRegistrarCliente")) document.getElementById("btnRegistrarCliente").onclick = procesarRegistroCliente;
+  if(document.getElementById("btnVerClientes")) document.getElementById("btnVerClientes").onclick = cargarVistaClientes;
+  if(document.getElementById("btnCerrarClientes")) document.getElementById("btnCerrarClientes").onclick = () => {
+      document.getElementById("pantallaClientes").style.display = "none";
+      document.getElementById("fundas").style.display = "grid"; 
+  };
 });
 
 // --- LÓGICA DE NAVEGACIÓN Y MENÚ ---
@@ -96,11 +107,10 @@ function toggleSidebar() {
   if(menu) menu.classList.toggle("active");
   if(overlay) overlay.classList.toggle("active");
 
-  // Lógica solicitada: Ocultar el botón hamburguesa cuando el menú está abierto
   if (menu && menu.classList.contains("active")) {
     if(btn) btn.style.display = "none";
   } else {
-    if(btn) btn.style.display = ""; // Restaura el valor original del CSS
+    if(btn) btn.style.display = ""; 
   }
 }
 
@@ -129,7 +139,7 @@ async function ejecutarCambioRol() {
   }
 }
 
-// --- AUTENTICACIÓN (PROTEGIDA CONTRA CUELGUES) ---
+// --- AUTENTICACIÓN PROTEGIDA ---
 onAuthStateChanged(auth, async (user) => {
   const loader = document.getElementById("cargando");
   try {
@@ -143,6 +153,7 @@ onAuthStateChanged(auth, async (user) => {
       const btnCambiarRol = document.getElementById("btnCambiarRol");
       const btnGestorCategorias = document.getElementById("btnGestorCategorias");
       const btnImportarExcel = document.getElementById("btnImportarExcel");
+      const btnVerClientes = document.getElementById("btnVerClientes");
 
       if (esAdmin) {
         if(btnCambiarRol) btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
@@ -150,12 +161,16 @@ onAuthStateChanged(auth, async (user) => {
         if(btnImportarExcel) btnImportarExcel.style.display = "inline-block"; 
         if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "flex";
         if(btnGestorCategorias) btnGestorCategorias.style.display = "block";
+        if(btnVerClientes) btnVerClientes.style.display = "block";
       } else {
         if(btnCambiarRol) btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
         if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").style.display = "none";
         if(btnImportarExcel) btnImportarExcel.style.display = "none"; 
         if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "none";
         if(btnGestorCategorias) btnGestorCategorias.style.display = "none";
+        if(btnVerClientes) btnVerClientes.style.display = "none";
+        
+        solicitarDatosCliente();
       }
       
       await cargarCategorias();
@@ -167,7 +182,7 @@ onAuthStateChanged(auth, async (user) => {
   } catch (error) {
     console.error("Error crítico durante el inicio:", error);
   } finally {
-    if(loader) loader.style.display = "none"; // Oculta el cargando SIEMPRE
+    if(loader) loader.style.display = "none"; 
   }
 });
 
@@ -191,7 +206,98 @@ async function loginCliente() {
   }
 }
 
-// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS (FIRESTORE)
+// --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
+function solicitarDatosCliente() {
+  const yaRegistrado = localStorage.getItem("clienteINeoRegistrado");
+  if (!yaRegistrado) {
+    document.getElementById("app").style.display = "none";
+    if (document.getElementById("modalRegistroCliente")) {
+      document.getElementById("modalRegistroCliente").style.display = "flex";
+    }
+  }
+}
+
+async function procesarRegistroCliente() {
+  const nombre = document.getElementById("registroNombre").value.trim();
+  let telefono = document.getElementById("registroTelefono").value.trim();
+
+  if (!nombre || !telefono) return alert("Por favor, completá ambos campos.");
+
+  telefono = telefono.replace(/\D/g, ''); 
+  
+  const btn = document.getElementById("btnRegistrarCliente");
+  btn.disabled = true;
+  btn.innerText = "⏳ Ingresando...";
+
+  try {
+    const docRef = doc(db, "clientes", telefono); 
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      await updateDoc(docRef, {
+        nombres: arrayUnion(nombre),
+        ultimoAcceso: new Date().toISOString()
+      });
+    } else {
+      await setDoc(docRef, {
+        nombres: [nombre],
+        telefono: telefono,
+        primerAcceso: new Date().toISOString(),
+        ultimoAcceso: new Date().toISOString()
+      });
+    }
+
+    localStorage.setItem("clienteINeoRegistrado", "true");
+    document.getElementById("modalRegistroCliente").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    
+  } catch (error) {
+    console.error("Error al registrar cliente:", error);
+    alert("Hubo un error. Intentá de nuevo.");
+    btn.disabled = false;
+    btn.innerText = "Entrar al Catálogo 🚀";
+  }
+}
+
+async function cargarVistaClientes() {
+  toggleSidebar(); 
+  document.getElementById("fundas").style.display = "none"; 
+  document.getElementById("pantallaClientes").style.display = "block"; 
+  
+  const contenedor = document.getElementById("listaClientesRender");
+  contenedor.innerHTML = "<p style='text-align:center;'>Cargando base de datos...</p>";
+
+  try {
+    const snapshot = await getDocs(collection(db, "clientes"));
+    let html = `<table style="width:100%; text-align:left; border-collapse: collapse; margin-top: 15px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                  <tr style="background: #f5f5f7;">
+                    <th style="padding: 15px; border-bottom: 2px solid #e5e5ea; color: #1d1d1f;">WhatsApp</th>
+                    <th style="padding: 15px; border-bottom: 2px solid #e5e5ea; color: #1d1d1f;">Nombres (Historial)</th>
+                  </tr>`;
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const nombresUnidos = data.nombres.join(" / "); 
+      html += `<tr>
+                <td style="padding: 15px; border-bottom: 1px solid #e5e5ea; font-weight: 600;">
+                   <a href="https://wa.me/549${data.telefono}" target="_blank" style="color: #25D366; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                     📱 ${data.telefono}
+                   </a>
+                </td>
+                <td style="padding: 15px; border-bottom: 1px solid #e5e5ea; color: #515154;">${nombresUnidos}</td>
+               </tr>`;
+    });
+    
+    html += `</table>`;
+    contenedor.innerHTML = html;
+    
+  } catch (error) {
+    console.error("Error al cargar lista de clientes:", error);
+    contenedor.innerHTML = "<p style='text-align:center; color: red;'>Error al cargar la base de datos.</p>";
+  }
+}
+
+// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
@@ -304,7 +410,7 @@ function renderizarListaCrudCategorias() {
   });
 }
 
-// 📥 PROCESADOR LECTOR DE EXCEL A FIRESTORE
+// 📥 PROCESADOR LECTOR DE EXCEL
 function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -365,7 +471,7 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 ENVIAR FOTO A REMOVE.BG Y CONFIGURAR INTERFAZ EN VIVO
+// 🚀 IA Y REMOVE BG
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -523,6 +629,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   }
 }
 
+// --- RESERVAS Y WHATSAPP ---
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
@@ -588,6 +695,7 @@ function enviarWhatsApp() {
   cerrarModalReservar();
 }
 
+// --- HERRAMIENTAS DE FORMATEO Y STOCK ---
 function toggleMenuMenuIA() {
   const menu = document.getElementById("menuAccionesIA");
   if(menu) {
@@ -663,6 +771,7 @@ function toggleModoModelo() {
   }
 }
 
+// --- GESTIÓN DE FORMULARIO DE PRODUCTO ---
 function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
@@ -782,6 +891,7 @@ function actualizarDatalistBuscador() {
     .join("");
 }
 
+// --- CRUD DE FUNDAS ---
 async function cargarFundas() {
   try {
     const snapshot = await getDocs(collection(db, "fundas"));
@@ -828,7 +938,6 @@ function actualizarDatalistAsistente() {
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
 
-// --- GUARDAR FUNDA CON IMGBB ---
 async function guardarFunda() {
   if (!esAdmin) return;
   const btnGuardar = document.getElementById("guardarFunda");
@@ -1049,6 +1158,7 @@ async function procesarVentaAsistente() {
   }
 }
 
+// --- UTILIDADES ---
 window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
