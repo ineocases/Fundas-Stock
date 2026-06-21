@@ -555,3 +555,37 @@ button:hover {
 .btn-admin-submit:hover {
     background: #000000;
 }
+/* --- ESTILOS MENÚ ACCIONES IA --- */
+#btnAccionesIA {
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(88, 86, 214, 0.3);
+}
+
+#btnAccionesIA:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(88, 86, 214, 0.4);
+}
+
+#menuAccionesIA {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#menuAccionesIA button {
+    border: none;
+    cursor: pointer;
+}
+
+#menuAccionesIA button:hover {
+    background-color: #f5f5f7 !important;
+    color: #0071e3 !important;
+}
+
+/* Ajuste para el botón del formateador */
+#btnProcesarStock:hover {
+    background-color: #28a745 !important;
+    transform: translateY(-1px);
+}
