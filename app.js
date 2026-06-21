@@ -90,9 +90,21 @@ document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
 
 
 function toggleSidebar() {
-  document.getElementById("sidebarMenu").classList.toggle("active");
-  document.getElementById("sidebarOverlay").classList.toggle("active");
-  // Ajuste: Se removió el toggle active del botón para que no se transforme en una X fea.
+  const sidebar = document.getElementById("sidebarMenu");
+  const overlay = document.getElementById("sidebarOverlay");
+  const btnMenu = document.getElementById("btnMenuHamburguesa");
+
+  sidebar.classList.toggle("active");
+  overlay.classList.toggle("active");
+
+  // Ajuste: Ocultar por completo el botón de menú cuando el panel lateral está abierto
+  if (btnMenu) {
+    if (sidebar.classList.contains("active")) {
+      btnMenu.style.display = "none";
+    } else {
+      btnMenu.style.display = ""; // Restaura el estilo original (flex/block) definido en CSS
+    }
+  }
 }
 
 function abrirModalAdmin() {
@@ -633,7 +645,6 @@ function actualizarCarritoUI() {
     const imgUrl = item.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     const subtotal = item.precio * item.cantidad;
 
-    // Ajuste: Botones '-' y '+' ahora tienen fondo #e5e5ea y texto #1d1d1f para máxima visibilidad
     html += `
       <div style="display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #e5e5ea;">
         <img src="${imgUrl}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 10px; border: 1px solid #d2d2d7; background: #f5f5f7;">
@@ -660,7 +671,6 @@ function actualizarCarritoUI() {
   const carritoTotal = document.getElementById("carritoTotal");
   if (carritoTotal) carritoTotal.innerText = `$${totalPrecio}`;
 
-  // Ajuste: Inyectar el logotipo oficial de WhatsApp de manera dinámica en el botón de salida
   setTimeout(() => {
     const btnPedidoWA = document.getElementById("btnEnviarPedido") || document.querySelector("button[onclick*='enviarPedidoWhatsApp']");
     if (btnPedidoWA) {
@@ -1095,7 +1105,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
-    // Ajuste: Se simplificó la etiqueta del botón de cliente de "Ver variantes / Comprar 🛒" a "Comprar 🛒"
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
