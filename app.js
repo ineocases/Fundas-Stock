@@ -907,8 +907,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
     
-    // Lógica para saber si expandir automáticamente:
-    // Se expande solo si el usuario escribió algo y encontramos coincidencias en los modelos
+    // Lógica para saber si expandir automáticamente
     const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
 
     const listaModelosHTML = modelosFiltrados
@@ -945,7 +944,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
         
         <button onclick="this.style.display='none'; this.nextElementSibling.style.display='block'" 
-                style="width:100%; margin-bottom:10px; background:#f0f0f0; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:500; display: ${mostrarDirecto ? 'none' : 'block'}">
+                style="width:100%; margin-bottom:10px; background:#28a745; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'none' : 'block'}">
           🔍 Ver Stock por Modelo
         </button>
 
@@ -961,7 +960,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   });
   document.getElementById("fundas").innerHTML = html;
 }
-
 function filtrarFundas() {
   // 1. Capturamos el texto de búsqueda
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
