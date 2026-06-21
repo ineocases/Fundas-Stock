@@ -11,7 +11,10 @@ import {
   addDoc,
   doc,
   deleteDoc,
-  updateDoc
+  updateDoc,
+  query,      // <-- IMPORTADO PARA ORDENAR CONSULTAS
+  orderBy,    // <-- IMPORTADO PARA FILTRAR POR ÍNDICE
+  writeBatch  // <-- IMPORTADO PARA SUBIDAS MASIVAS ATÓMICAS
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 console.log("DB conectada con éxito:", db);
@@ -31,6 +34,7 @@ let fundaReservando = null;
 let imagenRecortadaTemporal = null; 
 let porcentajeEscala = 0.72; 
 let anguloRotacion = 0; 
+let sortableInstance = null; // Instancia global para el Drag and Drop
 
 // 🚀 CREAR EL DATALIST PARA SUGERENCIAS DEL BUSCADOR PRINCIPAL
 const inputBuscar = document.getElementById("buscar");
@@ -324,7 +328,8 @@ function procesarImportacionExcel(evento) {
             costo: Number(fila.Costo || 0),
             venta: Number(fila.Venta || 0),
             stockPorModelo: stockPorModeloArray,
-            foto: "" 
+            foto: "",
+            orden: todasLasFundas.length + importados // Se le asigna el índice secuencial inicial al final
           };
 
           await addDoc(collection(db, "fundas"), nuevoProducto);
@@ -700,32 +705,34 @@ function actualizarDatalistBuscador() {
   
   const sugerencias = new Set();
   todasLasFundas.forEach(f => {
-    if (f.nombre) sugerencias.add(f.nombre); // Sugerir el nombre de la funda
+    if (f.nombre) sugerencias.add(f.nombre); 
     if (Array.isArray(f.stockPorModelo)) {
       f.stockPorModelo.forEach(m => {
-        if (m.modelo) sugerencias.add(m.modelo.trim()); // Sugerir los modelos exactos
+        if (m.modelo) sugerencias.add(m.modelo.trim()); 
       });
     }
   });
   
   datalist.innerHTML = Array.from(sugerencias)
-    .sort() // Los ordena alfabéticamente
+    .sort() 
     .map(texto => `<option value="${texto}"></option>`)
     .join("");
 }
 
+// MODIFICADA PARA CARGAR LAS FUNDAS CON EL NUEVO QUERY DE ORDENAMIENTO
 async function cargarFundas() {
   try {
-    const snapshot = await getDocs(collection(db, "fundas"));
+    const q = query(collection(db, "fundas"), orderBy("orden", "asc"));
+    const snapshot = await getDocs(q);
     todasLasFundas = []; 
     snapshot.forEach((doc) => {
       todasLasFundas.push({ id: doc.id, ...doc.data() });
     });
     actualizarDatalistAsistente();
-    actualizarDatalistBuscador(); // <- Llenamos el autocompletado aquí
+    actualizarDatalistBuscador(); 
     filtrarFundas();
   } catch (error) {
-    console.error(error);
+    console.error("Error al cargar fundas ordenadas:", error);
   }
 }
 
@@ -760,6 +767,11 @@ async function guardarFunda() {
     venta: Number(document.getElementById("venta").value),
     foto: fotoBase64 
   };
+
+  // ASIGNAR ORDEN INICIAL AL CREAR UN NUEVO ARTÍCULO
+  if (!idFundaEditando) {
+    datosFunda.orden = todasLasFundas.length;
+  }
 
   try {
     if (idFundaEditando) {
@@ -885,6 +897,7 @@ window.toggleStock = (btn, action) => {
     btnOcultar.style.display = 'none';
   }
 };
+
 // 🪄 NUEVA FUNCIÓN MAGICA: Filtra inteligentemente aislando los modelos
 function coincideModelo(modelo, textoBuscado) {
   const mod = String(modelo).toLowerCase().trim();
@@ -892,13 +905,10 @@ function coincideModelo(modelo, textoBuscado) {
   
   if (!mod.includes(txt)) return false;
 
-  // Si el usuario buscó algo que contiene números (Ej: 13)
   if (/\d/.test(txt)) {
-    // Array de sufijos problemáticos que queremos aislar
     const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
     
     for (let variante of variantes) {
-      // Si el modelo real tiene la palabra "pro", pero el usuario NO escribió "pro", descartamos ese modelo.
       if (mod.includes(variante) && !txt.includes(variante)) {
         return false;
       }
@@ -908,54 +918,60 @@ function coincideModelo(modelo, textoBuscado) {
   return true;
 }
 
+// INICIALIZADOR DE SORTABLEJS OPTIMIZADO
 function habilitarReordenamiento() {
-    // Solo habilitar si es admin
     if (!esAdmin) return; 
 
     const contenedor = document.getElementById('fundas');
+    if (!contenedor) return;
+
+    if (sortableInstance) {
+       sortableInstance.destroy();
+    }
     
-    new Sortable(contenedor, {
+    sortableInstance = new Sortable(contenedor, {
         animation: 150,
-        ghostClass: 'blue-background-class', // Puedes definir esta clase en tu CSS para el efecto visual
+        handle: '.drag-handle', // Arrastre limitado exclusivamente al botón handle
+        ghostClass: 'sortable-ghost', 
         onEnd: async (evt) => {
-            // Se ejecuta cuando el usuario suelta el elemento
-            const itemElement = evt.item;
-            const nuevoIndice = evt.newIndex;
-            
-            // Aquí obtenemos el ID del producto que se movió
-            // (Asumiendo que el ID está en un atributo data-id en tu HTML)
-            const idProducto = itemElement.dataset.id; 
-            
-            console.log(`Producto ${idProducto} movido a la posición ${nuevoIndice}`);
-            
-            // LOGICA PARA ACTUALIZAR FIREBASE
-            // Debes iterar sobre los elementos actuales del DOM y actualizar 
-            // el campo 'orden' en Firestore para todos los afectados
+            if (evt.oldIndex === evt.newIndex) return;
+            console.log("Se detectó cambio de posición visual. Sincronizando con base de datos...");
             await actualizarOrdenEnFirebase();
         }
     });
 }
 
+// CONTROLADOR DE ESCRITURA EN LOTES (BATCH) PARA FIRESTORE
 async function actualizarOrdenEnFirebase() {
-    const tarjetas = document.querySelectorAll('.card');
-    const promesas = [];
+    const tarjetas = document.querySelectorAll('#fundas .card');
+    const batch = writeBatch(db); // Inicializamos el lote masivo
 
     tarjetas.forEach((tarjeta, index) => {
         const id = tarjeta.dataset.id;
-        // Referencia a tu colección de productos
-        const docRef = doc(db, "fundas", id); 
-        // Actualizamos el campo 'orden' con el nuevo índice
-        promesas.push(updateDoc(docRef, { orden: index }));
+        if (id) {
+          const docRef = doc(db, "fundas", id); 
+          batch.update(docRef, { orden: index });
+        }
     });
 
     try {
-        await Promise.all(promesas);
-        console.log("Orden actualizado en la base de datos");
+        await batch.commit();
+        console.log("¡El nuevo orden se sincronizó exitosamente en Firestore! 🚀");
+        
+        // Sincronizar array local en memoria para mantener el orden exacto sin recargar
+        tarjetas.forEach((tarjeta, index) => {
+            const id = tarjeta.dataset.id;
+            const fundaLocal = todasLasFundas.find(f => f.id === id);
+            if (fundaLocal) fundaLocal.orden = index;
+        });
+        todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     } catch (error) {
-        console.error("Error al guardar el orden:", error);
+        console.error("Error crítico guardando el lote de ordenamiento:", error);
+        alert("No se pudo persistir el orden en la base de datos.");
     }
 }
 
+// MODIFICADA CON DATA-ID, DRAG-HANDLE VISUAL Y ACTIVADOR REACTIVO
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -986,8 +1002,10 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
           </button>
         </div>`;
 
+    // AGREGADO EL ATRIBUTO DATA-ID Y EL BOTÓN DRAG-HANDLE EXCLUSIVO PARA EL ADMIN
     html += `
-    <div class="card">
+    <div class="card" data-id="${f.id}" style="position: relative;">
+      ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
       <div class="badge-categoria">${f.categoria || "Varios"}</div>
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
@@ -1017,34 +1035,31 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     `;
   });
   document.getElementById("fundas").innerHTML = html;
+
+  // ACTIVAR EL ARRSTRAR SOLO SI NO ESTAMOS BUSCANDO O FILTRANDO POR CATEGORÍAS
+  if (esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas") {
+    habilitarReordenamiento();
+  }
 }
 
 function filtrarFundas() {
-  // 1. Capturamos el texto de búsqueda
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
 
-  // 2. Filtramos la lista global
   const fundasFiltradas = todasLasFundas.filter((f) => {
-    // Si hay una categoría seleccionada, la aplicamos
     if (categoriaSeleccionadaFiltro !== "Todas" && f.categoria !== categoriaSeleccionadaFiltro) {
       return false;
     }
 
-    // Buscamos coincidencia en el nombre de la funda
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     
-    // Buscamos coincidencia en los modelos (usando tu función 'coincideModelo')
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     
-    // La funda pasa el filtro si coincide el nombre O si coincide algún modelo
     return nombreCoincide || compatibleCoincide;
   });
 
-  // 3. Renderizamos pasando el textoBuscado para que la lógica de visualización 
-  // decida si expandir el stock automáticamente o mostrar el botón "Ver Stock"
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
