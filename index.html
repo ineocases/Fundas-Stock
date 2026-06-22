@@ -93,8 +93,8 @@
       <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
       <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
       <button id="btnVerClientes" class="sidebar-btn" style="display: none;">👥 Ver Clientes Registrados</button>
-      <button class="sidebar-btn" id="btnAbrirBanner" style="display: none;">🖼️ Cambiar Banner</button>
-      <button class="sidebar-btn" id="btnAbrirDescuentos" style="display: none;">🏷️ Menú Descuentos</button>
+      <button id="btnAbrirBanner" class="sidebar-btn" style="display: none;">Cambiar Banner Principal</button>
+      <button id="btnAbrirDescuentos" class="sidebar-btn" style="display: none;">Configurar Descuentos</button>
     </div>
 
     <div id="modalCategorias" style="display:none;">
@@ -318,37 +318,34 @@
     </div>
   </div>
 
-  <div id="modalBanner" style="display:none;" class="modal-admin-overlay">
-    <div class="modal-content">
-      <h3>🖼️ Banner de la Tienda</h3>
-      <p class="subtitle">
-        Medida óptima recomendada: <b>1200 x 450 píxeles</b> (Relación de aspecto panorámica). Asegurate de usar este formato para mantener la estética limpia estilo Apple.
-      </p>
-      
-      <label>Seleccionar Imagen del Banner</label>
-      <input type="file" id="inputFotoBanner" accept="image/*">
-      
-      <div class="modal-buttons">
-        <button type="button" class="btn-secundario" id="btnCerrarBanner">Cancelar</button>
-        <button type="button" id="btnGuardarBanner">Subir y Aplicar</button>
-      </div>
-    </div>
-  </div>
+<div id="contenedorBannerTienda" style="display: none; width: 100%; margin-bottom: 20px; border-radius: 12px; overflow: hidden;">
+  <img id="imgBannerTienda" src="" style="width: 100%; height: auto; display: block; object-fit: cover;">
+</div>
 
-  <div id="modalDescuentos" style="display:none;" class="modal-admin-overlay">
-    <div class="modal-content">
-      <h3>🏷️ Panel de Descuentos Globales</h3>
-      <p class="subtitle">Definí un porcentaje de descuento global. Se guardará de manera permanente y modificará los precios visibles de forma automática.</p>
-      
-      <label>Porcentaje de Descuento (%)</label>
-      <input type="number" id="inputPorcentajeDescuento" min="0" max="100" placeholder="Ej: 15 (Dejá en 0 para quitar)">
-      
-      <div class="modal-buttons">
-        <button type="button" class="btn-secundario" id="btnCerrarDescuentos">Cancelar</button>
-        <button type="button" id="btnGuardarDescuentos">Aplicar y Guardar</button>
-      </div>
+<div id="modalBanner" style="display:none;" class="modal-admin-overlay">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">Banner de la Tienda</h3>
+    <p style="color:#6e6e73; font-size:14px;">Subí una imagen horizontal para la cabecera.</p>
+    <input type="file" id="inputFotoBanner" accept="image/*" style="padding: 8px;">
+    <div class="modal-buttons">
+      <button type="button" class="btn-secundario" id="btnCerrarBanner">Cancelar</button>
+      <button type="button" id="btnGuardarBanner">Subir y Aplicar</button>
     </div>
   </div>
+</div>
+
+<div id="modalDescuentos" style="display:none;" class="modal-admin-overlay">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">Descuento Global</h3>
+    <p style="color:#6e6e73; font-size:14px;">Aplicá un porcentaje de descuento a todos los productos.</p>
+    <label>Porcentaje (%)</label>
+    <input type="number" id="inputPorcentajeDescuento" min="0" max="100" placeholder="Ej: 15 (0 para quitar)">
+    <div class="modal-buttons">
+      <button type="button" class="btn-secundario" id="btnCerrarDescuentos">Cancelar</button>
+      <button type="button" id="btnGuardarDescuentos">Aplicar</button>
+    </div>
+  </div>
+</div>
 
   <script type="module" src="app.js"></script>
 
