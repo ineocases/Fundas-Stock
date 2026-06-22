@@ -1511,7 +1511,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     html += `
     <div class="card" data-id="${f.id}" style="position: relative;">
-      ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
+      ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: black; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
       <div class="badge-categoria">${f.categoria || "Varios"}</div>
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
