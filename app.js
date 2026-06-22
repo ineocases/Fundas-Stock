@@ -406,7 +406,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = carritoDeCompras.length; 
+  contador.innerText = Phan = carritoDeCompras.length; 
   btnAbrir.style.display = "block"; 
 }
 
@@ -443,7 +443,7 @@ function enviarPedidoWhatsApp() {
   cerrarCarrito();
 }
 
-// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS
+// 🛒 --- CREACIÓN Y GESTIÓN DE CATEGORÍAS ---
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
@@ -620,7 +620,7 @@ async function procesarImagenPro() {
     const reader = new FileReader();
     
     reader.onloadend = function() {
-      fotoTransparenteBase64 = reader.result; // Almacenamos la transparente cruda
+      fotoTransparenteBase64 = reader.result; 
       iniciarEditorGestos(fotoTransparenteBase64);
     };
     reader.readAsDataURL(blobImagenRecortada);
@@ -641,8 +641,52 @@ function iniciarEditorGestos(fuenteImagen) {
   imagenRecortadaTemporal = new Image();
   imagenRecortadaTemporal.crossOrigin = "anonymous"; 
   
+  // 1. Configurar listeners y valores ANTES de disparar la carga (Evita race conditions con Base64)
+  const toggleFondoEl = document.getElementById("toggleFondo");
+  if (toggleFondoEl) {
+    if (toggleFondoEl.type === "checkbox") {
+      usarFondo = toggleFondoEl.checked;
+    } else {
+      usarFondo = toggleFondoEl.classList.contains("active") || true;
+    }
+
+    const handlerToggle = (e) => {
+      if (toggleFondoEl.type === "checkbox") {
+        usarFondo = toggleFondoEl.checked;
+      } else {
+        usarFondo = !usarFondo;
+        toggleFondoEl.classList.toggle("active", usarFondo);
+      }
+      dibujarCanvasGestos();
+    };
+
+    toggleFondoEl.onchange = handlerToggle;
+    toggleFondoEl.onclick = handlerToggle;
+  } else {
+    usarFondo = true;
+  }
+
+  if (document.getElementById("sliderSombra")) {
+    opacidadSombra = document.getElementById("sliderSombra").value / 100;
+    document.getElementById("sliderSombra").oninput = (e) => {
+      opacidadSombra = e.target.value / 100;
+      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  } else {
+    opacidadSombra = 0.35;
+  }
+  
+  if (document.getElementById("sliderRotacion")) {
+    document.getElementById("sliderRotacion").oninput = (e) => {
+      rotacionGrados = parseFloat(e.target.value);
+      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
+      dibujarCanvasGestos();
+    };
+  }
+
+  // 2. Callback del onload
   imagenRecortadaTemporal.onload = () => {
-    // Reset de controles
     porcentajeEscala = 0.72;
     rotacionGrados = 0;
     canvasPosX = 500;
@@ -656,33 +700,8 @@ function iniciarEditorGestos(fuenteImagen) {
     dibujarCanvasGestos();
   };
   
+  // 3. Asignar el .src AL FINAL para una ejecución asíncrona segura
   imagenRecortadaTemporal.src = fuenteImagen;
-  
-  usarFondo = document.getElementById("toggleFondo") ? document.getElementById("toggleFondo").checked : true;
-  opacidadSombra = document.getElementById("sliderSombra") ? document.getElementById("sliderSombra").value / 100 : 0.35;
-
-  if (document.getElementById("toggleFondo")) {
-    document.getElementById("toggleFondo").onchange = (e) => {
-      usarFondo = e.target.checked;
-      dibujarCanvasGestos();
-    };
-  }
-
-  if (document.getElementById("sliderSombra")) {
-    document.getElementById("sliderSombra").oninput = (e) => {
-      opacidadSombra = e.target.value / 100;
-      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
-      dibujarCanvasGestos();
-    };
-  }
-  
-  if (document.getElementById("sliderRotacion")) {
-    document.getElementById("sliderRotacion").oninput = (e) => {
-      rotacionGrados = parseFloat(e.target.value);
-      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
-      dibujarCanvasGestos();
-    };
-  }
 
   configurarGestosCanvas();
   crearBotonesConfirmacion();
@@ -771,11 +790,11 @@ function dibujarCanvasGestos() {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Fondo de estudio (Degradado radial Premium)
+  // 1. Fondo de estudio (Degradado radial Premium - Ajustado para mejor contraste visual)
   if (usarFondo) {
     const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
     grad.addColorStop(0, "#ffffff");
-    grad.addColorStop(1, "#e5e5ea");
+    grad.addColorStop(1, "#d2d2d7"); 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -1094,7 +1113,7 @@ async function guardarFunda() {
   btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
 
   let urlImagenFinal = fotoBase64; 
-  let urlTransparenteFinal = urlTransparenteGuardada; // Conservamos la vieja por defecto
+  let urlTransparenteFinal = urlTransparenteGuardada; 
 
   const subirAImgBB = async (base64) => {
     const base64Clean = base64.split(',')[1];
@@ -1110,11 +1129,9 @@ async function guardarFunda() {
   };
 
   try {
-    // Si hay una imagen transparente nueva recién recortada, la sube
     if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
       urlTransparenteFinal = await subirAImgBB(fotoTransparenteBase64);
     }
-    // Si la foto acoplada final es nueva, la sube
     if (fotoBase64 && fotoBase64.startsWith("data:image")) {
       urlImagenFinal = await subirAImgBB(fotoBase64);
     }
@@ -1147,7 +1164,7 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     foto: urlImagenFinal, 
-    fotoTransparente: urlTransparenteFinal, // El PNG oculto para ahorrar API
+    fotoTransparente: urlTransparenteFinal, 
     sinModelo: esProductoSinModelo 
   };
 
@@ -1252,7 +1269,6 @@ function abrirEditarFunda(id) {
     preview.parentNode.insertBefore(btnReeditar, preview);
   }
 
-  // Permite abrir el editor si la BD tiene el PNG crudo
   if (funda.fotoTransparente) {
     btnReeditar.style.display = "block";
     btnReeditar.onclick = (e) => {
@@ -1388,7 +1404,7 @@ window.toggleStock = (btn, action) => {
 
 function coincideModelo(modelo, textoBuscado) {
   const mod = String(modelo).toLowerCase().trim();
-  const txt = textoBuscado.toLowerCase().trim();
+  const txt = textoBuscened = textoBuscado.toLowerCase().trim();
   
   if (!mod.includes(txt)) return false;
 
@@ -1531,3 +1547,5 @@ function filtrarFundas() {
 
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
+
+});
