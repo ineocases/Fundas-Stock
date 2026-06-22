@@ -566,6 +566,19 @@ button:active {
 
 .btn-link-admin:hover { background: rgba(0, 0, 0, 0.09); transform: none; }
 
+/* ✅ CORRECCIÓN AQUÍ: Tarjeta blanca para el login de admin */
+.modal-admin-content {
+    background: var(--bg-surface);
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: var(--radius-modal);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    z-index: 10;
+    box-sizing: border-box;
+}
+
 .modal-admin-header { text-align: center; margin-bottom: 22px; }
 .modal-admin-header h3 { margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: var(--text-main); }
 .modal-admin-header p { margin: 0; font-size: 13px; color: var(--text-secondary); }
