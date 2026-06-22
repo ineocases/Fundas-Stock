@@ -56,7 +56,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Asignación de eventos de la interfaz
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
-  if(document.getElementById("btnCliente")) document.getElementById("btnCliente").onclick = loginCliente; 
+  
+  // MODIFICADO: Interceptamos el clic de "Entrar a ver Catálogo" para pedir el número ANTES de loguear
+  if(document.getElementById("btnCliente")) {
+    document.getElementById("btnCliente").onclick = (e) => {
+      e.preventDefault();
+      const datosCliente = localStorage.getItem("clienteINeoDatos");
+      if (!datosCliente) {
+        // Si no tenemos sus datos, le mostramos el modal arriba del login
+        document.getElementById("modalRegistroCliente").style.display = "flex";
+      } else {
+        // Si ya lo conocemos, iniciamos sesión silenciosa
+        loginCliente();
+      }
+    };
+  }
+
   if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").onclick = mostrarFormulario;
   if(document.getElementById("guardarFunda")) document.getElementById("guardarFunda").onclick = guardarFunda;
   if(document.getElementById("buscar")) document.getElementById("buscar").addEventListener("input", filtrarFundas);
@@ -68,7 +83,17 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = agregarAlCarrito;
   if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
   if(document.getElementById("btnCerrarCarrito")) document.getElementById("btnCerrarCarrito").onclick = cerrarCarrito;
-  if(document.getElementById("btnComprarWhatsAppCarrito")) document.getElementById("btnComprarWhatsAppCarrito").onclick = enviarPedidoWhatsApp;
+  
+  // MODIFICADO: Inyectar logo SVG de WhatsApp y dar estilo al botón del carrito
+  const btnComprar = document.getElementById("btnComprarWhatsAppCarrito");
+  if (btnComprar) {
+    btnComprar.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Enviar pedido por WhatsApp`;
+    btnComprar.style.display = "flex";
+    btnComprar.style.alignItems = "center";
+    btnComprar.style.justifyContent = "center";
+    btnComprar.style.gap = "8px";
+    btnComprar.onclick = enviarPedidoWhatsApp;
+  }
 
   if(document.getElementById("btnAbrirAdminModal")) document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
   if(document.getElementById("btnCerrarAdminModal")) document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
@@ -222,9 +247,9 @@ function solicitarDatosCliente() {
   const datosCliente = localStorage.getItem("clienteINeoDatos");
   if (!datosCliente) {
     document.getElementById("app").style.display = "none";
-    if (document.getElementById("modalRegistroCliente")) {
-      document.getElementById("modalRegistroCliente").style.display = "flex";
-    }
+    // Si por algún motivo entra a la app sin datos (ej: borró caché pero sigue la sesión), lo deslogueamos.
+    signOut(auth);
+    document.getElementById("login").style.display = "flex";
   }
 }
 
@@ -234,12 +259,10 @@ async function procesarRegistroCliente() {
 
   if (!nombre || !telefonoCrudo) return alert("Por favor, completá ambos campos.");
 
-  // Limpiamos el teléfono dejando solo números y signo +
   let telefono = telefonoCrudo.replace(/[^\d+]/g, ''); 
   
-  // Si no puso prefijo internacional (+ o 549), le sugerimos un formato o lo adaptamos (asumiendo Argentina)
   if (!telefono.startsWith("+") && !telefono.startsWith("54")) {
-      telefono = "549" + telefono; // Agrega prefijo AR por defecto si escriben solo el local
+      telefono = "549" + telefono; 
   }
 
   const btn = document.getElementById("btnRegistrarCliente");
@@ -264,11 +287,11 @@ async function procesarRegistroCliente() {
       });
     }
 
-    // Guardamos nombre y teléfono para el Carrito
     localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
-    
     document.getElementById("modalRegistroCliente").style.display = "none";
-    document.getElementById("app").style.display = "block";
+    
+    // Una vez procesado el número, forzamos el login que nos mandará directo al catálogo
+    loginCliente();
     
   } catch (error) {
     console.error("Error al registrar cliente:", error);
@@ -297,7 +320,6 @@ async function cargarVistaClientes() {
     snapshot.forEach(doc => {
       const data = doc.data();
       const nombresUnidos = data.nombres.join(" / "); 
-      // Si el número guardado no tiene el +, se lo agremos para el link de WA visual
       const waLink = data.telefono.startsWith("+") ? data.telefono.substring(1) : data.telefono;
       html += `<tr>
                 <td style="padding: 15px; border-bottom: 1px solid #e5e5ea; font-weight: 600;">
@@ -339,7 +361,6 @@ function agregarAlCarrito() {
   actualizarUI_Carrito();
   cerrarModalReservar();
   
-  // Pequeño feedback visual
   const btnCarrito = document.getElementById("btnAbrirCarrito");
   btnCarrito.style.transform = "scale(1.1)";
   setTimeout(() => btnCarrito.style.transform = "scale(1)", 200);
@@ -391,7 +412,7 @@ function actualizarUI_Carrito() {
 
   totalEl.innerText = `$${total}`;
   contador.innerText = carritoDeCompras.length;
-  btnAbrir.style.display = "block"; // Muestra el botón flotante si hay items
+  btnAbrir.style.display = "block"; 
 }
 
 function abrirCarrito() {
@@ -1233,7 +1254,7 @@ window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
 window.ocultarAsistente = ocultarAsistente;
-window.eliminarItemCarrito = eliminarItemCarrito; // Vinculado a window para los eventos onclick generados dinámicamente
+window.eliminarItemCarrito = eliminarItemCarrito; 
 
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
@@ -1426,14 +1447,15 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       `;
     }
 
+    // MODIFICADO: Botón "Añadir" en negro y texto blanco, sin logo de WhatsApp
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
         <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Añadir
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #000000; color: #ffffff; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
+            Añadir
           </button>
         </div>`;
 
