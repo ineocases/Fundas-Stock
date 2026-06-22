@@ -13,7 +13,7 @@
 
   <div id="cargando">
     <div class="loader-container">
-      <img src="logo.svg" alt="iNeo Cases" class="loader-logo" style="width: 150px; height: auto;">
+      <img src="logo.svg" alt="iNeo Cases" class="loader-logo">
       <div class="progress-bar-container">
         <div id="loaderProgreso" class="progress-bar-fill"></div>
       </div>
@@ -24,7 +24,7 @@
     <div class="login-container">
       <div class="login-welcome">
         <div class="header-logo-welcome">
-          <img src="logo.svg" alt="Logo" class="app-logo-welcome" style="width: 130px; height: auto; display: block; margin: 0 auto 10px auto;">
+          <img src="logo.svg" alt="Logo" class="app-logo-welcome">
           <h1>iNeo Cases</h1>
           <p class="subtitle">Descubrí los mejores accesorios premium para tu dispositivo</p>
         </div>
@@ -74,11 +74,6 @@
       </button>
     </div>
     
-    <picture id="pictureBannerCliente" style="display:none; margin-bottom: 20px; width: 100%;">
-      <source id="sourceBannerMovil" media="(max-width: 768px)" srcset="">
-      <img id="imgBannerPC" src="" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); object-fit: cover;">
-    </picture>
-
     <div class="top-bar">
       <input id="buscar" placeholder="Buscar producto o modelo...">
       <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
@@ -92,29 +87,8 @@
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div id="sidebarMenu" class="sidebar">
       <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
-      <button id="btnGestorBanner" class="sidebar-btn" style="display: none;">🖼️ Configurar Banner DUAL</button>
       <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
       <button id="btnVerClientes" class="sidebar-btn" style="display: none;">👥 Ver Clientes Registrados</button>
-    </div>
-
-    <div id="modalBanner" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); justify-content: center; align-items: center; z-index: 9999; padding: 20px; box-sizing: border-box;">
-      <div class="modal-content">
-        <h3>🖼️ Configurar Banner</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Subí tus diseños para adaptar la vista a cada pantalla.</p>
-        
-        <label>Banner para PC (Recomendado: 1920x600px):</label>
-        <input type="file" id="inputBannerPC" accept="image/png, image/jpeg" style="margin-bottom: 15px;">
-        <input type="hidden" id="urlBannerPCActual">
-
-        <label>Banner para Móvil (Recomendado: 1080x1080px):</label>
-        <input type="file" id="inputBannerMovil" accept="image/png, image/jpeg" style="margin-bottom: 15px;">
-        <input type="hidden" id="urlBannerMovilActual">
-
-        <div class="modal-buttons" style="margin-top: 20px;">
-          <button type="button" id="btnCerrarBanner" class="btn-secundario">Cancelar</button>
-          <button id="btnGuardarBanner">Subir y Guardar</button>
-        </div>
-      </div>
     </div>
 
     <div id="modalCategorias" style="display:none;">
@@ -179,18 +153,10 @@
         <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
         <input id="stockTotalSencillo" type="number" placeholder="Ej: 45 (Total de piezas en stock)" style="display: none; margin-bottom: 15px;">
         
-        <div style="background: #fff8e1; border: 1px solid #ffeb3b; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-            <p style="margin-top: 0; font-size: 14px; font-weight: bold; color: #f57f17; margin-bottom: 10px;">⚡ Promociones (Opcional)</p>
-            <label>Etiqueta Libre Visual</label>
-            <input id="etiquetaLibre" type="text" placeholder="Ej: 20% OFF, Últimos, Hot Sale!">
-            <label>Precio Anterior (Para aparecer tachado) ($)</label>
-            <input id="precioAnterior" type="number" placeholder="Ej: 15000">
-        </div>
-
-        <label>Costo de lista interno ($)</label>
+        <label>Costo de lista ($)</label>
         <input id="costo" type="number" placeholder="0">
         
-        <label>Precio de venta actual/final ($)</label>
+        <label>Precio de venta ($)</label>
         <input id="venta" type="number" placeholder="0">
 
         <label>Foto del producto</label>
@@ -209,13 +175,17 @@
       <div class="modal-content">
         <h3>🤖 Asistente Virtual de Ventas</h3>
         <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente:</p>
+        
         <label>Nombre del producto</label>
         <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar...">
         <datalist id="listaProductos"></datalist>
+
         <label>Modelo / Variante vendida</label>
         <input id="asistenteModelo" placeholder="Ej: 12, Blanco, Único">
+
         <label>Unidades vendidas</label>
         <input id="asistenteUnidades" type="number" value="1" min="1">
+
         <div class="modal-buttons">
           <button type="button" onclick="ocultarAsistente()" class="btn-secundario">Cerrar</button>
           <button id="btnRegistrarVenta">Confirmar Venta 🛒</button>
@@ -227,9 +197,12 @@
       <div class="modal-content">
         <h3>🛒 Añadir al Carrito</h3>
         <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
+        
         <label>Seleccioná tu variante / modelo</label>
         <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
-        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio a pagar: <span id="reservaPrecio"></span></p>
+        
+        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
+        
         <div class="modal-buttons">
           <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
           <button id="btnConfirmarWhatsApp" style="background: #0071e3; color: white; font-weight: 600;">Añadir al Carrito 🛒</button>
@@ -241,32 +214,42 @@
       <div class="modal-content" style="max-width: 550px; width: 100%; max-height: 90vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
         <h3>📸 Editor Inteligente de Foto Pro</h3>
         <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Remové el fondo de tu producto y colocale un fondo de estudio premium.</p>
+        
         <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #f5f5f7; position: relative;">
           <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
         </div>
         <p style="text-align:center; font-size: 12px; color: #6e6e73; margin-top: 8px; margin-bottom: 15px;">
           👆 Arrastrá para rotar/mover. Pellizcá (o usá la rueda del mouse) para controlar el zoom.
         </p>
+
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
           <button type="button" id="btnBorrarFondo" style="flex: 1; background: linear-gradient(135deg, #ff2d55, #ff9500); color: white; font-weight: bold; padding: 12px; border-radius: 12px; border: none; cursor: pointer;">✨ Borrar Fondo</button>
           <button type="button" id="btnReEditar" style="background: #6e6e73; color: white; padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600;">🔄 Re-editar Foto</button>
         </div>
+
         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estilo de Fondo</label>
         <select id="selectFondoPro" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 15px; font-size: 15px; background: white;">
           <option value="estudio">Fondo Blanco de Estudio (fondo-estudio.png)</option>
           <option value="blanco">Blanco Liso</option>
           <option value="original">Original (Dejar como está)</option>
         </select>
+
         <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
           <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">Opacidad de la Sombra: <span id="valorSombra">35%</span></label>
+            <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
+              Opacidad de la Sombra: <span id="valorSombra">35%</span>
+            </label>
             <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
           </div>
+
           <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="sliderRotacion" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">Rotación Fina: <span id="valorRotacion">0°</span></label>
+            <label for="sliderRotacion" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
+              Rotación Fina: <span id="valorRotacion">0°</span>
+            </label>
             <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #1d1d1f;">
           </div>
         </div>
+
         <div class="modal-buttons" style="display: flex; gap: 10px;">
           <button type="button" id="btnCerrarFotoPro" class="btn-secundario" style="flex: 1;">Cancelar</button>
           <button type="button" id="btnGuardarFotoPro" style="flex: 1; background: #0071e3; color: white; font-weight: bold;">Listo ✅</button>
@@ -292,11 +275,15 @@
 
     <div id="modalCarrito" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); justify-content: flex-end; z-index: 9999;">
       <div class="modal-carrito-content" style="background: white; width: 100%; max-width: 400px; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column;">
+        
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d2d2d7; padding-bottom: 15px; margin-bottom: 15px;">
           <h2 style="margin: 0; font-size: 20px;">🛒 Resumen de Compra</h2>
           <button id="btnCerrarCarrito" style="background: none; border: none; font-size: 18px; cursor: pointer;">❌</button>
         </div>
-        <div id="listaItemsCarrito" style="flex-grow: 1; overflow-y: auto;"></div>
+        
+        <div id="listaItemsCarrito" style="flex-grow: 1; overflow-y: auto;">
+          </div>
+        
         <div style="border-top: 1px solid #d2d2d7; padding-top: 15px; margin-top: auto;">
           <h3 style="display: flex; justify-content: space-between; font-size: 18px;">Total: <span id="totalCarrito">$0</span></h3>
           <button id="btnComprarWhatsAppCarrito" style="width: 100%; background: #25D366; color: white; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">
@@ -312,10 +299,13 @@
     <div class="modal-content">
       <h3>👋 ¡Bienvenido a iNeo Cases!</h3>
       <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Para ver el catálogo y hacer reservas, dejanos tus datos:</p>
+      
       <label>Nombre y Apellido</label>
       <input id="registroNombre" type="text" placeholder="Ej: Juan Pérez">
+      
       <label>WhatsApp (Sin 0 ni 15)</label>
       <input id="registroTelefono" type="number" placeholder="Ej: 1145678901">
+      
       <div class="modal-buttons" style="margin-top: 15px;">
         <button id="btnRegistrarCliente" style="width: 100%;">Entrar al Catálogo 🚀</button>
       </div>
