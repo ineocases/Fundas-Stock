@@ -223,13 +223,12 @@ onAuthStateChanged(auth, async (user) => {
       if (barra) barra.style.width = "92%"; 
       await cargarFundas(); 
       
-      // El fin de la animación del loader lo manejará controlarCargaDeImagenes() al renderizar las fotos.
+      // La ocultación del loader se hace ahora en controlarCargaDeImagenes()
     } else {
       if (barra) barra.style.width = "100%";
       document.getElementById("login").style.display = "flex";
       document.getElementById("app").style.display = "none";
       
-      // Si no hay sesión iniciada, quitamos el loader de inmediato para ver el login
       setTimeout(() => {
         if (loader) {
           loader.style.opacity = "0"; 
@@ -239,7 +238,6 @@ onAuthStateChanged(auth, async (user) => {
     }
   } catch (error) {
     console.error("Error crítico durante el inicio:", error);
-    // En caso de error, quitamos el loader para no trabar la pantalla
     setTimeout(() => {
       if (loader) {
         loader.style.opacity = "0"; 
@@ -615,7 +613,7 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO (ARRASTRAR, SOMBRA REALISTA, ZOOM, ROTAR)
+// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -722,7 +720,6 @@ function configurarGestosCanvas() {
   let startY = 0;
   let prevTouchDist = null;
 
-  // Lógica de Movimiento (Arrastrar)
   canvas.onpointerdown = (e) => { 
     isDragging = true; 
     startX = e.clientX; 
@@ -740,7 +737,6 @@ function configurarGestosCanvas() {
 
   canvas.onpointermove = (e) => {
     if (!isDragging) return;
-    
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -753,7 +749,6 @@ function configurarGestosCanvas() {
     dibujarCanvasGestos();
   };
 
-  // Zoom Rueda del Mouse
   canvas.onwheel = (e) => {
     e.preventDefault();
     if (e.deltaY < 0) {
@@ -764,7 +759,6 @@ function configurarGestosCanvas() {
     dibujarCanvasGestos();
   };
 
-  // Zoom Táctil (Pellizco)
   canvas.ontouchstart = (e) => {
     if (e.touches.length === 2) {
       prevTouchDist = Math.hypot(
@@ -796,7 +790,6 @@ function dibujarCanvasGestos() {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Fondo de estudio (Degradado radial Premium)
   if (usarFondo) {
     const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
     grad.addColorStop(0, "#ffffff");
@@ -805,12 +798,10 @@ function dibujarCanvasGestos() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 2. Dibujar imagen movible y rotable
   ctx.save();
   ctx.translate(canvasPosX, canvasPosY); 
   ctx.rotate(rotacionGrados * Math.PI / 180); 
   
-  // 3. Sombra realista proyectada abajo a la derecha
   if (opacidadSombra > 0) {
     ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
     ctx.shadowBlur = 40;
@@ -1391,14 +1382,13 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
-// MÓDULO NUEVO: Monitorea de manera fluida y adaptativa la carga de las fotos de los productos
+// MÓDULO: Monitorea de manera fluida y adaptativa la carga de las fotos
 function controlarCargaDeImagenes() {
   const imagenes = document.querySelectorAll("#fundas .card-img");
   const totalImagenes = imagenes.length;
   const loader = document.getElementById("cargando");
   const barraProgreso = document.getElementById("loaderProgreso");
 
-  // Si no hay imágenes válidas renderizadas, finalizamos el progreso de inmediato
   if (totalImagenes === 0) {
     if (barraProgreso) barraProgreso.style.width = "100%";
     setTimeout(() => {
@@ -1415,7 +1405,6 @@ function controlarCargaDeImagenes() {
   function verificarFin() {
     imagenesCargadas++;
     
-    // Distribuye el 8% restante (del 92% al 100%) proporcionalmente entre las fotos
     const porcentajeBase = 92;
     const porcentajeRestante = 8;
     const porcentaje = porcentajeBase + ((imagenesCargadas / totalImagenes) * porcentajeRestante);
@@ -1424,7 +1413,6 @@ function controlarCargaDeImagenes() {
       barraProgreso.style.width = `${porcentaje}%`;
     }
 
-    // Cuando finalizó la última foto (sea carga correcta o error/rota)
     if (imagenesCargadas === totalImagenes) {
       setTimeout(() => {
         if (loader) {
@@ -1443,11 +1431,12 @@ function controlarCargaDeImagenes() {
       verificarFin();
     } else {
       img.addEventListener("load", verificarFin);
-      img.addEventListener("error", verificarFin); // Evita bloqueos en la interfaz por enlaces rotos
+      img.addEventListener("error", verificarFin);
     }
   });
 }
 
+// NUEVO: Manipulamos el CSS "inline" con '!important' para ganarle al style.css de móviles
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1455,13 +1444,13 @@ window.toggleStock = (btn, action) => {
   const btnOcultar = card.querySelector('.btn-ocultar-stock');
 
   if (action === 'show') {
-    stockDiv.classList.remove('d-none');
-    btnVer.classList.add('d-none');
-    btnOcultar.classList.add('activo'); // Usa la clase '.activo' controlada por CSS
+    stockDiv.style.setProperty('display', 'block', 'important');
+    btnVer.style.setProperty('display', 'none', 'important');
+    btnOcultar.style.setProperty('display', 'block', 'important');
   } else {
-    stockDiv.classList.add('d-none');
-    btnVer.classList.remove('d-none');
-    btnOcultar.classList.remove('activo'); // Quita la clase '.activo'
+    stockDiv.style.setProperty('display', 'none', 'important');
+    btnVer.style.setProperty('display', 'block', 'important');
+    btnOcultar.style.setProperty('display', 'none', 'important');
   }
 };
 
@@ -1546,11 +1535,15 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     if (f.sinModelo) {
       bloqueStockHTML = `<p ${estiloOculto}>Stock Total: ${totalStock} u.</p>`;
     } else {
+      // NUEVO: Agregamos el style="display: none !important;" directo al HTML para anular el CSS del celular
+      const styleVerStock = mostrarDirecto ? 'display: none !important;' : 'display: block !important;';
+      const styleOcultarStock = mostrarDirecto ? 'display: block !important;' : 'display: none !important;';
+      
       bloqueStockHTML = `
         <p>Stock Total: ${totalStock} u.</p>
-        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock ${mostrarDirecto ? 'd-none' : ''}">Ver Stock por Modelo</button>
-        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock ${mostrarDirecto ? 'activo' : ''}">Ocultar Stock</button>
-        <div class="stock-list ${mostrarDirecto ? '' : 'd-none'}" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
+        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock" style="${styleVerStock}">Ver Stock por Modelo</button>
+        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock" style="${styleOcultarStock}">Ocultar Stock</button>
+        <div class="stock-list" style="${styleOcultarStock} margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
       `;
     }
 
@@ -1593,7 +1586,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     habilitarReordenamiento();
   }
 
-  // NUEVO: Dispara el listener de imágenes si el loader sigue visible en pantalla
+  // Dispara el listener de imágenes si el loader sigue visible en pantalla
   const loader = document.getElementById("cargando");
   if (loader && window.getComputedStyle(loader).display !== "none") {
     controlarCargaDeImagenes();
