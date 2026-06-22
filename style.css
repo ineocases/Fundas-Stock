@@ -334,24 +334,25 @@ button:active {
     z-index: 5;
 }
 
+/* --- OPTIMIZACIÓN DE IMÁGENES (FOTOS CUADRADAS) --- */
 .card-img {
-    width: 100%;
-    height: 280px;
-    object-fit: cover;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important; 
+    object-fit: cover !important;   
+    border-radius: var(--radius-md) var(--radius-md) 0 0; 
+    display: block;
     background: var(--bg-app);
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card:hover .card-img { transform: scale(1.04); }
 
-/* ESTA ES LA MAGIA: Forzamos el orden visual con Flexbox */
 .card-body { 
     padding: 20px; 
     display: flex;
     flex-direction: column;
 }
 
-/* 1. Nombre de la funda */
 .card-body h2 {
     font-size: 16px;
     font-weight: 700;
@@ -360,7 +361,6 @@ button:active {
     order: 1;
 }
 
-/* 2. Stock Disponible (Con ícono SVG minimalista) */
 .card-body > p:first-of-type {
     font-size: 13px !important;
     color: var(--text-secondary) !important;
@@ -383,7 +383,6 @@ button:active {
     background-position: center;
 }
 
-/* 3. Precio */
 .card-body > p:nth-of-type(2) {
     font-size: 18px !important;
     font-weight: 800 !important;
@@ -393,17 +392,16 @@ button:active {
     order: 3;
 }
 
-/* 4. Botón Ver Stock / Ocultar Stock (Negro Sólido - Bajo y estirado) */
 .btn-ver-stock, .btn-ocultar-stock {
     order: 4;
     background-color: #0a0a0a !important;
     color: #ffffff !important;
     border-radius: 12px !important;
-    padding: 9px 12px !important; /* Altura reducida */
+    padding: 9px 12px !important; 
     font-size: 14px !important;
     font-weight: 600 !important;
     border: none !important;
-    width: 100% !important; /* Ancho máximo */
+    width: 100% !important; 
     box-sizing: border-box !important;
     margin-bottom: 10px !important;
     margin-top: 0 !important;
@@ -416,29 +414,25 @@ button:active {
     background-color: #1d1d1f !important;
 }
 
-/* Lista de modelos desplegable si se clickea */
 .stock-list { order: 5; margin-bottom: 15px !important; }
 
-/* Métricas Admin (Ganancia) - Solo visible para el admin */
 .card-body > p:nth-of-type(3) { order: 6; margin-bottom: 15px !important; }
 
-/* Contenedor de acciones inferior */
 .card-body > div:last-child {
     order: 7;
     margin-top: 0 !important;
     width: 100% !important;
 }
 
-/* 5. Botón + Añadir (Abajo de todo, blanco, con borde fino - Bajo y estirado) */
 .card-body > div:last-child button {
     background-color: #ffffff !important;
     color: #000000 !important;
     border: 1px solid #e5e5ea !important;
     border-radius: 12px !important;
-    padding: 9px 12px !important; /* Misma altura reducida para equilibrar */
+    padding: 9px 12px !important; 
     font-size: 14px !important;
     font-weight: 600 !important;
-    width: 100% !important; /* Ancho máximo */
+    width: 100% !important; 
     box-sizing: border-box !important;
     display: block !important;
     text-align: center !important;
@@ -493,7 +487,7 @@ button:active {
 .btn-secundario:hover { background: var(--border-light); }
 
 /* ==========================================================================
-   PANTALLAS DE LOGIN Y CARGA
+   PANTALLAS DE LOGIN
    ========================================================================== */
 #login { 
     background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=80') no-repeat center center; 
@@ -566,7 +560,6 @@ button:active {
 
 .btn-link-admin:hover { background: rgba(0, 0, 0, 0.09); transform: none; }
 
-/* ✅ CORRECCIÓN AQUÍ: Tarjeta blanca para el login de admin */
 .modal-admin-content {
     background: var(--bg-surface);
     padding: 32px 24px;
@@ -591,16 +584,57 @@ button:active {
     margin-top: 5px;
 }
 
-/* --- PANTALLA DE CARGA --- */
+/* ==========================================================================
+   PANTALLA DE CARGA PREMIUM (Apple-Style)
+   ========================================================================== */
 #cargando {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg-surface);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-app);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 10000;
+    z-index: 99999;
+    font-family: var(--font-base);
+    opacity: 1;
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.loader-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+.loader-logo {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.05));
+    animation: pulseLogo 2s infinite ease-in-out;
+}
+
+.progress-bar-container {
+    width: 180px;
+    height: 5px;
+    background: var(--border-light);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    border-radius: var(--radius-pill);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ==========================================================================
@@ -653,6 +687,11 @@ button:active {
     to { transform: scale(1); opacity: 1; }
 }
 
+@keyframes pulseLogo {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.04); opacity: 1; }
+}
+
 /* ==========================================================================
    RESPONSIVE DESIGN (OPTIMIZACIÓN MÓVIL)
    ========================================================================== */
@@ -676,12 +715,10 @@ button:active {
         -webkit-box-orient: vertical; overflow: hidden; height: 36px; 
     }
     
-    /* El stock y el precio en móviles */
     .card-body > p:first-of-type { font-size: 12px !important; margin-bottom: 8px !important; }
     .card-body > p:first-of-type::before { width: 13px; height: 13px; }
     .card-body > p:nth-of-type(2) { font-size: 16px !important; }
 
-    /* Botones estirados y de menor altura en móvil */
     .btn-ver-stock, .btn-ocultar-stock, .card-body > div:last-child button {
         padding: 8px 8px !important; 
         font-size: 12px !important;
