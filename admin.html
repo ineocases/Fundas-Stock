@@ -4,38 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iNeo Cases - Panel de Administración</title>
-    <!-- Tailwind CSS para un diseño moderno y rápido -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- FontAwesome para los íconos -->
+    
+    <!-- Tailwind CSS (Diseño) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome (Íconos) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SortableJS para el Drag and Drop de productos -->
+    
+    <!-- SortableJS (Drag & Drop) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
 
     <!-- ========================================== -->
-    <!-- 1. PANTALLA DE CARGA (LOADER OVERLAY)      -->
+    <!-- PANTALLA DE CARGA                          -->
     <!-- ========================================== -->
     <div id="pantallaCarga" class="fixed inset-0 bg-white z-50 flex flex-col justify-center items-center transition-opacity duration-500">
         <div class="flex flex-col items-center space-y-4">
-            <!-- Logo de iNeo Cases -->
             <div class="flex items-center space-x-1 text-2xl font-bold tracking-wider text-black">
                 <span>iNeo</span>
                 <span class="border border-black px-1.5 py-0.5 text-xs rounded-md uppercase font-black">Cases</span>
             </div>
-            <!-- Barra de Progreso -->
             <div class="w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
                 <div id="loaderProgreso" class="w-0 h-full bg-black transition-all duration-300"></div>
             </div>
+            <p id="textoCarga" class="text-xs text-gray-400 mt-2">Conectando al panel...</p>
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. ESTRUCTURA PRINCIPAL DEL PANEL          -->
+    <!-- ESTRUCTURA PRINCIPAL                       -->
     <!-- ========================================== -->
     <div class="flex h-screen overflow-hidden">
 
-        <!-- BARRA LATERAL (SIDEBAR) -->
+        <!-- SIDEBAR -->
         <aside class="w-64 bg-black text-white flex flex-col justify-between hidden md:flex">
             <div class="p-5">
                 <div class="flex items-center space-x-1 text-xl font-bold tracking-wider mb-8">
@@ -44,9 +46,10 @@
                 </div>
                 <nav class="space-y-2">
                     <a href="#" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg bg-zinc-800 text-white font-medium transition">
-                        <i class="fa-solid Nav-icon fa-box"></i>
+                        <i class="fa-solid fa-box"></i>
                         <span>Inventario</span>
                     </a>
+                    <!-- Botón que abre el modal de categorías -->
                     <button id="btnCategorias" class="w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:bg-zinc-900 hover:text-white font-medium transition text-left">
                         <i class="fa-solid fa-tags"></i>
                         <span>Categorías</span>
@@ -57,55 +60,43 @@
                     </a>
                 </nav>
             </div>
-            <div class="p-5 border-t border-zinc-800">
-                <button id="btnCambiarRol" class="w-full flex items-center justify-center space-x-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium py-2 rounded-lg transition">
-                    <i class="fa-solid fa-sync"></i>
-                    <span>Vista Cliente</span>
-                </button>
-            </div>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
-        <main class="flex-1 flex flex-col overflow-y-auto">
-            <!-- Encabezado Superior -->
-            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-xl font-bold text-gray-900">Gestión de Inventario</h1>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <button id="btnNuevaFunda" class="bg-black hover:bg-zinc-800 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition flex items-center space-x-2">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Nuevo Item</span>
-                    </button>
-                </div>
+        <main class="flex-1 flex flex-col overflow-y-auto relative">
+            
+            <!-- HEADER -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
+                <h1 class="text-xl font-bold text-gray-900">Inventario</h1>
+                <button id="btnNuevaFunda" class="bg-black hover:bg-zinc-800 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Nuevo Item</span>
+                </button>
             </header>
 
-            <!-- Zona de Trabajo / Dashboard -->
+            <!-- DASHBOARD -->
             <div class="p-6 space-y-6 max-w-7xl w-full mx-auto">
                 
-                <!-- Buscador y Filtros -->
+                <!-- Buscador -->
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div class="relative w-full md:w-96">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="buscadorAdmin" placeholder="Buscar fundas por modelo o tag..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black">
+                        <input type="text" id="buscadorAdmin" placeholder="Buscar fundas por modelo..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black">
                     </div>
-                    <div class="flex space-x-2 w-full md:w-auto">
-                        <select id="filtroCategoria" class="w-full md:w-48 bg-white border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black">
-                            <option value="todos">Todas las categorías</option>
-                        </select>
-                    </div>
+                    <select id="filtroCategoria" class="w-full md:w-48 bg-white border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black">
+                        <option value="todos">Todas las categorías</option>
+                    </select>
                 </div>
 
-                <!-- Contenedor Drag & Drop para SortableJS -->
+                <!-- Lista de Productos -->
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                     <div class="border-b border-gray-100 pb-3 mb-4 flex justify-between items-center">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lista de Productos (Arrastra para reordenar en la web)</p>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Productos (Arrastra para reordenar)</p>
                         <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium" id="totalProductos">0 Items</span>
                     </div>
                     
-                    <!-- ID Crítico para tu script de productos -->
                     <div id="contenedorProductosAdmin" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 min-h-[200px]">
-                        <!-- Las fundas se inyectarán aquí mediante admin.js -->
+                        <!-- Aquí admin.js inyecta los productos -->
                     </div>
                 </div>
 
@@ -114,66 +105,43 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 3. MODALES DE INTERFAZ                     -->
+    <!-- MODALES Y FLOTANTES                        -->
     <!-- ========================================== -->
 
-    <!-- MODAL: GESTIÓN DE CATEGORÍAS (Soluciona el error de JavaScript) -->
-    <div id="modalCategorias" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <!-- Modal Categorías -->
+    <div id="modalCategorias" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300 hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 m-4 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-gray-200 pb-3 mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Gestionar Categorías</h3>
+                <h3 class="text-lg font-bold text-gray-900">Categorías</h3>
                 <button id="btnCerrarModalCat" class="text-gray-400 hover:text-gray-600 transition text-lg">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             
-            <!-- Formulario Nueva Categoría -->
             <form id="formNuevaCategoria" class="flex gap-2 mb-4">
-                <input type="text" id="inputNuevaCategoria" placeholder="Ej: iPhone Series" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black">
-                <button type="submit" class="bg-black hover:bg-zinc-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+                <input type="text" id="inputNuevaCategoria" placeholder="Ej: iPhone 15" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black">
+                <button type="submit" class="bg-black text-white text-sm font-medium px-4 py-2 rounded-lg transition">
                     Añadir
                 </button>
             </form>
 
-            <!-- Lista de Categorías de Firebase -->
-            <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="listaCategoriasAdmin">
-                <!-- Se inyectan dinámicamente desde Firestore -->
-                <p class="text-sm text-gray-500 text-center py-4">Cargando categorías...</p>
+            <div class="flex-1 overflow-y-auto space-y-2" id="listaCategoriasAdmin">
+                <!-- Aquí admin.js inyecta las categorías -->
             </div>
         </div>
     </div>
 
-    <!-- BOTÓN FLOTANTE: ASISTENTE DE VENTAS -->
-    <button id="btnAsistente" class="fixed bottom-6 right-6 bg-black hover:bg-zinc-800 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-115 z-40">
+    <!-- Botón Asistente Flotante -->
+    <button id="btnAsistente" class="fixed bottom-6 right-6 bg-black text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 z-40">
         <i class="fa-solid fa-comments"></i>
     </button>
 
     <!-- ========================================== -->
-    <!-- 4. ENLACE DE ARCHIVOS Y LOGICA             -->
+    <!-- SCRIPTS                                    -->
     <!-- ========================================== -->
-
-    <!-- Configuración e Inicialización de Firebase (Asegúrate de configurar tus scripts aquí si es necesario) -->
     
-    <!-- Tu archivo lógico principal de administración -->
-    <script src="admin.js"></script>
+    <!-- Script principal del administrador -->
+    <script src="admin.js" type="module"></script>
 
-    <!-- Script Inline de control básico para asegurar que los modales abran/cierren si falla admin.js -->
-    <script>
-        // Manejo nativo básico para el modal de categorías por si admin.js tiene retrasos
-        const modalCat = document.getElementById('modalCategorias');
-        const btnAbrirCat = document.getElementById('btnCategorias');
-        const btnCerrarCat = document.getElementById('btnCerrarModalCat');
-
-        if (btnAbrirCat && modalCat) {
-            btnAbrirCat.addEventListener('click', () => {
-                modalCat.classList.remove('opacity-0', 'pointer-events-none');
-            });
-        }
-        if (btnCerrarCat && modalCat) {
-            btnCerrarCat.addEventListener('click', () => {
-                modalCat.classList.add('opacity-0', 'pointer-events-none');
-            });
-        }
-    </script>
 </body>
 </html>
