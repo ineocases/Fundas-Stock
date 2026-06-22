@@ -28,7 +28,7 @@ let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
 // --- INICIALIZACIÓN DE EVENTOS CLIENTE ---
 document.addEventListener("DOMContentLoaded", () => {
   // --- INICIO FIX: Ocultar botones de administrador al cliente ---
-  const elementosAdmin = ["btnNuevaFunda", "btnAsistente", "btnCambiarRol"];
+  const elementosAdmin = ["btnNuevaFunda", "btnAsistente"];
   elementosAdmin.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
