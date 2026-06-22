@@ -1469,7 +1469,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         
         ${bloqueStockHTML}
 
-        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 2px;">💰 Precio: $${f.venta ?? 0}</p>
+        <p style="font-size: 17px; color:#000000; font-weight:700; margin-bottom: 2px;">$${f.venta ?? 0}</p>
         
         ${bloqueMétricasAdmin}
         
