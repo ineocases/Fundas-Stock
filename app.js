@@ -54,6 +54,9 @@ let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
 
 // --- INICIALIZACIÓN DE EVENTOS Y PROTECCIÓN ---
 document.addEventListener("DOMContentLoaded", () => {
+  const barra = document.getElementById("loaderProgreso");
+  if (barra) barra.style.width = "15%";
+
   const inputBuscar = document.getElementById("buscar");
   if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
     const datalist = document.createElement("datalist");
@@ -176,9 +179,13 @@ async function ejecutarCambioRol() {
   }
 }
 
-// --- AUTENTICACIÓN PROTEGIDA ---
+// --- AUTENTICACIÓN PROTEGIDA CON PROGRESO REAL ---
 onAuthStateChanged(auth, async (user) => {
   const loader = document.getElementById("cargando");
+  const barra = document.getElementById("loaderProgreso");
+  
+  if (barra) barra.style.width = "40%"; 
+
   try {
     if (user) {
       document.getElementById("modalAdminLogin").style.display = "none"; 
@@ -210,16 +217,29 @@ onAuthStateChanged(auth, async (user) => {
         solicitarDatosCliente();
       }
       
+      if (barra) barra.style.width = "70%"; 
       await cargarCategorias();
+      
+      if (barra) barra.style.width = "92%"; 
       await cargarFundas(); 
+      
+      if (barra) barra.style.width = "100%"; 
     } else {
+      if (barra) barra.style.width = "100%";
       document.getElementById("login").style.display = "flex";
       document.getElementById("app").style.display = "none";
     }
   } catch (error) {
     console.error("Error crítico durante el inicio:", error);
   } finally {
-    if(loader) loader.style.display = "none"; 
+    setTimeout(() => {
+      if (loader) {
+        loader.style.opacity = "0"; 
+        setTimeout(() => { 
+          loader.style.display = "none"; 
+        }, 400); 
+      }
+    }, 250);
   }
 });
 
@@ -443,7 +463,7 @@ function enviarPedidoWhatsApp() {
   cerrarCarrito();
 }
 
-// 🛒 --- CREACIÓN Y GESTIÓN DE CATEGORÍAS ---
+// 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS
 async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
@@ -641,51 +661,6 @@ function iniciarEditorGestos(fuenteImagen) {
   imagenRecortadaTemporal = new Image();
   imagenRecortadaTemporal.crossOrigin = "anonymous"; 
   
-  // 1. Configurar listeners y valores ANTES de disparar la carga (Evita race conditions con Base64)
-  const toggleFondoEl = document.getElementById("toggleFondo");
-  if (toggleFondoEl) {
-    if (toggleFondoEl.type === "checkbox") {
-      usarFondo = toggleFondoEl.checked;
-    } else {
-      usarFondo = toggleFondoEl.classList.contains("active") || true;
-    }
-
-    const handlerToggle = (e) => {
-      if (toggleFondoEl.type === "checkbox") {
-        usarFondo = toggleFondoEl.checked;
-      } else {
-        usarFondo = !usarFondo;
-        toggleFondoEl.classList.toggle("active", usarFondo);
-      }
-      dibujarCanvasGestos();
-    };
-
-    toggleFondoEl.onchange = handlerToggle;
-    toggleFondoEl.onclick = handlerToggle;
-  } else {
-    usarFondo = true;
-  }
-
-  if (document.getElementById("sliderSombra")) {
-    opacidadSombra = document.getElementById("sliderSombra").value / 100;
-    document.getElementById("sliderSombra").oninput = (e) => {
-      opacidadSombra = e.target.value / 100;
-      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
-      dibujarCanvasGestos();
-    };
-  } else {
-    opacidadSombra = 0.35;
-  }
-  
-  if (document.getElementById("sliderRotacion")) {
-    document.getElementById("sliderRotacion").oninput = (e) => {
-      rotacionGrados = parseFloat(e.target.value);
-      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
-      dibujarCanvasGestos();
-    };
-  }
-
-  // 2. Callback del onload
   imagenRecortadaTemporal.onload = () => {
     porcentajeEscala = 0.72;
     rotacionGrados = 0;
@@ -700,8 +675,33 @@ function iniciarEditorGestos(fuenteImagen) {
     dibujarCanvasGestos();
   };
   
-  // 3. Asignar el .src AL FINAL para una ejecución asíncrona segura
   imagenRecortadaTemporal.src = fuenteImagen;
+  
+  usarFondo = document.getElementById("toggleFondo") ? document.getElementById("toggleFondo").checked : true;
+  opacidadSombra = document.getElementById("sliderSombra") ? document.getElementById("sliderSombra").value / 100 : 0.35;
+
+  if (document.getElementById("toggleFondo")) {
+    document.getElementById("toggleFondo").onchange = (e) => {
+      usarFondo = e.target.checked;
+      dibujarCanvasGestos();
+    };
+  }
+
+  if (document.getElementById("sliderSombra")) {
+    document.getElementById("sliderSombra").oninput = (e) => {
+      opacidadSombra = e.target.value / 100;
+      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  }
+  
+  if (document.getElementById("sliderRotacion")) {
+    document.getElementById("sliderRotacion").oninput = (e) => {
+      rotacionGrados = parseFloat(e.target.value);
+      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
+      dibujarCanvasGestos();
+    };
+  }
 
   configurarGestosCanvas();
   crearBotonesConfirmacion();
@@ -790,11 +790,11 @@ function dibujarCanvasGestos() {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Fondo de estudio (Degradado radial Premium - Ajustado para mejor contraste visual)
+  // 1. Fondo de estudio (Degradado radial Premium)
   if (usarFondo) {
     const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
     grad.addColorStop(0, "#ffffff");
-    grad.addColorStop(1, "#d2d2d7"); 
+    grad.addColorStop(1, "#e5e5ea");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
