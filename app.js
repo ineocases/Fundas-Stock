@@ -41,6 +41,9 @@ let anguloRotacion = 0;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
+// 🛒 Variables del Carrito de Compras
+let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
+
 // --- INICIALIZACIÓN DE EVENTOS Y PROTECCIÓN ---
 document.addEventListener("DOMContentLoaded", () => {
   const inputBuscar = document.getElementById("buscar");
@@ -60,7 +63,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").onclick = mostrarAsistente;
   if(document.getElementById("btnRegistrarVenta")) document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
   if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagen;
-  if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = enviarWhatsApp;
+  
+  // Eventos de Carrito y Reserva
+  if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = agregarAlCarrito;
+  if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
+  if(document.getElementById("btnCerrarCarrito")) document.getElementById("btnCerrarCarrito").onclick = cerrarCarrito;
+  if(document.getElementById("btnComprarWhatsAppCarrito")) document.getElementById("btnComprarWhatsAppCarrito").onclick = enviarPedidoWhatsApp;
 
   if(document.getElementById("btnAbrirAdminModal")) document.getElementById("btnAbrirAdminModal").onclick = abrirModalAdmin;
   if(document.getElementById("btnCerrarAdminModal")) document.getElementById("btnCerrarAdminModal").onclick = cerrarModalAdmin;
@@ -96,6 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("pantallaClientes").style.display = "none";
       document.getElementById("fundas").style.display = "grid"; 
   };
+
+  // Inicializar UI del carrito
+  actualizarUI_Carrito();
 });
 
 // --- LÓGICA DE NAVEGACIÓN Y MENÚ ---
@@ -208,8 +219,8 @@ async function loginCliente() {
 
 // --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
 function solicitarDatosCliente() {
-  const yaRegistrado = localStorage.getItem("clienteINeoRegistrado");
-  if (!yaRegistrado) {
+  const datosCliente = localStorage.getItem("clienteINeoDatos");
+  if (!datosCliente) {
     document.getElementById("app").style.display = "none";
     if (document.getElementById("modalRegistroCliente")) {
       document.getElementById("modalRegistroCliente").style.display = "flex";
@@ -219,12 +230,18 @@ function solicitarDatosCliente() {
 
 async function procesarRegistroCliente() {
   const nombre = document.getElementById("registroNombre").value.trim();
-  let telefono = document.getElementById("registroTelefono").value.trim();
+  let telefonoCrudo = document.getElementById("registroTelefono").value.trim();
 
-  if (!nombre || !telefono) return alert("Por favor, completá ambos campos.");
+  if (!nombre || !telefonoCrudo) return alert("Por favor, completá ambos campos.");
 
-  telefono = telefono.replace(/\D/g, ''); 
+  // Limpiamos el teléfono dejando solo números y signo +
+  let telefono = telefonoCrudo.replace(/[^\d+]/g, ''); 
   
+  // Si no puso prefijo internacional (+ o 549), le sugerimos un formato o lo adaptamos (asumiendo Argentina)
+  if (!telefono.startsWith("+") && !telefono.startsWith("54")) {
+      telefono = "549" + telefono; // Agrega prefijo AR por defecto si escriben solo el local
+  }
+
   const btn = document.getElementById("btnRegistrarCliente");
   btn.disabled = true;
   btn.innerText = "⏳ Ingresando...";
@@ -247,7 +264,9 @@ async function procesarRegistroCliente() {
       });
     }
 
-    localStorage.setItem("clienteINeoRegistrado", "true");
+    // Guardamos nombre y teléfono para el Carrito
+    localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
+    
     document.getElementById("modalRegistroCliente").style.display = "none";
     document.getElementById("app").style.display = "block";
     
@@ -278,9 +297,11 @@ async function cargarVistaClientes() {
     snapshot.forEach(doc => {
       const data = doc.data();
       const nombresUnidos = data.nombres.join(" / "); 
+      // Si el número guardado no tiene el +, se lo agremos para el link de WA visual
+      const waLink = data.telefono.startsWith("+") ? data.telefono.substring(1) : data.telefono;
       html += `<tr>
                 <td style="padding: 15px; border-bottom: 1px solid #e5e5ea; font-weight: 600;">
-                   <a href="https://wa.me/549${data.telefono}" target="_blank" style="color: #25D366; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                   <a href="https://wa.me/${waLink}" target="_blank" style="color: #25D366; text-decoration: none; display: flex; align-items: center; gap: 8px;">
                      📱 ${data.telefono}
                    </a>
                 </td>
@@ -295,6 +316,121 @@ async function cargarVistaClientes() {
     console.error("Error al cargar lista de clientes:", error);
     contenedor.innerHTML = "<p style='text-align:center; color: red;'>Error al cargar la base de datos.</p>";
   }
+}
+
+// 🛒 --- SISTEMA DE CARRITO DE COMPRAS ---
+function agregarAlCarrito() {
+  const modeloSeleccionado = document.getElementById("reservaModelo").value;
+  if (!modeloSeleccionado && !fundaReservando.sinModelo) {
+      alert("Por favor, selecciona una variante/modelo disponible.");
+      return;
+  }
+
+  const item = {
+      id: fundaReservando.id,
+      nombre: fundaReservando.nombre,
+      modelo: fundaReservando.sinModelo ? "Único" : modeloSeleccionado,
+      precio: fundaReservando.venta || 0,
+      foto: fundaReservando.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=100&auto=format&fit=crop&q=60"
+  };
+
+  carritoDeCompras.push(item);
+  guardarCarritoLocalStorage();
+  actualizarUI_Carrito();
+  cerrarModalReservar();
+  
+  // Pequeño feedback visual
+  const btnCarrito = document.getElementById("btnAbrirCarrito");
+  btnCarrito.style.transform = "scale(1.1)";
+  setTimeout(() => btnCarrito.style.transform = "scale(1)", 200);
+}
+
+function eliminarItemCarrito(index) {
+  carritoDeCompras.splice(index, 1);
+  guardarCarritoLocalStorage();
+  actualizarUI_Carrito();
+}
+
+function guardarCarritoLocalStorage() {
+  localStorage.setItem("carritoINeo", JSON.stringify(carritoDeCompras));
+}
+
+function actualizarUI_Carrito() {
+  const lista = document.getElementById("listaItemsCarrito");
+  const totalEl = document.getElementById("totalCarrito");
+  const btnAbrir = document.getElementById("btnAbrirCarrito");
+  const contador = document.getElementById("contadorCarrito");
+
+  lista.innerHTML = "";
+  let total = 0;
+
+  if (carritoDeCompras.length === 0) {
+      lista.innerHTML = "<p style='text-align:center; color:#6e6e73; margin-top: 50px;'>Tu carrito está vacío 🛒</p>";
+      btnAbrir.style.display = "none";
+      totalEl.innerText = "$0";
+      contador.innerText = "0";
+      return;
+  }
+
+  carritoDeCompras.forEach((item, index) => {
+      total += item.precio;
+      lista.innerHTML += `
+          <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #e5e5ea; padding-bottom: 15px;">
+              <img src="${item.foto}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #d2d2d7;">
+              <div style="flex-grow: 1;">
+                  <h4 style="margin: 0; font-size: 15px; color: #1d1d1f;">${item.nombre}</h4>
+                  <p style="margin: 4px 0 0 0; font-size: 13px; color: #6e6e73;">Variante: ${item.modelo}</p>
+              </div>
+              <div style="text-align: right;">
+                  <p style="margin: 0; font-weight: 700; font-size: 15px; color: #0071e3;">$${item.precio}</p>
+                  <button onclick="eliminarItemCarrito(${index})" style="background: none; border: none; color: #ff3b30; font-size: 12px; cursor: pointer; padding: 5px 0; margin-top: 5px; text-decoration: underline;">Quitar</button>
+              </div>
+          </div>
+      `;
+  });
+
+  totalEl.innerText = `$${total}`;
+  contador.innerText = carritoDeCompras.length;
+  btnAbrir.style.display = "block"; // Muestra el botón flotante si hay items
+}
+
+function abrirCarrito() {
+  document.getElementById("modalCarrito").style.display = "flex";
+}
+
+function cerrarCarrito() {
+  document.getElementById("modalCarrito").style.display = "none";
+}
+
+function enviarPedidoWhatsApp() {
+  if(carritoDeCompras.length === 0) return;
+
+  const datosClienteStr = localStorage.getItem("clienteINeoDatos");
+  let nombreCliente = "Cliente";
+  if(datosClienteStr) {
+      const datos = JSON.parse(datosClienteStr);
+      nombreCliente = datos.nombre;
+  }
+
+  let mensaje = `Hola iNeo Cases! 👋 Soy *${nombreCliente}* y este es mi pedido:\n\n`;
+  let totalPedido = 0;
+
+  carritoDeCompras.forEach(item => {
+      mensaje += `📦 *${item.nombre}*\n`;
+      if (item.modelo !== "Único" && item.modelo !== "") {
+          mensaje += `⚙️ Variante: ${item.modelo}\n`;
+      }
+      mensaje += `💰 $${item.precio}\n`;
+      mensaje += `────────────────\n`;
+      totalPedido += item.precio;
+  });
+
+  mensaje += `\n🧾 *TOTAL ESTIMADO: $${totalPedido}*\n\n`;
+  mensaje += `¿Podemos coordinar el pago y la entrega? ¡Gracias!`;
+
+  const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, "_blank");
+  cerrarCarrito();
 }
 
 // 📂 CREACIÓN Y GESTIÓN DE CATEGORÍAS
@@ -627,72 +763,6 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   } catch (error) {
     console.error(error);
   }
-}
-
-// --- RESERVAS Y WHATSAPP ---
-function abrirModalReservar(id) {
-  const funda = todasLasFundas.find(f => f.id === id);
-  if (!funda) return;
-
-  fundaReservando = funda;
-  document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
-  document.getElementById("reservaPrecio").innerText = `$${funda.venta ?? 0}`;
-
-  const selectModelo = document.getElementById("reservaModelo");
-  selectModelo.innerHTML = "";
-
-  if (funda.sinModelo) {
-    const totalStock = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
-    if (totalStock <= 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
-      document.getElementById("btnConfirmarWhatsApp").disabled = true;
-    } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      selectModelo.innerHTML = `<option value="Único">Estándar / Único</option>`;
-    }
-  } else if (Array.isArray(funda.stockPorModelo)) {
-    const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
-
-    if (modelsDisponibles.length === 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
-      document.getElementById("btnConfirmarWhatsApp").disabled = true;
-    } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      modelsDisponibles.forEach(m => {
-        const option = document.createElement("option");
-        option.value = m.modelo;
-        option.innerText = `${m.modelo} (${m.stock} u.)`;
-        selectModelo.appendChild(option);
-      });
-    }
-  } else {
-    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
-    document.getElementById("btnConfirmarWhatsApp").disabled = false;
-  }
-
-  document.getElementById("modalReservar").style.display = "flex";
-}
-
-function cerrarModalReservar() {
-  fundaReservando = null;
-  document.getElementById("modalReservar").style.display = "none";
-}
-
-function enviarWhatsApp() {
-  const modeloSeleccionado = document.getElementById("reservaModelo").value;
-  if (!modeloSeleccionado) return;
-
-  const bloqueModelo = fundaReservando.sinModelo ? "" : `⚙️ *Variante/Modelo:* ${modeloSeleccionado}\n`;
-
-  const mensaje = `Hola iNeo Cases! 👋 Me gustaría reservar:\n\n` +
-                  `📦 *Producto:* ${fundaReservando.nombre}\n` +
-                  bloqueModelo +
-                  `💰 *Precio:* $${fundaReservando.venta}\n\n` +
-                  `¿Tienen disponibilidad para coordinar? ¡Gracias!`;
-
-  const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, "_blank");
-  cerrarModalReservar();
 }
 
 // --- HERRAMIENTAS DE FORMATEO Y STOCK ---
@@ -1163,8 +1233,58 @@ window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
 window.ocultarAsistente = ocultarAsistente;
+window.eliminarItemCarrito = eliminarItemCarrito; // Vinculado a window para los eventos onclick generados dinámicamente
+
+function abrirModalReservar(id) {
+  const funda = todasLasFundas.find(f => f.id === id);
+  if (!funda) return;
+
+  fundaReservando = funda;
+  document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
+  document.getElementById("reservaPrecio").innerText = `$${funda.venta ?? 0}`;
+
+  const selectModelo = document.getElementById("reservaModelo");
+  selectModelo.innerHTML = "";
+
+  if (funda.sinModelo) {
+    const totalStock = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
+    if (totalStock <= 0) {
+      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
+      document.getElementById("btnConfirmarWhatsApp").disabled = true;
+    } else {
+      document.getElementById("btnConfirmarWhatsApp").disabled = false;
+      selectModelo.innerHTML = `<option value="Único">Estándar / Único</option>`;
+    }
+  } else if (Array.isArray(funda.stockPorModelo)) {
+    const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
+
+    if (modelsDisponibles.length === 0) {
+      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
+      document.getElementById("btnConfirmarWhatsApp").disabled = true;
+    } else {
+      document.getElementById("btnConfirmarWhatsApp").disabled = false;
+      modelsDisponibles.forEach(m => {
+        const option = document.createElement("option");
+        option.value = m.modelo;
+        option.innerText = `${m.modelo} (${m.stock} u.)`;
+        selectModelo.appendChild(option);
+      });
+    }
+  } else {
+    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
+    document.getElementById("btnConfirmarWhatsApp").disabled = false;
+  }
+
+  document.getElementById("modalReservar").style.display = "flex";
+}
 window.abrirModalReservar = abrirModalReservar;
+
+function cerrarModalReservar() {
+  fundaReservando = null;
+  document.getElementById("modalReservar").style.display = "none";
+}
 window.cerrarModalReservar = cerrarModalReservar;
+
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1313,7 +1433,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         </div>` : `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #25D366; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Reservar
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Añadir
           </button>
         </div>`;
 
