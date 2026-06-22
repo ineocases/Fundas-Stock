@@ -360,7 +360,7 @@ button:active {
     order: 1;
 }
 
-/* 2. Stock Disponible (Con ícono 📦) */
+/* 2. Stock Disponible (Con ícono SVG minimalista) */
 .card-body > p:first-of-type {
     font-size: 13px !important;
     color: var(--text-secondary) !important;
@@ -373,8 +373,14 @@ button:active {
 }
 
 .card-body > p:first-of-type::before {
-    content: "📦";
-    font-size: 15px;
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 /* 3. Precio */
@@ -387,22 +393,23 @@ button:active {
     order: 3;
 }
 
-/* 4. Botón Ver Stock (Negro Sólido - Estirado) */
+/* 4. Botón Ver Stock / Ocultar Stock (Negro Sólido - Bajo y estirado) */
 .btn-ver-stock, .btn-ocultar-stock {
     order: 4;
     background-color: #0a0a0a !important;
     color: #ffffff !important;
     border-radius: 12px !important;
-    padding: 14px 12px !important; /* Estirado y con mejor altura */
+    padding: 9px 12px !important; /* Altura reducida */
     font-size: 14px !important;
     font-weight: 600 !important;
     border: none !important;
-    width: 100% !important;
+    width: 100% !important; /* Ancho máximo */
     box-sizing: border-box !important;
     margin-bottom: 10px !important;
     margin-top: 0 !important;
     display: block !important;
     text-align: center !important;
+    transition: background 0.2s ease;
 }
 
 .btn-ver-stock:hover, .btn-ocultar-stock:hover {
@@ -422,16 +429,16 @@ button:active {
     width: 100% !important;
 }
 
-/* 5. Botón + Añadir (Abajo de todo, blanco, con borde fino - Estirado) */
+/* 5. Botón + Añadir (Abajo de todo, blanco, con borde fino - Bajo y estirado) */
 .card-body > div:last-child button {
     background-color: #ffffff !important;
     color: #000000 !important;
     border: 1px solid #e5e5ea !important;
     border-radius: 12px !important;
-    padding: 14px 12px !important; /* Mismo padding para equilibrar peso visual */
+    padding: 9px 12px !important; /* Misma altura reducida para equilibrar */
     font-size: 14px !important;
     font-weight: 600 !important;
-    width: 100% !important;
+    width: 100% !important; /* Ancho máximo */
     box-sizing: border-box !important;
     display: block !important;
     text-align: center !important;
@@ -658,14 +665,17 @@ button:active {
     
     /* El stock y el precio en móviles */
     .card-body > p:first-of-type { font-size: 12px !important; margin-bottom: 8px !important; }
-    .card-body > p:first-of-type::before { font-size: 13px !important; }
+    .card-body > p:first-of-type::before { width: 13px; height: 13px; }
     .card-body > p:nth-of-type(2) { font-size: 16px !important; }
 
-    /* Botones estirados también en móvil */
+    /* Botones estirados y de menor altura en móvil */
     .btn-ver-stock, .btn-ocultar-stock, .card-body > div:last-child button {
-        padding: 10px 8px !important; font-size: 12px !important;
-        border-radius: var(--radius-sm) !important; font-weight: 700;
-        width: 100% !important; box-sizing: border-box !important;
+        padding: 8px 8px !important; 
+        font-size: 12px !important;
+        border-radius: var(--radius-sm) !important; 
+        font-weight: 700;
+        width: 100% !important; 
+        box-sizing: border-box !important;
         display: block !important;
     }
 
