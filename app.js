@@ -1455,7 +1455,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         </div>` : `
         <div style="margin-top: 20px;">
           <button onclick="abrirModalReservar('${f.id}')" style="background: #000000; color: #ffffff; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            Añadir
+            + Añadir
           </button>
         </div>`;
 
