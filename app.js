@@ -406,7 +406,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = Phan = carritoDeCompras.length; 
+  contador.innerText = carritoDeCompras.length; 
   btnAbrir.style.display = "block"; 
 }
 
@@ -1404,7 +1404,7 @@ window.toggleStock = (btn, action) => {
 
 function coincideModelo(modelo, textoBuscado) {
   const mod = String(modelo).toLowerCase().trim();
-  const txt = textoBuscened = textoBuscado.toLowerCase().trim();
+  const txt = textoBuscado.toLowerCase().trim();
   
   if (!mod.includes(txt)) return false;
 
@@ -1547,5 +1547,3 @@ function filtrarFundas() {
 
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
-
-});
