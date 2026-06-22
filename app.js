@@ -38,16 +38,19 @@ let fundaReservando = null;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
-// 📸 VARIABLES PARA FOTO PRO INTERACTIVA
+// 📸 VARIABLES PARA FOTO PRO INTERACTIVA (MODAL SEPARADO)
+let imagenOriginalTemporal = null; 
 let imagenRecortadaTemporal = null; 
 let fotoTransparenteBase64 = ""; 
 let urlTransparenteGuardada = ""; 
 let opacidadSombra = 0.35;
-let usarFondo = true;
+let tipoFondoElegido = "estudio"; // 'estudio', 'blanco', 'original'
 let porcentajeEscala = 0.72; 
 let rotacionGrados = 0;
 let canvasPosX = 500;
 let canvasPosY = 500;
+let imgFondoEstudio = new Image();
+imgFondoEstudio.src = "fondo-estudio.png"; // Precarga del fondo de estudio
 
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
@@ -65,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inputBuscar.setAttribute("list", "sugerenciasBuscador");
   }
 
-  // Asignación de eventos de la interfaz
+  // Asignación de eventos de la interfaz principal
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
   
   if(document.getElementById("btnCliente")) {
@@ -122,10 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("menuAccionesIA").style.display = "none";
     toggleFormateador();
   };
-  if(document.getElementById("btnCrearFoto")) document.getElementById("btnCrearFoto").onclick = () => {
-    document.getElementById("menuAccionesIA").style.display = "none";
-    procesarImagenPro();
-  };
   if(document.getElementById("btnProcesarStock")) document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
 
   if(document.getElementById("btnRegistrarCliente")) document.getElementById("btnRegistrarCliente").onclick = procesarRegistroCliente;
@@ -135,6 +134,47 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("fundas").style.display = "grid"; 
   };
 
+  // --- NUEVOS EVENTOS DEL MODAL FOTO PRO ---
+  if(document.getElementById("btnCrearFoto")) {
+    document.getElementById("btnCrearFoto").onclick = () => {
+      document.getElementById("menuAccionesIA").style.display = "none";
+      abrirEditorFotoPro();
+    };
+  }
+  if(document.getElementById("btnCerrarFotoPro")) {
+    document.getElementById("btnCerrarFotoPro").onclick = cerrarEditorFotoPro;
+  }
+  if(document.getElementById("btnBorrarFondo")) {
+    document.getElementById("btnBorrarFondo").onclick = ejecutarBorradoFondoIA;
+  }
+  if(document.getElementById("btnReEditar")) {
+    document.getElementById("btnReEditar").onclick = reEditarMontaje;
+  }
+  if(document.getElementById("selectFondoPro")) {
+    document.getElementById("selectFondoPro").onchange = (e) => {
+      tipoFondoElegido = e.target.value;
+      dibujarCanvasGestos();
+    };
+  }
+  if(document.getElementById("sliderSombra")) {
+    document.getElementById("sliderSombra").oninput = (e) => {
+      opacidadSombra = e.target.value / 100;
+      document.getElementById("valorSombra").innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  }
+  if(document.getElementById("sliderRotacion")) {
+    document.getElementById("sliderRotacion").oninput = (e) => {
+      rotacionGrados = parseFloat(e.target.value);
+      document.getElementById("valorRotacion").innerText = e.target.value + "°";
+      dibujarCanvasGestos();
+    };
+  }
+  if(document.getElementById("btnGuardarFotoPro")) {
+    document.getElementById("btnGuardarFotoPro").onclick = aplicarMontajeFinal;
+  }
+
+  configurarGestosCanvas();
   actualizarUI_Carrito();
 });
 
@@ -223,7 +263,6 @@ onAuthStateChanged(auth, async (user) => {
       if (barra) barra.style.width = "92%"; 
       await cargarFundas(); 
       
-      // La ocultación del loader se hace ahora en controlarCargaDeImagenes()
     } else {
       if (barra) barra.style.width = "100%";
       document.getElementById("login").style.display = "flex";
@@ -613,19 +652,43 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO
-async function procesarImagenPro() {
-  const fileInput = document.getElementById("fotoInput");
-  if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Por favor, selecciona un archivo de imagen primero.");
+// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO (MODAL FOTO PRO)
+function abrirEditorFotoPro() {
+  if (!imagenOriginalTemporal) {
+    alert("Por favor, selecciona una foto de tu galería antes de abrir el Editor Pro.");
     return;
   }
+  document.getElementById("modalFotoPro").style.display = "flex";
+  
+  // Reseteamos valores visuales del modal a su estado base
+  document.getElementById("sliderSombra").value = 35;
+  document.getElementById("valorSombra").innerText = "35%";
+  document.getElementById("sliderRotacion").value = 0;
+  document.getElementById("valorRotacion").innerText = "0°";
+  document.getElementById("selectFondoPro").value = tipoFondoElegido;
 
-  const btnCrear = document.getElementById("btnCrearFoto");
-  btnCrear.disabled = true;
-  btnCrear.innerText = "🚀 Procesando con Remove.bg...";
+  porcentajeEscala = 0.72;
+  rotacionGrados = 0;
+  canvasPosX = 500;
+  canvasPosY = 500;
+  opacidadSombra = 0.35;
 
+  dibujarCanvasGestos();
+}
+
+function cerrarEditorFotoPro() {
+  document.getElementById("modalFotoPro").style.display = "none";
+}
+
+async function ejecutarBorradoFondoIA() {
+  const fileInput = document.getElementById("fotoInput");
   const file = fileInput.files[0];
+  if (!file && !fotoTransparenteBase64) return alert("No se encontró la imagen original para procesar.");
+
+  const btn = document.getElementById("btnBorrarFondo");
+  const textoOriginal = btn.innerText;
+  btn.innerText = "⏳ Borrando...";
+  btn.disabled = true;
 
   try {
     const formData = new FormData();
@@ -645,70 +708,36 @@ async function procesarImagenPro() {
     
     reader.onloadend = function() {
       fotoTransparenteBase64 = reader.result; 
-      iniciarEditorGestos(fotoTransparenteBase64);
+      imagenRecortadaTemporal = new Image();
+      imagenRecortadaTemporal.crossOrigin = "anonymous";
+      imagenRecortadaTemporal.onload = () => {
+        dibujarCanvasGestos();
+        btn.innerText = textoOriginal;
+        btn.disabled = false;
+      };
+      imagenRecortadaTemporal.src = fotoTransparenteBase64;
     };
     reader.readAsDataURL(blobImagenRecortada);
 
   } catch (err) {
     console.error(err);
-    alert("Hubo un problemita al conectar con Remove.bg.");
-  } finally {
-    btnCrear.disabled = false;
-    btnCrear.innerText = "📷 Crear foto Pro";
+    alert("Hubo un problemita al conectar con Remove.bg. Verifica tu API Key o conexión.");
+    btn.innerText = textoOriginal;
+    btn.disabled = false;
   }
 }
 
-function iniciarEditorGestos(fuenteImagen) {
-  document.getElementById("previewFoto").style.display = "none";
-  document.getElementById("controlCamposPro").style.display = "block";
-
-  imagenRecortadaTemporal = new Image();
-  imagenRecortadaTemporal.crossOrigin = "anonymous"; 
-  
-  imagenRecortadaTemporal.onload = () => {
-    porcentajeEscala = 0.72;
-    rotacionGrados = 0;
-    canvasPosX = 500;
-    canvasPosY = 500;
-    
-    if(document.getElementById("sliderRotacion")) {
-      document.getElementById("sliderRotacion").value = 0;
-      document.getElementById("valorRotacion").innerText = "0°";
-    }
-    
-    dibujarCanvasGestos();
-  };
-  
-  imagenRecortadaTemporal.src = fuenteImagen;
-  
-  usarFondo = document.getElementById("toggleFondo") ? document.getElementById("toggleFondo").checked : true;
-  opacidadSombra = document.getElementById("sliderSombra") ? document.getElementById("sliderSombra").value / 100 : 0.35;
-
-  if (document.getElementById("toggleFondo")) {
-    document.getElementById("toggleFondo").onchange = (e) => {
-      usarFondo = e.target.checked;
-      dibujarCanvasGestos();
-    };
-  }
-
-  if (document.getElementById("sliderSombra")) {
-    document.getElementById("sliderSombra").oninput = (e) => {
-      opacidadSombra = e.target.value / 100;
-      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
-      dibujarCanvasGestos();
-    };
-  }
+function reEditarMontaje() {
+  porcentajeEscala = 0.72;
+  rotacionGrados = 0;
+  canvasPosX = 500;
+  canvasPosY = 500;
   
   if (document.getElementById("sliderRotacion")) {
-    document.getElementById("sliderRotacion").oninput = (e) => {
-      rotacionGrados = parseFloat(e.target.value);
-      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
-      dibujarCanvasGestos();
-    };
+    document.getElementById("sliderRotacion").value = 0;
+    document.getElementById("valorRotacion").innerText = "0°";
   }
-
-  configurarGestosCanvas();
-  crearBotonesConfirmacion();
+  dibujarCanvasGestos();
 }
 
 function configurarGestosCanvas() {
@@ -785,24 +814,40 @@ function configurarGestosCanvas() {
 
 function dibujarCanvasGestos() {
   const canvas = document.getElementById("canvasGestos");
-  if (!canvas || !imagenRecortadaTemporal) return;
-
+  if (!canvas) return;
   const ctx = canvas.getContext("2d");
+  
+  // Usamos la imagen recortada si existe, de lo contrario la original base
+  let imagenADibujar = imagenRecortadaTemporal || imagenOriginalTemporal;
+  if (!imagenADibujar) return;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (usarFondo) {
-    const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
-    grad.addColorStop(0, "#ffffff");
-    grad.addColorStop(1, "#e5e5ea");
-    ctx.fillStyle = grad;
+  // Lógica del selector de fondos
+  if (tipoFondoElegido === "estudio") {
+    if (imgFondoEstudio.complete && imgFondoEstudio.naturalWidth > 0) {
+      ctx.drawImage(imgFondoEstudio, 0, 0, canvas.width, canvas.height);
+    } else {
+      const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(1, "#e5e5ea");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  } else if (tipoFondoElegido === "blanco") {
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if (tipoFondoElegido === "original") {
+    // Si elige original, idealmente renderizamos la foto sin transparencia al fondo
+    // o simplemente la dejamos sin fondo artificial para que quede como venía de fábrica.
   }
 
   ctx.save();
   ctx.translate(canvasPosX, canvasPosY); 
   ctx.rotate(rotacionGrados * Math.PI / 180); 
   
-  if (opacidadSombra > 0) {
+  // La sombra solo se aplica si no elegimos el fondo "original"
+  if (opacidadSombra > 0 && tipoFondoElegido !== "original") {
     ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
     ctx.shadowBlur = 40;
     ctx.shadowOffsetX = 30; 
@@ -810,50 +855,15 @@ function dibujarCanvasGestos() {
   }
 
   const limitePixel = 1000 * porcentajeEscala;
-  const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
-  const anchoFinal = imagenRecortadaTemporal.width * escala;
-  const altoFinal = imagenRecortadaTemporal.height * escala;
+  const escala = Math.min(limitePixel / imagenADibujar.width, limitePixel / imagenADibujar.height);
+  const anchoFinal = imagenADibujar.width * escala;
+  const altoFinal = imagenADibujar.height * escala;
 
-  ctx.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
+  ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
   ctx.restore();
 }
 
-function crearBotonesConfirmacion() {
-  if (document.getElementById("contenedorConfirmacion")) return;
-
-  const contenedor = document.createElement("div");
-  contenedor.id = "contenedorConfirmacion";
-  contenedor.style.cssText = "margin-top: 15px; display: flex; flex-direction: column; gap: 10px; align-items: center;";
-
-  const filaAcciones = document.createElement("div");
-  filaAcciones.style.cssText = "display: flex; gap: 10px; justify-content: center; width: 100%;";
-
-  const btnAceptar = document.createElement("button");
-  btnAceptar.innerText = "✅ Aplicar y Confirmar";
-  btnAceptar.style.background = "#28a745";
-  btnAceptar.onclick = () => aplicarMontajeFinal(true);
-
-  const btnCancelar = document.createElement("button");
-  btnCancelar.innerText = "❌ Cancelar";
-  btnCancelar.style.background = "#dc3545";
-  btnCancelar.onclick = () => {
-    document.getElementById("contenedorConfirmacion").remove();
-    document.getElementById("controlCamposPro").style.display = "none";
-    document.getElementById("previewFoto").style.display = "none";
-    imagenRecortadaTemporal = null;
-    fotoBase64 = "";
-    fotoTransparenteBase64 = "";
-  };
-
-  filaAcciones.appendChild(btnAceptar);
-  filaAcciones.appendChild(btnCancelar);
-
-  contenedor.appendChild(filaAcciones);
-  const preview = document.getElementById("previewFoto");
-  preview.parentNode.insertBefore(contenedor, preview.nextSibling);
-}
-
-async function aplicarMontajeFinal(mostrarAlerta = false) {
+async function aplicarMontajeFinal() {
   const canvas = document.getElementById("canvasGestos");
   if (!canvas) return;
 
@@ -863,11 +873,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   preview.src = fotoBase64;
   preview.style.display = "block";
 
-  if (mostrarAlerta) {
-    if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-    document.getElementById("controlCamposPro").style.display = "none";
-    alert("¡Montaje procesado con éxito! Puedes proceder a guardar el artículo. 🚀");
-  }
+  cerrarEditorFotoPro();
 }
 
 // --- HERRAMIENTAS DE FORMATEO Y STOCK ---
@@ -944,16 +950,20 @@ function procesarImagen(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
 
-  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlCamposPro").style.display = "none";
-
   const btnGuardar = document.getElementById("guardarFunda");
   btnGuardar.disabled = true;
 
   const lector = new FileReader();
   lector.onload = function (e) {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = function () {
+      
+      // Guardamos la imagen original en memoria para el editor Pro
+      imagenOriginalTemporal = img;
+      imagenRecortadaTemporal = null; // Reseteamos recorte anterior si sube una nueva
+      fotoTransparenteBase64 = "";
+
       const canvas = document.createElement("canvas");
       canvas.width = 500;
       canvas.height = 500;
@@ -964,8 +974,7 @@ function procesarImagen(evento) {
       const sy = (img.height - ladoMenor) / 2;
 
       ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
-      fotoBase64 = canvas.toDataURL("image/jpeg", 0.4);
-      fotoTransparenteBase64 = ""; 
+      fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
 
       const preview = document.getElementById("previewFoto");
       preview.src = fotoBase64;
@@ -989,6 +998,8 @@ function mostrarFormulario() {
   fotoBase64 = ""; 
   fotoTransparenteBase64 = "";
   urlTransparenteGuardada = "";
+  imagenOriginalTemporal = null;
+  imagenRecortadaTemporal = null;
   
   document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
   document.getElementById("guardarFunda").innerText = "Guardar";
@@ -1013,8 +1024,6 @@ function mostrarFormulario() {
   document.getElementById("fotoInput").value = "";
   
   document.getElementById("previewFoto").style.display = "none";
-  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlCamposPro").style.display = "none";
   
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
@@ -1029,8 +1038,8 @@ function ocultarFormulario() {
   fotoBase64 = "";
   fotoTransparenteBase64 = "";
   urlTransparenteGuardada = "";
-  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlCamposPro").style.display = "none";
+  imagenOriginalTemporal = null;
+  imagenRecortadaTemporal = null;
   document.getElementById("agregar").style.display = "none";
 }
 
@@ -1213,6 +1222,8 @@ function abrirEditarFunda(id) {
   fotoBase64 = "";
   fotoTransparenteBase64 = "";
   urlTransparenteGuardada = funda.fotoTransparente || "";
+  imagenOriginalTemporal = null;
+  imagenRecortadaTemporal = null;
 
   document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
   document.getElementById("nombre").value = funda.nombre || "";
@@ -1253,6 +1264,13 @@ function abrirEditarFunda(id) {
   if (funda.foto) {
     preview.src = funda.foto;
     preview.style.display = "block";
+    
+    // Convertimos la imagen previa de imgbb en el original temporal para habilitar el re-editado pro
+    const imgOld = new Image();
+    imgOld.crossOrigin = "anonymous";
+    imgOld.onload = () => { imagenOriginalTemporal = imgOld; };
+    imgOld.src = funda.foto;
+    
   } else {
     preview.style.display = "none";
   }
@@ -1270,14 +1288,19 @@ function abrirEditarFunda(id) {
     btnReeditar.style.display = "block";
     btnReeditar.onclick = (e) => {
       e.preventDefault();
-      iniciarEditorGestos(funda.fotoTransparente);
+      // Si ya hay fondo transparente, lo bajamos y abrimos el editor pro
+      const imgRecorteViejo = new Image();
+      imgRecorteViejo.crossOrigin = "anonymous";
+      imgRecorteViejo.onload = () => {
+        imagenRecortadaTemporal = imgRecorteViejo;
+        abrirEditorFotoPro();
+      };
+      imgRecorteViejo.src = funda.fotoTransparente;
     };
   } else {
     btnReeditar.style.display = "none";
   }
 
-  if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-  document.getElementById("controlCamposPro").style.display = "none";
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
