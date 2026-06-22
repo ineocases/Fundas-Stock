@@ -1541,7 +1541,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       
       bloqueStockHTML = `
         <p>Stock Total: ${totalStock} u.</p>
-        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock" style="${styleVerStock}">Ver Stock por Modelo</button>
+        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock" style="${styleVerStock}">Ver stock por modelo</button>
         <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock" style="${styleOcultarStock}">Ocultar Stock</button>
         <div class="stock-list" style="${styleOcultarStock} margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
       `;
