@@ -223,21 +223,27 @@ onAuthStateChanged(auth, async (user) => {
       if (barra) barra.style.width = "92%"; 
       await cargarFundas(); 
       
-      if (barra) barra.style.width = "100%"; 
+      // El fin de la animación del loader lo manejará controlarCargaDeImagenes() al renderizar las fotos.
     } else {
       if (barra) barra.style.width = "100%";
       document.getElementById("login").style.display = "flex";
       document.getElementById("app").style.display = "none";
+      
+      // Si no hay sesión iniciada, quitamos el loader de inmediato para ver el login
+      setTimeout(() => {
+        if (loader) {
+          loader.style.opacity = "0"; 
+          setTimeout(() => { loader.style.display = "none"; }, 400); 
+        }
+      }, 250);
     }
   } catch (error) {
     console.error("Error crítico durante el inicio:", error);
-  } finally {
+    // En caso de error, quitamos el loader para no trabar la pantalla
     setTimeout(() => {
       if (loader) {
         loader.style.opacity = "0"; 
-        setTimeout(() => { 
-          loader.style.display = "none"; 
-        }, 400); 
+        setTimeout(() => { loader.style.display = "none"; }, 400); 
       }
     }, 250);
   }
@@ -1385,6 +1391,63 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
+// MÓDULO NUEVO: Monitorea de manera fluida y adaptativa la carga de las fotos de los productos
+function controlarCargaDeImagenes() {
+  const imagenes = document.querySelectorAll("#fundas .card-img");
+  const totalImagenes = imagenes.length;
+  const loader = document.getElementById("cargando");
+  const barraProgreso = document.getElementById("loaderProgreso");
+
+  // Si no hay imágenes válidas renderizadas, finalizamos el progreso de inmediato
+  if (totalImagenes === 0) {
+    if (barraProgreso) barraProgreso.style.width = "100%";
+    setTimeout(() => {
+      if (loader) {
+        loader.style.opacity = "0";
+        setTimeout(() => { loader.style.display = "none"; }, 400);
+      }
+    }, 300);
+    return;
+  }
+
+  let imagenesCargadas = 0;
+
+  function verificarFin() {
+    imagenesCargadas++;
+    
+    // Distribuye el 8% restante (del 92% al 100%) proporcionalmente entre las fotos
+    const porcentajeBase = 92;
+    const porcentajeRestante = 8;
+    const porcentaje = porcentajeBase + ((imagenesCargadas / totalImagenes) * porcentajeRestante);
+    
+    if (barraProgreso) {
+      barraProgreso.style.width = `${porcentaje}%`;
+    }
+
+    // Cuando finalizó la última foto (sea carga correcta o error/rota)
+    if (imagenesCargadas === totalImagenes) {
+      setTimeout(() => {
+        if (loader) {
+          loader.style.opacity = "0";
+          loader.style.transition = "opacity 0.4s ease";
+          setTimeout(() => {
+            loader.style.display = "none";
+          }, 400);
+        }
+      }, 300);
+    }
+  }
+
+  imagenes.forEach((img) => {
+    if (img.complete) {
+      verificarFin();
+    } else {
+      img.addEventListener("load", verificarFin);
+      img.addEventListener("error", verificarFin); // Evita bloqueos en la interfaz por enlaces rotos
+    }
+  });
+}
+
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1394,11 +1457,11 @@ window.toggleStock = (btn, action) => {
   if (action === 'show') {
     stockDiv.classList.remove('d-none');
     btnVer.classList.add('d-none');
-    btnOcultar.classList.remove('d-none');
+    btnOcultar.classList.add('activo'); // Usa la clase '.activo' controlada por CSS
   } else {
     stockDiv.classList.add('d-none');
     btnVer.classList.remove('d-none');
-    btnOcultar.classList.add('d-none');
+    btnOcultar.classList.remove('activo'); // Quita la clase '.activo'
   }
 };
 
@@ -1486,7 +1549,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       bloqueStockHTML = `
         <p>Stock Total: ${totalStock} u.</p>
         <button onclick="toggleStock(this, 'show')" class="btn-ver-stock ${mostrarDirecto ? 'd-none' : ''}">Ver Stock por Modelo</button>
-        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock ${mostrarDirecto ? '' : 'd-none'}">Ocultar Stock</button>
+        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock ${mostrarDirecto ? 'activo' : ''}">Ocultar Stock</button>
         <div class="stock-list ${mostrarDirecto ? '' : 'd-none'}" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
       `;
     }
@@ -1528,6 +1591,12 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
   if (esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas") {
     habilitarReordenamiento();
+  }
+
+  // NUEVO: Dispara el listener de imágenes si el loader sigue visible en pantalla
+  const loader = document.getElementById("cargando");
+  if (loader && window.getComputedStyle(loader).display !== "none") {
+    controlarCargaDeImagenes();
   }
 }
 
