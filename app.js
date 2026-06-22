@@ -41,6 +41,14 @@ let anguloRotacion = 0;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
+// 📸 NUEVAS VARIABLES PARA FOTO PRO INTERACTIVA
+let fotoTransparenteBase64 = ""; 
+let urlTransparenteGuardada = ""; 
+let opacidadSombra = 0.35;
+let usarFondo = true;
+let imgFondoObj = new Image();
+imgFondoObj.src = "fondo-estudio.png"; 
+
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
 
@@ -409,7 +417,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = carritoDeCompras.length; // ✅ CORREGIDO
+  contador.innerText = carritoDeCompras.length; 
   btnAbrir.style.display = "block"; 
 }
 
@@ -626,7 +634,7 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 IA Y REMOVE BG
+// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO POR GESTOS
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -636,7 +644,7 @@ async function procesarImagenPro() {
 
   const btnCrear = document.getElementById("btnCrearFoto");
   btnCrear.disabled = true;
-  btnCrear.innerText = "🚀 Recortando...";
+  btnCrear.innerText = "🚀 Procesando con Remove.bg...";
 
   const file = fileInput.files[0];
 
@@ -654,46 +662,13 @@ async function procesarImagenPro() {
     if (!respuestaAPI.ok) throw new Error("Error en la API de Remove.bg.");
 
     const blobImagenRecortada = await respuestaAPI.blob();
-    const urlImagenRecortada = URL.createObjectURL(blobImagenRecortada);
-
-    imagenRecortadaTemporal = new Image();
-    imagenRecortadaTemporal.src = urlImagenRecortada;
-
-    await new Promise((res) => imagenRecortadaTemporal.onload = res);
-
-    const preview = document.getElementById("previewFoto");
-    preview.src = urlImagenRecortada;
-    preview.style.display = "block";
-
-    const contenedorSliders = document.getElementById("controlCamposPro");
-    if (contenedorSliders) {
-      contenedorSliders.style.display = "block";
-      
-      const sliderEscala = document.getElementById("sliderEscala");
-      sliderEscala.value = 72;
-      porcentajeEscala = 0.72;
-      document.getElementById("valorEscala").innerText = "72%";
-
-      const sliderRotacion = document.getElementById("sliderRotacion");
-      sliderRotacion.value = 0;
-      anguloRotacion = 0;
-      document.getElementById("valorRotacion").innerText = "0°";
-      
-      sliderEscala.oninput = function() {
-        porcentajeEscala = Number(this.value) / 100;
-        document.getElementById("valorEscala").innerText = this.value + "%";
-        aplicarMontajeFinal(false); 
-      };
-
-      sliderRotacion.oninput = function() {
-        anguloRotacion = Number(this.value);
-        document.getElementById("valorRotacion").innerText = this.value + "°";
-        aplicarMontajeFinal(false); 
-      };
-    }
-
-    crearBotonesConfirmacion();
-    aplicarMontajeFinal(false); 
+    const reader = new FileReader();
+    
+    reader.onloadend = function() {
+      fotoTransparenteBase64 = reader.result; // Almacenamos la transparente cruda
+      iniciarEditorGestos(fotoTransparenteBase64);
+    };
+    reader.readAsDataURL(blobImagenRecortada);
 
   } catch (err) {
     console.error(err);
@@ -702,6 +677,152 @@ async function procesarImagenPro() {
     btnCrear.disabled = false;
     btnCrear.innerText = "📷 Crear foto Pro";
   }
+}
+
+function iniciarEditorGestos(fuenteImagen) {
+  document.getElementById("previewFoto").style.display = "none";
+  document.getElementById("controlCamposPro").style.display = "block";
+
+  imagenRecortadaTemporal = new Image();
+  imagenRecortadaTemporal.crossOrigin = "anonymous"; // Prevenir fallos de CORS al reeditar
+  imagenRecortadaTemporal.onload = () => dibujarCanvasGestos();
+  imagenRecortadaTemporal.src = fuenteImagen;
+
+  // Resetear valores iniciales
+  porcentajeEscala = 0.72;
+  anguloRotacion = 0;
+  usarFondo = document.getElementById("toggleFondo") ? document.getElementById("toggleFondo").checked : true;
+  opacidadSombra = document.getElementById("sliderSombra") ? document.getElementById("sliderSombra").value / 100 : 0.35;
+
+  // Asignación de inputs interactivos
+  if (document.getElementById("toggleFondo")) {
+    document.getElementById("toggleFondo").onchange = (e) => {
+      usarFondo = e.target.checked;
+      dibujarCanvasGestos();
+    };
+  }
+
+  if (document.getElementById("sliderSombra")) {
+    document.getElementById("sliderSombra").oninput = (e) => {
+      opacidadSombra = e.target.value / 100;
+      const labelSombra = document.getElementById("valorSombra");
+      if (labelSombra) labelSombra.innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  }
+
+  configurarGestosCanvas();
+  crearBotonesConfirmacion();
+}
+
+function configurarGestosCanvas() {
+  const canvas = document.getElementById("canvasGestos");
+  if (!canvas) return;
+
+  let isDragging = false;
+  let lastX = 0;
+  let prevTouchDist = null;
+
+  // --- GESTOS CON MOUSE ---
+  canvas.onpointerdown = (e) => { 
+    isDragging = true; 
+    lastX = e.clientX; 
+    canvas.style.cursor = "grabbing"; 
+    canvas.setPointerCapture(e.pointerId);
+  };
+  
+  canvas.onpointerup = (e) => { 
+    isDragging = false; 
+    canvas.style.cursor = "grab"; 
+    canvas.releasePointerCapture(e.pointerId);
+  };
+
+  canvas.onpointermove = (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - lastX;
+    anguloRotacion += deltaX * 0.5; // Deslizar horizontalmente rota el objeto
+    lastX = e.clientX;
+    dibujarCanvasGestos();
+  };
+
+  canvas.onwheel = (e) => {
+    e.preventDefault();
+    porcentajeEscala += e.deltaY * -0.001;
+    porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 2.5)); // Delimitadores de zoom
+    dibujarCanvasGestos();
+  };
+
+  // --- GESTOS TÁCTILES (MÓVILES) ---
+  canvas.ontouchstart = (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      lastX = e.touches[0].clientX;
+    } else if (e.touches.length === 2) {
+      prevTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  };
+
+  canvas.ontouchmove = (e) => {
+    e.preventDefault(); // Evitamos scroll nativo mientras interactuamos
+    if (e.touches.length === 1 && isDragging) {
+      const deltaX = e.touches[0].clientX - lastX;
+      anguloRotacion += deltaX * 0.5;
+      lastX = e.touches[0].clientX;
+      dibujarCanvasGestos();
+    } else if (e.touches.length === 2 && prevTouchDist) {
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      porcentajeEscala *= (currentDist / prevTouchDist);
+      porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 2.5));
+      prevTouchDist = currentDist;
+      dibujarCanvasGestos();
+    }
+  };
+
+  canvas.ontouchend = () => {
+    isDragging = false;
+    prevTouchDist = null;
+  };
+}
+
+function dibujarCanvasGestos() {
+  const canvas = document.getElementById("canvasGestos");
+  if (!canvas || !imagenRecortadaTemporal) return;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, 1000, 1000);
+
+  // 1. Renderizar fondo de estudio si está habilitado
+  if (usarFondo && imgFondoObj.complete) {
+    ctx.drawImage(imgFondoObj, 0, 0, 1000, 1000);
+  }
+
+  // 2. Calcular escalas métricas centradas
+  const limitePixel = 1000 * porcentajeEscala;
+  const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
+  const anchoFinal = imagenRecortadaTemporal.width * escala;
+  const altoFinal = imagenRecortadaTemporal.height * escala;
+  const radianes = (anguloRotacion * Math.PI) / 180;
+
+  // 3. Dibujar la imagen sobre el canvas
+  ctx.save();
+  ctx.translate(1000 / 2, 1000 / 2);
+  ctx.rotate(radianes);
+  
+  if (opacidadSombra > 0) {
+    ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 12;
+  }
+
+  ctx.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
+  ctx.restore();
 }
 
 function crearBotonesConfirmacion() {
@@ -727,6 +848,8 @@ function crearBotonesConfirmacion() {
     document.getElementById("controlCamposPro").style.display = "none";
     document.getElementById("previewFoto").style.display = "none";
     imagenRecortadaTemporal = null;
+    fotoBase64 = "";
+    fotoTransparenteBase64 = "";
   };
 
   filaAcciones.appendChild(btnAceptar);
@@ -738,49 +861,19 @@ function crearBotonesConfirmacion() {
 }
 
 async function aplicarMontajeFinal(mostrarAlerta = false) {
-  if (!imagenRecortadaTemporal) return;
+  const canvas = document.getElementById("canvasGestos");
+  if (!canvas) return;
 
-  try {
-    const imgFondo = new Image();
-    imgFondo.src = "fondo-estudio.png";
+  fotoBase64 = canvas.toDataURL("image/png"); // El resultado final acoplado o transparente
+  
+  const preview = document.getElementById("previewFoto");
+  preview.src = fotoBase64;
+  preview.style.display = "block";
 
-    await new Promise((res, rej) => {
-      imgFondo.onload = res;
-      imgFondo.onerror = () => rej(new Error("Falta fondo-estudio.png"));
-    });
-
-    const canvasFinal = document.createElement("canvas");
-    canvasFinal.width = 1000;
-    canvasFinal.height = 1000;
-    const ctxFinal = canvasFinal.getContext("2d");
-
-    ctxFinal.drawImage(imgFondo, 0, 0, 1000, 1000);
-
-    const limitePixel = 1000 * porcentajeEscala;
-    const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
-    const anchoFinal = imagenRecortadaTemporal.width * escala;
-    const altoFinal = imagenRecortadaTemporal.height * escala;
-
-    const radianes = (anguloRotacion * Math.PI) / 180;
-
-    ctxFinal.save();
-    ctxFinal.translate(1000 / 2, 1000 / 2); 
-    ctxFinal.rotate(radianes);
-    ctxFinal.shadowColor = "rgba(0, 0, 0, 0.35)"; 
-    ctxFinal.shadowBlur = 35; 
-    ctxFinal.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
-    ctxFinal.restore();
-
-    fotoBase64 = canvasFinal.toDataURL("image/png");
-    document.getElementById("previewFoto").src = fotoBase64;
-
-    if (mostrarAlerta) {
-      if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
-      document.getElementById("controlCamposPro").style.display = "none";
-      alert("¡Montaje Pro acoplado! El fondo se aplicó correctamente. 🚀");
-    }
-  } catch (error) {
-    console.error(error);
+  if (mostrarAlerta) {
+    if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
+    document.getElementById("controlCamposPro").style.display = "none";
+    alert("¡Montaje procesado con éxito! Puedes proceder a guardar el artículo. 🚀");
   }
 }
 
@@ -886,6 +979,7 @@ function procesarImagen(evento) {
 
       ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
       fotoBase64 = canvas.toDataURL("image/jpeg", 0.4);
+      fotoTransparenteBase64 = ""; // Reset de transparencia si sube foto común
 
       const preview = document.getElementById("previewFoto");
       preview.src = fotoBase64;
@@ -907,6 +1001,9 @@ function mostrarFormulario() {
   
   idFundaEditando = null;
   fotoBase64 = ""; 
+  fotoTransparenteBase64 = "";
+  urlTransparenteGuardada = "";
+  
   document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
   document.getElementById("guardarFunda").innerText = "Guardar";
   document.getElementById("guardarFunda").disabled = false;
@@ -936,6 +1033,7 @@ function mostrarFormulario() {
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
+  if(document.getElementById("btnReeditarMontaje")) document.getElementById("btnReeditarMontaje").style.display = "none";
 
   document.getElementById("agregar").style.display = "flex";
 }
@@ -943,6 +1041,8 @@ function mostrarFormulario() {
 function ocultarFormulario() {
   idFundaEditando = null;
   fotoBase64 = "";
+  fotoTransparenteBase64 = "";
+  urlTransparenteGuardada = "";
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
   document.getElementById("agregar").style.display = "none";
@@ -1033,35 +1133,42 @@ async function guardarFunda() {
   const textoOriginal = btnGuardar.innerText;
   
   btnGuardar.disabled = true;
-  btnGuardar.innerText = "⏳ Subiendo imagen..."; 
+  btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
 
   let urlImagenFinal = fotoBase64; 
+  let urlTransparenteFinal = urlTransparenteGuardada; // Mantiene la existente si se está reeditando
 
-  if (fotoBase64 && fotoBase64.startsWith("data:image")) {
-    try {
-      const base64Clean = fotoBase64.split(',')[1];
-      const formData = new FormData();
-      formData.append("image", base64Clean);
+  const subirAImgBB = async (base64) => {
+    const base64Clean = base64.split(',')[1];
+    const formData = new FormData();
+    formData.append("image", base64Clean);
+    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: "POST",
+      body: formData
+    });
+    const resultado = await respuesta.json();
+    if (!resultado.success) throw new Error("Error en ImgBB");
+    return resultado.data.url;
+  };
 
-      const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-        method: "POST",
-        body: formData
-      });
-
-      const resultado = await respuesta.json();
-      if (resultado.success) {
-        urlImagenFinal = resultado.data.url; 
-        btnGuardar.innerText = "💾 Guardando datos..."; 
-      } else {
-        throw new Error("Error en ImgBB");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
-      btnGuardar.disabled = false;
-      btnGuardar.innerText = textoOriginal;
-      return;
+  try {
+    // 1. Si hay una nueva imagen transparente cruda procesada, la subimos
+    if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
+      urlTransparenteFinal = await subirAImgBB(fotoTransparenteBase64);
     }
+
+    // 2. Si hay un montaje final nuevo, lo subimos
+    if (fotoBase64 && fotoBase64.startsWith("data:image")) {
+      urlImagenFinal = await subirAImgBB(fotoBase64);
+    }
+    
+    btnGuardar.innerText = "💾 Guardando datos..."; 
+  } catch (err) {
+    console.error(err);
+    alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
+    btnGuardar.disabled = false;
+    btnGuardar.innerText = textoOriginal;
+    return;
   }
 
   let stockPorModeloArray = [];
@@ -1089,6 +1196,7 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     foto: urlImagenFinal, 
+    fotoTransparente: urlTransparenteFinal, // Guardamos la cruda transparente en Firestore
     sinModelo: esProductoSinModelo 
   };
 
@@ -1100,7 +1208,11 @@ async function guardarFunda() {
     if (idFundaEditando) {
       if (urlImagenFinal === "" && !fotoBase64) {
          const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.foto = vieja ? (vieja.foto || "") : "";
+         datosFunda.foto = vieja ? (viaja.foto || "") : "";
+      }
+      if (urlTransparenteFinal === "" && !fotoTransparenteBase64) {
+         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+         datosFunda.fotoTransparente = vieja ? (vieja.fotoTransparente || "") : "";
       }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
       alert("Artículo actualizado 🎉");
@@ -1137,6 +1249,10 @@ function abrirEditarFunda(id) {
   if (!funda) return;
 
   idFundaEditando = id;
+  fotoBase64 = "";
+  fotoTransparenteBase64 = "";
+  urlTransparenteGuardada = funda.fotoTransparente || "";
+
   document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
 
   document.getElementById("nombre").value = funda.nombre || "";
@@ -1177,12 +1293,30 @@ function abrirEditarFunda(id) {
 
   const preview = document.getElementById("previewFoto");
   if (funda.foto) {
-    fotoBase64 = funda.foto; 
     preview.src = funda.foto;
     preview.style.display = "block";
   } else {
-    fotoBase64 = "";
     preview.style.display = "none";
+  }
+
+  // Generación dinámica del botón para re-editar montaje guardado sin consumir API
+  let btnReeditar = document.getElementById("btnReeditarMontaje");
+  if (!btnReeditar) {
+    btnReeditar = document.createElement("button");
+    btnReeditar.id = "btnReeditarMontaje";
+    btnReeditar.style.cssText = "width: 100%; background: #5856d6; margin-bottom: 15px; color: white; padding: 12px; border-radius: 12px; border:none; font-weight:bold; cursor:pointer;";
+    btnReeditar.innerText = "🖼️ Re-editar Montaje Guardado";
+    preview.parentNode.insertBefore(btnReeditar, preview);
+  }
+
+  if (funda.fotoTransparente) {
+    btnReeditar.style.display = "block";
+    btnReeditar.onclick = (e) => {
+      e.preventDefault();
+      iniciarEditorGestos(funda.fotoTransparente);
+    };
+  } else {
+    btnReeditar.style.display = "none";
   }
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
@@ -1407,7 +1541,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
-    // ✅ CORRECCIÓN AQUÍ: Estilos en línea para evitar que CSS lo fuerce visible
     const estiloOculto = (f.sinModelo && !esAdmin) ? 'style="display: none !important;"' : '';
 
     let bloqueStockHTML = "";
