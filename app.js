@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Asignación de eventos de la interfaz
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
   
-  // MODIFICADO: Interceptamos el clic de "Entrar a ver Catálogo" para pedir el número ANTES de loguear
+  // Interceptamos el clic de "Entrar a ver Catálogo" para pedir el número ANTES de loguear
   if(document.getElementById("btnCliente")) {
     document.getElementById("btnCliente").onclick = (e) => {
       e.preventDefault();
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
   if(document.getElementById("btnCerrarCarrito")) document.getElementById("btnCerrarCarrito").onclick = cerrarCarrito;
   
-  // MODIFICADO: Inyectar logo SVG de WhatsApp y dar estilo al botón del carrito
+  // Inyectar logo SVG de WhatsApp y dar estilo al botón del carrito
   const btnComprar = document.getElementById("btnComprarWhatsAppCarrito");
   if (btnComprar) {
     btnComprar.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Enviar pedido por WhatsApp`;
@@ -409,7 +409,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = Split? carritoDeCompras.length : carritoDeCompras.length;
+  contador.innerText = carritoDeCompras.length; // ✅ CORREGIDO
   btnAbrir.style.display = "block"; 
 }
 
@@ -1304,7 +1304,7 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
-// MODIFICADO: Usamos las clases de visibilidad '.d-none' para saltarnos el !important del CSS
+// Usamos las clases de visibilidad '.d-none' para saltarnos el !important del CSS
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1387,7 +1387,7 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-// MODIFICADO: Estructura HTML interna completamente limpia para respetar el CSS y cambiar los botones correctamente
+// Estructura HTML interna completamente limpia para respetar el CSS y cambiar los botones correctamente
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1407,13 +1407,13 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
-    // Evitamos desajustes en el CSS 'p:first-of-type' dejando siempre el primer párrafo ahí, pero d-none si es cliente y no tiene modelo.
-    const ocultarParrafoStock = (f.sinModelo && !esAdmin);
+    // ✅ CORRECCIÓN AQUÍ: Estilos en línea para evitar que CSS lo fuerce visible
+    const estiloOculto = (f.sinModelo && !esAdmin) ? 'style="display: none !important;"' : '';
 
     let bloqueStockHTML = "";
     if (f.sinModelo) {
       bloqueStockHTML = `
-        <p class="${ocultarParrafoStock ? 'd-none' : ''}">Stock Total: ${totalStock} u.</p>
+        <p ${estiloOculto}>Stock Total: ${totalStock} u.</p>
       `;
     } else {
       bloqueStockHTML = `
