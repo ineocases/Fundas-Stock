@@ -35,19 +35,19 @@ let idFundaEditando = null;
 let fotoBase64 = ""; 
 let esAdmin = false; 
 let fundaReservando = null; 
-let imagenRecortadaTemporal = null; 
-let porcentajeEscala = 0.72; 
-let anguloRotacion = 0; 
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
-// 📸 NUEVAS VARIABLES PARA FOTO PRO INTERACTIVA
+// 📸 VARIABLES PARA FOTO PRO INTERACTIVA
+let imagenRecortadaTemporal = null; 
 let fotoTransparenteBase64 = ""; 
 let urlTransparenteGuardada = ""; 
 let opacidadSombra = 0.35;
 let usarFondo = true;
-let imgFondoObj = new Image();
-imgFondoObj.src = "fondo-estudio.png"; 
+let porcentajeEscala = 0.72; 
+let rotacionGrados = 0;
+let canvasPosX = 500;
+let canvasPosY = 500;
 
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
@@ -65,16 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Asignación de eventos de la interfaz
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
   
-  // Interceptamos el clic de "Entrar a ver Catálogo" para pedir el número ANTES de loguear
   if(document.getElementById("btnCliente")) {
     document.getElementById("btnCliente").onclick = (e) => {
       e.preventDefault();
       const datosCliente = localStorage.getItem("clienteINeoDatos");
       if (!datosCliente) {
-        // Si no tenemos sus datos, le mostramos el modal arriba del login
         document.getElementById("modalRegistroCliente").style.display = "flex";
       } else {
-        // Si ya lo conocemos, iniciamos sesión silenciosa
         loginCliente();
       }
     };
@@ -87,12 +84,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("btnRegistrarVenta")) document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
   if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagen;
   
-  // Eventos de Carrito y Reserva
   if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = agregarAlCarrito;
   if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
   if(document.getElementById("btnCerrarCarrito")) document.getElementById("btnCerrarCarrito").onclick = cerrarCarrito;
   
-  // Inyectar logo SVG de WhatsApp y dar estilo al botón del carrito
   const btnComprar = document.getElementById("btnComprarWhatsAppCarrito");
   if (btnComprar) {
     btnComprar.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20" alt="WA"> Enviar pedido por WhatsApp`;
@@ -130,7 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   if(document.getElementById("btnProcesarStock")) document.getElementById("btnProcesarStock").onclick = procesarTextoStock;
 
-  // Nuevos eventos para Base de Datos de Clientes
   if(document.getElementById("btnRegistrarCliente")) document.getElementById("btnRegistrarCliente").onclick = procesarRegistroCliente;
   if(document.getElementById("btnVerClientes")) document.getElementById("btnVerClientes").onclick = cargarVistaClientes;
   if(document.getElementById("btnCerrarClientes")) document.getElementById("btnCerrarClientes").onclick = () => {
@@ -138,7 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("fundas").style.display = "grid"; 
   };
 
-  // Inicializar UI del carrito
   actualizarUI_Carrito();
 });
 
@@ -267,7 +260,6 @@ async function procesarRegistroCliente() {
   if (!nombre || !telefonoCrudo) return alert("Por favor, completá ambos campos.");
 
   let telefono = telefonoCrudo.replace(/[^\d+]/g, ''); 
-  
   if (!telefono.startsWith("+") && !telefono.startsWith("54")) {
       telefono = "549" + telefono; 
   }
@@ -296,7 +288,6 @@ async function procesarRegistroCliente() {
 
     localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
     document.getElementById("modalRegistroCliente").style.display = "none";
-    
     loginCliente();
     
   } catch (error) {
@@ -336,10 +327,8 @@ async function cargarVistaClientes() {
                 <td style="padding: 15px; border-bottom: 1px solid #e5e5ea; color: #515154;">${nombresUnidos}</td>
                </tr>`;
     });
-    
     html += `</table>`;
     contenedor.innerHTML = html;
-    
   } catch (error) {
     console.error("Error al cargar lista de clientes:", error);
     contenedor.innerHTML = "<p style='text-align:center; color: red;'>Error al cargar la base de datos.</p>";
@@ -421,17 +410,11 @@ function actualizarUI_Carrito() {
   btnAbrir.style.display = "block"; 
 }
 
-function abrirCarrito() {
-  document.getElementById("modalCarrito").style.display = "flex";
-}
-
-function cerrarCarrito() {
-  document.getElementById("modalCarrito").style.display = "none";
-}
+function abrirCarrito() { document.getElementById("modalCarrito").style.display = "flex"; }
+function cerrarCarrito() { document.getElementById("modalCarrito").style.display = "none"; }
 
 function enviarPedidoWhatsApp() {
   if(carritoDeCompras.length === 0) return;
-
   const datosClienteStr = localStorage.getItem("clienteINeoDatos");
   let nombreCliente = "Cliente";
   if(datosClienteStr) {
@@ -465,10 +448,7 @@ async function cargarCategorias() {
   try {
     const snapshot = await getDocs(collection(db, "categorias"));
     let lista = [];
-    snapshot.forEach(doc => {
-      lista.push({ id: doc.id, nombre: doc.data().nombre });
-    });
-    
+    snapshot.forEach(doc => { lista.push({ id: doc.id, nombre: doc.data().nombre }); });
     listaCategorias = lista;
     renderizarPildorasCategorias();
     actualizarSelectFormulario();
@@ -483,11 +463,9 @@ function renderizarPildorasCategorias() {
   if (!contenedor) return;
 
   let html = `<div class="categoria-pill ${categoriaSeleccionadaFiltro === 'Todas' ? 'active' : ''}" data-cat="Todas">Todas</div>`;
-  
   listaCategorias.forEach(cat => {
     html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat.nombre ? 'active' : ''}" data-cat="${cat.nombre}">${cat.nombre}</div>`;
   });
-
   contenedor.innerHTML = html;
 
   const pills = contenedor.querySelectorAll(".categoria-pill");
@@ -512,15 +490,11 @@ function abrirModalCategorias() {
   document.getElementById("nuevoNombreCategoria").value = "";
   document.getElementById("modalCategorias").style.display = "flex";
 }
-
-function cerrarModalCategorias() {
-  document.getElementById("modalCategorias").style.display = "none";
-}
+function cerrarModalCategorias() { document.getElementById("modalCategorias").style.display = "none"; }
 
 async function crearNuevaCategoria() {
   const input = document.getElementById("nuevoNombreCategoria");
   const nombre = input.value.trim();
-
   if (!nombre) return alert("Escribí un nombre para la categoría.");
 
   const existe = listaCategorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase());
@@ -530,9 +504,7 @@ async function crearNuevaCategoria() {
     await addDoc(collection(db, "categorias"), { nombre: nombre });
     input.value = "";
     await cargarCategorias(); 
-  } catch (error) {
-    console.error(error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function eliminarCategoria(id, nombre) {
@@ -540,32 +512,26 @@ async function eliminarCategoria(id, nombre) {
     try {
       await deleteDoc(doc(db, "categorias", id));
       await cargarCategorias();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }
 }
 
 function renderizarListaCrudCategorias() {
   const contenedor = document.getElementById("listaCategoriasCrud");
   if (!contenedor) return;
-
   if (listaCategorias.length === 0) {
     contenedor.innerHTML = `<p style="text-align:center; color:#6e6e73; font-size:13px;">No hay categorías creadas aún.</p>`;
     return;
   }
-
   let html = "";
   listaCategorias.forEach(cat => {
     html += `
       <div class="item-crud-categoria">
         <span>${cat.nombre}</span>
         <button class="btn-eliminar-cat" data-id="${cat.id}" data-nombre="${cat.nombre}">🗑️</button>
-      </div>
-    `;
+      </div>`;
   });
   contenedor.innerHTML = html;
-
   contenedor.querySelectorAll(".btn-eliminar-cat").forEach(btn => {
     btn.onclick = function() {
       eliminarCategoria(this.getAttribute("data-id"), this.getAttribute("data-nombre"));
@@ -577,35 +543,26 @@ function renderizarListaCrudCategorias() {
 function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
-
   const lector = new FileReader();
   lector.onload = async function(e) {
     try {
       const datos = new Uint8Array(e.target.result);
       const libro = XLSX.read(datos, { type: 'array' });
-      
-      const nombreHoja = libro.SheetNames[0];
-      const hoja = libro.Sheets[nombreHoja];
+      const hoja = libro.Sheets[libro.SheetNames[0]];
       const filas = XLSX.utils.sheet_to_json(hoja);
       
       if (filas.length === 0) return alert("El archivo de Excel se encuentra vacío.");
 
       if (confirm(`Se detectaron ${filas.length} artículos en el archivo. ¿Proceder a importarlos masivamente?`)) {
         let importados = 0;
-
         for (const fila of filas) {
           let stockPorModeloArray = [];
-          
           if (fila.StockPorModelo) {
             stockPorModeloArray = String(fila.StockPorModelo).split(",")
               .map(item => {
                 const [modelo, cantidad] = item.split(":");
-                return {
-                  modelo: modelo ? modelo.trim() : "Único",
-                  stock: cantidad ? Number(cantidad.trim()) : 0
-                };
-              })
-              .filter(item => item.modelo !== "");
+                return { modelo: modelo ? modelo.trim() : "Único", stock: cantidad ? Number(cantidad.trim()) : 0 };
+              }).filter(item => item.modelo !== "");
           }
 
           const nuevoProducto = {
@@ -617,11 +574,9 @@ function procesarImportacionExcel(evento) {
             foto: "",
             orden: todasLasFundas.length + importados 
           };
-
           await addDoc(collection(db, "fundas"), nuevoProducto);
           importados++;
         }
-
         alert(`¡Listo! Se añadieron ${importados} productos correctamente. 🎉`);
         document.getElementById("inputExcel").value = ""; 
         cargarFundas(); 
@@ -634,7 +589,7 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO POR GESTOS
+// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO (ARRASTRAR, SOMBRA REALISTA, ZOOM, ROTAR)
 async function procesarImagenPro() {
   const fileInput = document.getElementById("fotoInput");
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -684,17 +639,28 @@ function iniciarEditorGestos(fuenteImagen) {
   document.getElementById("controlCamposPro").style.display = "block";
 
   imagenRecortadaTemporal = new Image();
-  imagenRecortadaTemporal.crossOrigin = "anonymous"; // Prevenir fallos de CORS al reeditar
-  imagenRecortadaTemporal.onload = () => dibujarCanvasGestos();
+  imagenRecortadaTemporal.crossOrigin = "anonymous"; 
+  
+  imagenRecortadaTemporal.onload = () => {
+    // Reset de controles
+    porcentajeEscala = 0.72;
+    rotacionGrados = 0;
+    canvasPosX = 500;
+    canvasPosY = 500;
+    
+    if(document.getElementById("sliderRotacion")) {
+      document.getElementById("sliderRotacion").value = 0;
+      document.getElementById("valorRotacion").innerText = "0°";
+    }
+    
+    dibujarCanvasGestos();
+  };
+  
   imagenRecortadaTemporal.src = fuenteImagen;
-
-  // Resetear valores iniciales
-  porcentajeEscala = 0.72;
-  anguloRotacion = 0;
+  
   usarFondo = document.getElementById("toggleFondo") ? document.getElementById("toggleFondo").checked : true;
   opacidadSombra = document.getElementById("sliderSombra") ? document.getElementById("sliderSombra").value / 100 : 0.35;
 
-  // Asignación de inputs interactivos
   if (document.getElementById("toggleFondo")) {
     document.getElementById("toggleFondo").onchange = (e) => {
       usarFondo = e.target.checked;
@@ -705,8 +671,15 @@ function iniciarEditorGestos(fuenteImagen) {
   if (document.getElementById("sliderSombra")) {
     document.getElementById("sliderSombra").oninput = (e) => {
       opacidadSombra = e.target.value / 100;
-      const labelSombra = document.getElementById("valorSombra");
-      if (labelSombra) labelSombra.innerText = e.target.value + "%";
+      if(document.getElementById("valorSombra")) document.getElementById("valorSombra").innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  }
+  
+  if (document.getElementById("sliderRotacion")) {
+    document.getElementById("sliderRotacion").oninput = (e) => {
+      rotacionGrados = parseFloat(e.target.value);
+      if(document.getElementById("valorRotacion")) document.getElementById("valorRotacion").innerText = e.target.value + "°";
       dibujarCanvasGestos();
     };
   }
@@ -720,13 +693,15 @@ function configurarGestosCanvas() {
   if (!canvas) return;
 
   let isDragging = false;
-  let lastX = 0;
+  let startX = 0;
+  let startY = 0;
   let prevTouchDist = null;
 
-  // --- GESTOS CON MOUSE ---
+  // Lógica de Movimiento (Arrastrar)
   canvas.onpointerdown = (e) => { 
     isDragging = true; 
-    lastX = e.clientX; 
+    startX = e.clientX; 
+    startY = e.clientY; 
     canvas.style.cursor = "grabbing"; 
     canvas.setPointerCapture(e.pointerId);
   };
@@ -735,29 +710,38 @@ function configurarGestosCanvas() {
     isDragging = false; 
     canvas.style.cursor = "grab"; 
     canvas.releasePointerCapture(e.pointerId);
+    prevTouchDist = null;
   };
 
   canvas.onpointermove = (e) => {
     if (!isDragging) return;
-    const deltaX = e.clientX - lastX;
-    anguloRotacion += deltaX * 0.5; // Deslizar horizontalmente rota el objeto
-    lastX = e.clientX;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    canvasPosX += (e.clientX - startX) * scaleX;
+    canvasPosY += (e.clientY - startY) * scaleY;
+    
+    startX = e.clientX;
+    startY = e.clientY;
     dibujarCanvasGestos();
   };
 
+  // Zoom Rueda del Mouse
   canvas.onwheel = (e) => {
     e.preventDefault();
-    porcentajeEscala += e.deltaY * -0.001;
-    porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 2.5)); // Delimitadores de zoom
+    if (e.deltaY < 0) {
+      porcentajeEscala = Math.min(porcentajeEscala + 0.05, 3.5); 
+    } else {
+      porcentajeEscala = Math.max(porcentajeEscala - 0.05, 0.1); 
+    }
     dibujarCanvasGestos();
   };
 
-  // --- GESTOS TÁCTILES (MÓVILES) ---
+  // Zoom Táctil (Pellizco)
   canvas.ontouchstart = (e) => {
-    if (e.touches.length === 1) {
-      isDragging = true;
-      lastX = e.touches[0].clientX;
-    } else if (e.touches.length === 2) {
+    if (e.touches.length === 2) {
       prevTouchDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -766,27 +750,17 @@ function configurarGestosCanvas() {
   };
 
   canvas.ontouchmove = (e) => {
-    e.preventDefault(); // Evitamos scroll nativo mientras interactuamos
-    if (e.touches.length === 1 && isDragging) {
-      const deltaX = e.touches[0].clientX - lastX;
-      anguloRotacion += deltaX * 0.5;
-      lastX = e.touches[0].clientX;
-      dibujarCanvasGestos();
-    } else if (e.touches.length === 2 && prevTouchDist) {
+    if (e.touches.length === 2 && prevTouchDist) {
+      e.preventDefault(); 
       const currentDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       porcentajeEscala *= (currentDist / prevTouchDist);
-      porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 2.5));
+      porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 3.5));
       prevTouchDist = currentDist;
       dibujarCanvasGestos();
     }
-  };
-
-  canvas.ontouchend = () => {
-    isDragging = false;
-    prevTouchDist = null;
   };
 }
 
@@ -795,31 +769,34 @@ function dibujarCanvasGestos() {
   if (!canvas || !imagenRecortadaTemporal) return;
 
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, 1000, 1000);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Renderizar fondo de estudio si está habilitado
-  if (usarFondo && imgFondoObj.complete) {
-    ctx.drawImage(imgFondoObj, 0, 0, 1000, 1000);
+  // 1. Fondo de estudio (Degradado radial Premium)
+  if (usarFondo) {
+    const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(1, "#e5e5ea");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 2. Calcular escalas métricas centradas
+  // 2. Dibujar imagen movible y rotable
+  ctx.save();
+  ctx.translate(canvasPosX, canvasPosY); 
+  ctx.rotate(rotacionGrados * Math.PI / 180); 
+  
+  // 3. Sombra realista proyectada abajo a la derecha
+  if (opacidadSombra > 0) {
+    ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetX = 30; 
+    ctx.shadowOffsetY = 40; 
+  }
+
   const limitePixel = 1000 * porcentajeEscala;
   const escala = Math.min(limitePixel / imagenRecortadaTemporal.width, limitePixel / imagenRecortadaTemporal.height);
   const anchoFinal = imagenRecortadaTemporal.width * escala;
   const altoFinal = imagenRecortadaTemporal.height * escala;
-  const radianes = (anguloRotacion * Math.PI) / 180;
-
-  // 3. Dibujar la imagen sobre el canvas
-  ctx.save();
-  ctx.translate(1000 / 2, 1000 / 2);
-  ctx.rotate(radianes);
-  
-  if (opacidadSombra > 0) {
-    ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 12;
-  }
 
   ctx.drawImage(imagenRecortadaTemporal, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
   ctx.restore();
@@ -864,7 +841,7 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
   const canvas = document.getElementById("canvasGestos");
   if (!canvas) return;
 
-  fotoBase64 = canvas.toDataURL("image/png"); // El resultado final acoplado o transparente
+  fotoBase64 = canvas.toDataURL("image/png"); 
   
   const preview = document.getElementById("previewFoto");
   preview.src = fotoBase64;
@@ -880,16 +857,12 @@ async function aplicarMontajeFinal(mostrarAlerta = false) {
 // --- HERRAMIENTAS DE FORMATEO Y STOCK ---
 function toggleMenuMenuIA() {
   const menu = document.getElementById("menuAccionesIA");
-  if(menu) {
-    menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
-  }
+  if(menu) menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
 }
 
 function toggleFormateador() {
   const caja = document.getElementById("cajaFormateador");
-  if(caja) {
-    caja.style.display = (caja.style.display === "none" || caja.style.display === "") ? "block" : "none";
-  }
+  if(caja) caja.style.display = (caja.style.display === "none" || caja.style.display === "") ? "block" : "none";
 }
 
 function procesarTextoStock() {
@@ -915,10 +888,7 @@ function procesarTextoStock() {
     str = str.replace(/\bp\b/ig, 'Pro');
     str = str.replace(/\bplus\b/ig, 'Plus');
 
-    if (str.length > 0) {
-      str = str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
+    if (str.length > 0) str = str.charAt(0).toUpperCase() + str.slice(1);
     resultado.push(`${str}:${cantidad}`);
   });
 
@@ -979,7 +949,7 @@ function procesarImagen(evento) {
 
       ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
       fotoBase64 = canvas.toDataURL("image/jpeg", 0.4);
-      fotoTransparenteBase64 = ""; // Reset de transparencia si sube foto común
+      fotoTransparenteBase64 = ""; 
 
       const preview = document.getElementById("previewFoto");
       preview.src = fotoBase64;
@@ -1055,10 +1025,7 @@ function mostrarAsistente() {
   document.getElementById("asistenteUnidades").value = "1";
   document.getElementById("modalAsistente").style.display = "flex";
 }
-
-function ocultarAsistente() {
-  document.getElementById("modalAsistente").style.display = "none";
-}
+function ocultarAsistente() { document.getElementById("modalAsistente").style.display = "none"; }
 
 function actualizarDatalistBuscador() {
   const datalist = document.getElementById("sugerenciasBuscador");
@@ -1074,10 +1041,7 @@ function actualizarDatalistBuscador() {
     }
   });
   
-  datalist.innerHTML = Array.from(sugerencias)
-    .sort() 
-    .map(texto => `<option value="${texto}"></option>`)
-    .join("");
+  datalist.innerHTML = Array.from(sugerencias).sort().map(texto => `<option value="${texto}"></option>`).join("");
 }
 
 // --- CRUD DE FUNDAS ---
@@ -1089,16 +1053,13 @@ async function cargarFundas() {
 
     snapshot.forEach((doc) => {
       const datos = doc.data();
-      if (datos.orden === undefined) {
-        necesitaMigracion = true;
-      }
+      if (datos.orden === undefined) necesitaMigracion = true;
       todasLasFundas.push({ id: doc.id, ...datos });
     });
 
     if (necesitaMigracion) {
       console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
       const batch = writeBatch(db);
-      
       todasLasFundas.forEach((funda, index) => {
         if (funda.orden === undefined) {
           const docRef = doc(db, "fundas", funda.id);
@@ -1106,7 +1067,6 @@ async function cargarFundas() {
           funda.orden = index; 
         }
       });
-
       await batch.commit();
     }
 
@@ -1115,9 +1075,7 @@ async function cargarFundas() {
     actualizarDatalistAsistente();
     actualizarDatalistBuscador(); 
     filtrarFundas();
-  } catch (error) {
-    console.error("Error al cargar o migrar fundas:", error);
-  }
+  } catch (error) { console.error("Error al cargar o migrar fundas:", error); }
 }
 
 function actualizarDatalistAsistente() {
@@ -1136,7 +1094,7 @@ async function guardarFunda() {
   btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
 
   let urlImagenFinal = fotoBase64; 
-  let urlTransparenteFinal = urlTransparenteGuardada; // Mantiene la existente si se está reeditando
+  let urlTransparenteFinal = urlTransparenteGuardada; // Conservamos la vieja por defecto
 
   const subirAImgBB = async (base64) => {
     const base64Clean = base64.split(',')[1];
@@ -1152,16 +1110,14 @@ async function guardarFunda() {
   };
 
   try {
-    // 1. Si hay una nueva imagen transparente cruda procesada, la subimos
+    // Si hay una imagen transparente nueva recién recortada, la sube
     if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
       urlTransparenteFinal = await subirAImgBB(fotoTransparenteBase64);
     }
-
-    // 2. Si hay un montaje final nuevo, lo subimos
+    // Si la foto acoplada final es nueva, la sube
     if (fotoBase64 && fotoBase64.startsWith("data:image")) {
       urlImagenFinal = await subirAImgBB(fotoBase64);
     }
-    
     btnGuardar.innerText = "💾 Guardando datos..."; 
   } catch (err) {
     console.error(err);
@@ -1172,7 +1128,6 @@ async function guardarFunda() {
   }
 
   let stockPorModeloArray = [];
-
   if (esProductoSinModelo) {
     const unidadesTotales = Number(document.getElementById("stockTotalSencillo").value) || 0;
     stockPorModeloArray = [{ modelo: "Único", stock: unidadesTotales }];
@@ -1181,12 +1136,8 @@ async function guardarFunda() {
     stockPorModeloArray = compatiblesInput.split(",")
       .map(item => {
         const [modelo, cantidad] = item.split(":");
-        return {
-          modelo: modelo ? modelo.trim() : "",
-          stock: cantidad ? Number(cantidad.trim()) : 0
-        };
-      })
-      .filter(item => item.modelo !== "");
+        return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 };
+      }).filter(item => item.modelo !== "");
   }
 
   const datosFunda = {
@@ -1196,19 +1147,17 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     foto: urlImagenFinal, 
-    fotoTransparente: urlTransparenteFinal, // Guardamos la cruda transparente en Firestore
+    fotoTransparente: urlTransparenteFinal, // El PNG oculto para ahorrar API
     sinModelo: esProductoSinModelo 
   };
 
-  if (!idFundaEditando) {
-    datosFunda.orden = todasLasFundas.length;
-  }
+  if (!idFundaEditando) datosFunda.orden = todasLasFundas.length;
 
   try {
     if (idFundaEditando) {
       if (urlImagenFinal === "" && !fotoBase64) {
          const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.foto = vieja ? (viaja.foto || "") : "";
+         datosFunda.foto = vieja ? (vieja.foto || "") : "";
       }
       if (urlTransparenteFinal === "" && !fotoTransparenteBase64) {
          const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
@@ -1237,9 +1186,7 @@ async function eliminarFunda(id) {
     try {
       await deleteDoc(doc(db, "fundas", id));
       cargarFundas();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }
 }
 
@@ -1254,7 +1201,6 @@ function abrirEditarFunda(id) {
   urlTransparenteGuardada = funda.fotoTransparente || "";
 
   document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
-
   document.getElementById("nombre").value = funda.nombre || "";
   document.getElementById("categoriaSelect").value = funda.categoria || (listaCategorias[0] ? listaCategorias[0].nombre : "");
   document.getElementById("costo").value = funda.costo ?? 0;
@@ -1285,9 +1231,7 @@ function abrirEditarFunda(id) {
     stockTotalSencillo.value = "";
 
     if (Array.isArray(funda.stockPorModelo)) {
-      document.getElementById("stockPorModelo").value = funda.stockPorModelo
-        .map(m => `${m.modelo}:${m.stock}`)
-        .join(", ");
+      document.getElementById("stockPorModelo").value = funda.stockPorModelo.map(m => `${m.modelo}:${m.stock}`).join(", ");
     }
   }
 
@@ -1299,16 +1243,16 @@ function abrirEditarFunda(id) {
     preview.style.display = "none";
   }
 
-  // Generación dinámica del botón para re-editar montaje guardado sin consumir API
   let btnReeditar = document.getElementById("btnReeditarMontaje");
   if (!btnReeditar) {
     btnReeditar = document.createElement("button");
     btnReeditar.id = "btnReeditarMontaje";
     btnReeditar.style.cssText = "width: 100%; background: #5856d6; margin-bottom: 15px; color: white; padding: 12px; border-radius: 12px; border:none; font-weight:bold; cursor:pointer;";
-    btnReeditar.innerText = "🖼️ Re-editar Montaje Guardado";
+    btnReeditar.innerText = "🖼️ Re-editar Montaje Guardado (No gasta API)";
     preview.parentNode.insertBefore(btnReeditar, preview);
   }
 
+  // Permite abrir el editor si la BD tiene el PNG crudo
   if (funda.fotoTransparente) {
     btnReeditar.style.display = "block";
     btnReeditar.onclick = (e) => {
@@ -1321,7 +1265,6 @@ function abrirEditarFunda(id) {
 
   if (document.getElementById("contenedorConfirmacion")) document.getElementById("contenedorConfirmacion").remove();
   document.getElementById("controlCamposPro").style.display = "none";
-  
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
@@ -1347,17 +1290,12 @@ async function procesarVentaAsistente() {
     if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
 
     modeloStock.stock -= unidadesAVender;
-
     try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
-        stockPorModelo: fundaEncontrada.stockPorModelo
-      });
+      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
       alert(`¡Venta registrada!`);
       ocultarAsistente();
       cargarFundas();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
     return;
   }
 
@@ -1367,17 +1305,12 @@ async function procesarVentaAsistente() {
     if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
 
     modeloStock.stock -= unidadesAVender;
-
     try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), {
-        stockPorModelo: fundaEncontrada.stockPorModelo
-      });
+      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
       alert(`¡Venta registrada!`);
       ocultarAsistente();
       cargarFundas();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }
 }
 
@@ -1410,7 +1343,6 @@ function abrirModalReservar(id) {
     }
   } else if (Array.isArray(funda.stockPorModelo)) {
     const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
-
     if (modelsDisponibles.length === 0) {
       selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
       document.getElementById("btnConfirmarWhatsApp").disabled = true;
@@ -1427,7 +1359,6 @@ function abrirModalReservar(id) {
     selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
     document.getElementById("btnConfirmarWhatsApp").disabled = false;
   }
-
   document.getElementById("modalReservar").style.display = "flex";
 }
 window.abrirModalReservar = abrirModalReservar;
@@ -1438,7 +1369,6 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
-// Usamos las clases de visibilidad '.d-none' para saltarnos el !important del CSS
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1465,9 +1395,7 @@ function coincideModelo(modelo, textoBuscado) {
   if (/\d/.test(txt)) {
     const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
     for (let variante of variantes) {
-      if (mod.includes(variante) && !txt.includes(variante)) {
-        return false;
-      }
+      if (mod.includes(variante) && !txt.includes(variante)) return false;
     }
   }
   return true;
@@ -1475,13 +1403,10 @@ function coincideModelo(modelo, textoBuscado) {
 
 function habilitarReordenamiento() {
     if (!esAdmin) return; 
-
     const contenedor = document.getElementById('fundas');
     if (!contenedor) return;
 
-    if (sortableInstance) {
-       sortableInstance.destroy();
-    }
+    if (sortableInstance) sortableInstance.destroy();
     
     sortableInstance = new Sortable(contenedor, {
         animation: 150,
@@ -1521,7 +1446,6 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-// Estructura HTML interna completamente limpia para respetar el CSS y cambiar los botones correctamente
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1535,33 +1459,19 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
     const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
 
-    const listaModelosHTML = modelosFiltrados
-      .map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`)
-      .join("<br>");
-
+    const listaModelosHTML = modelosFiltrados.map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`).join("<br>");
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-    
     const estiloOculto = (f.sinModelo && !esAdmin) ? 'style="display: none !important;"' : '';
 
     let bloqueStockHTML = "";
     if (f.sinModelo) {
-      bloqueStockHTML = `
-        <p ${estiloOculto}>Stock Total: ${totalStock} u.</p>
-      `;
+      bloqueStockHTML = `<p ${estiloOculto}>Stock Total: ${totalStock} u.</p>`;
     } else {
       bloqueStockHTML = `
         <p>Stock Total: ${totalStock} u.</p>
-        <button onclick="toggleStock(this, 'show')" 
-                class="btn-ver-stock ${mostrarDirecto ? 'd-none' : ''}">
-          Ver Stock por Modelo
-        </button>
-        <button onclick="toggleStock(this, 'hide')" 
-                class="btn-ocultar-stock ${mostrarDirecto ? '' : 'd-none'}">
-          Ocultar Stock
-        </button>
-        <div class="stock-list ${mostrarDirecto ? '' : 'd-none'}" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
-          ${listaModelosHTML}
-        </div>
+        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock ${mostrarDirecto ? 'd-none' : ''}">Ver Stock por Modelo</button>
+        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock ${mostrarDirecto ? '' : 'd-none'}">Ocultar Stock</button>
+        <div class="stock-list ${mostrarDirecto ? '' : 'd-none'}" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
       `;
     }
 
@@ -1571,12 +1481,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       const venta = f.venta || 0;
       const gananciaPesos = venta - costo;
       const porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
-
-      bloqueMétricasAdmin = `
-        <p style="font-size: 14px; color: #43a047; font-weight: 600; margin: 4px 0 12px 0;">
-          📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)
-        </p>
-      `;
+      bloqueMétricasAdmin = `<p style="font-size: 14px; color: #43a047; font-weight: 600; margin: 4px 0 12px 0;">📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)</p>`;
     }
 
     let bloqueAcciones = esAdmin ? `
@@ -1585,9 +1490,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
         <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">
-            + Añadir
-          </button>
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
         </div>`;
 
     html += `
@@ -1597,13 +1500,9 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
         <h2>${f.nombre || "Sin nombre"}</h2>
-        
         ${bloqueStockHTML}
-
         <p>$${f.venta ?? 0}</p>
-        
         ${bloqueMétricasAdmin}
-        
         ${bloqueAcciones}
       </div>
     </div>
@@ -1620,18 +1519,13 @@ function filtrarFundas() {
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
 
   const fundasFiltradas = todasLasFundas.filter((f) => {
-    if (categoriaSeleccionadaFiltro !== "Todas" && f.categoria !== categoriaSeleccionadaFiltro) {
-      return false;
-    }
-
+    if (categoriaSeleccionadaFiltro !== "Todas" && f.categoria !== categoriaSeleccionadaFiltro) return false;
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
-    
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
-    
     return nombreCoincide || compatibleCoincide;
   });
 
