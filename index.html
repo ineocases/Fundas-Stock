@@ -1,289 +1,140 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iNeo Cases - Stock</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iNeo Cases - Gestión de Catálogo</title>
+    <!-- Librerías Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        :root { --primary: #0071e3; --bg: #f5f5f7; --card-bg: #ffffff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1d1d1f; }
+        header { background: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d2d2d7; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; }
+        .card { background: var(--card-bg); border-radius: 18px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+        .card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; margin-bottom: 10px; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 600; width: 100%; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .categoria-pill { padding: 8px 16px; border-radius: 20px; background: #e5e5ea; cursor: pointer; font-size: 14px; }
+        .categoria-pill.active { background: var(--primary); color: white; }
+        .badge-categoria { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 5px; }
+    </style>
 </head>
 <body>
 
-  <div id="cargando" style="text-align: center; margin-top: 50px; font-family: Arial; font-size: 18px;">
-    ⏳ Cargando aplicación...
-  </div>
-
-  <div id="login" style="display:none;">
-    <div class="login-container">
-      <div class="login-welcome">
-        <div class="header-logo-welcome">
-          <img src="logo.svg" alt="Logo" class="app-logo-welcome">
-          <h1>iNeo Cases</h1>
-          <p class="subtitle">Descubrí los mejores accesorios premium para tu dispositivo</p>
+    <header>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button id="btnMenuHamburguesa" style="background:none; border:none; font-size:24px; cursor:pointer;">☰</button>
+            <h1 style="font-size: 20px; margin: 0;">iNeo Cases</h1>
         </div>
-        
-        <button id="btnCliente" class="btn-principal-welcome">Entrar a ver Catálogo 📱</button>
-      </div>
-      
-      <div class="admin-trigger-zone">
-        <button type="button" id="btnAbrirAdminModal" class="btn-link-admin">🔒 Acceso Personal de Trabajo</button>
-      </div>
+        <input type="text" id="buscar" placeholder="Buscar modelo o nombre..." style="padding: 8px 15px; border-radius: 8px; border: 1px solid #d2d2d7;">
+        <button id="btnAbrirCarrito" style="background: var(--primary); color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; display:none;">
+            🛒 <span id="contadorCarrito">0</span>
+        </button>
+    </header>
+
+    <div id="filtrosCategorias" style="display: flex; gap: 10px; padding: 15px 20px; overflow-x: auto;"></div>
+
+    <div id="app">
+        <div class="grid" id="fundas"></div>
+        <button id="btnNuevaFunda" style="position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,113,227,0.4); display: none;">+ Nuevo</button>
     </div>
 
-    <div id="modalAdminLogin" class="modal-admin-overlay" style="display: none;">
-      <div class="modal-admin-content">
-        <div class="modal-admin-header">
-          <h3>Panel de Administración</h3>
-          <p>Ingresá tus credenciales autorizadas</p>
-        </div>
-        
-        <div class="modal-admin-body">
-          <label for="email">Correo Electrónico</label>
-          <input id="email" type="email" placeholder="ejemplo@ineocases.com" autocomplete="email">
-          
-          <label for="password">Contraseña de Seguridad</label>
-          <input id="password" type="password" placeholder="••••••••">
-          
-          <div class="modal-admin-buttons">
-            <button id="btnLogin" class="btn-admin-submit">Ingresar al Sistema 🔐</button>
-            <button type="button" id="btnCerrarAdminModal" class="btn-secundario" style="width: 100%; margin-top: 8px;">Volver atrás</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="app" style="display:none;">
-    <div class="header-logo">
-      <div class="header-logo-left">
-        <img src="logo.svg" alt="Logo" class="app-logo">
-        <h1>iNeo Cases</h1>
-      </div>
-      
-      <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-    
-    <div class="top-bar">
-      <input id="buscar" placeholder="Buscar producto o modelo...">
-      <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
-      
-      <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar Excel</button>
-      <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-    </div>
-
-    <div id="filtrosCategorias" class="categorias-container"></div>
-
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    <div id="sidebarMenu" class="sidebar">
-      <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
-      <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
-      <button id="btnVerClientes" class="sidebar-btn" style="display: none;">👥 Ver Clientes Registrados</button>
-    </div>
-
-    <div id="modalCategorias" style="display:none;">
-      <div class="modal-content">
-        <h3>📁 Administrar Mis Categorías</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Creá o eliminá las categorías de tu negocio:</p>
-        
-        <label>Nombre de la nueva categoría</label>
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-          <input id="nuevoNombreCategoria" placeholder="Ej: Corte, Auriculares, Fundas..." style="margin-bottom:0;">
-          <button id="btnGuardarCategoria" style="white-space: nowrap;">Añadir ➕</button>
-        </div>
-
-        <label>Categorías existentes</label>
-        <div id="listaCategoriasCrud" style="max-height: 250px; overflow-y: auto; border: 1px solid #d2d2d7; border-radius: 12px; background: #f5f5f7; padding: 10px;"></div>
-
-        <div class="modal-buttons" style="margin-top: 20px;">
-          <button type="button" id="btnCerrarCategorias" class="btn-secundario" style="width: 100%;">Cerrar Ventana</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="agregar" style="display:none">
-      <div class="modal-content">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: relative;">
-          <h3 id="modalTitulo" style="margin: 0;">Nuevo Artículo</h3>
-          
-          <div style="position: relative; display: inline-block;">
-            <button id="btnAccionesIA" type="button" style="background: linear-gradient(135deg, #5856d6, #ff2d55); color: white; padding: 8px 14px; font-size: 13px; font-weight: bold;">
-              ✨ Acciones IA
-            </button>
+    <!-- MODAL AGREGAR / EDITAR PRODUCTO -->
+    <div id="agregar" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitulo">Nuevo Artículo</h2>
+            <input type="text" id="nombre" placeholder="Nombre del producto" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            <select id="categoriaSelect" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;"></select>
             
-            <div id="menuAccionesIA" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #d2d2d7; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; width: 200px; margin-top: 8px; overflow: hidden;">
-              <button id="btnCrearFoto" type="button" style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: white; color: #1d1d1f; border-radius: 0; border-bottom: 1px solid #eee; font-size: 14px; transition: background 0.2s;">
-                📷 Crear Foto Pro
-              </button>
-              <button id="btnMenuFormatear" type="button" style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: white; color: #1d1d1f; border-radius: 0; font-size: 14px; transition: background 0.2s;">
-                📦 Formatear Stock
-              </button>
+            <button id="btnToggleModelo" class="btn-primary" style="background: #6e6e73; margin-bottom: 10px;">🚫 No Modelo</button>
+            <label id="labelStock" style="font-size: 13px; font-weight: 600;">Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
+            <input type="text" id="stockPorModelo" placeholder="Ej: iPhone 13:5, iPhone 14:10" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            <input type="number" id="stockTotalSencillo" placeholder="Cantidad en stock" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px; display:none;">
+
+            <input type="number" id="costo" placeholder="Costo" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            <input type="number" id="venta" placeholder="Precio de Venta" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            
+            <input type="file" id="fotoInput" accept="image/*" style="margin: 10px 0;">
+            <button id="btnCrearFoto" class="btn-primary" style="background:#5856d6; margin-bottom: 10px;">📷 Crear foto Pro</button>
+            
+            <!-- INICIO DE LA NUEVA SECCIÓN DE GESTOS -->
+            <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #fff; padding: 10px 15px; border-radius: 12px; border: 1px solid #d2d2d7;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin: 0;">
+                  <input type="checkbox" id="toggleFondo" checked style="width: 18px; height: 18px; margin: 0; accent-color: #0071e3;">
+                  Fondo de Estudio
+                </label>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; background: #f5f5f7; padding: 15px; border-radius: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                  <label for="sliderSombra" style="font-weight: 600; font-size: 13px; color: #1d1d1f; display: flex; justify-content: space-between;">
+                    <span>Sombra Realista:</span> <span id="valorSombra">35%</span>
+                  </label>
+                  <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                  <label for="sliderRotacion" style="font-weight: 600; font-size: 13px; color: #1d1d1f; display: flex; justify-content: space-between;">
+                    <span>Rotar Producto:</span> <span id="valorRotacion">0°</span>
+                  </label>
+                  <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #0071e3;">
+                </div>
+              </div>
+              <p style="text-align:center; font-size: 13px; color: #6e6e73; margin-bottom: 8px;">
+                👆 <b>Arrastrá</b> para mover el producto. <b>Pellizcá</b> (o rueda del mouse) para zoom.
+              </p>
+              <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #e5e5ea; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);">
+                <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
+              </div>
             </div>
-          </div>
+            <!-- FIN DE LA NUEVA SECCIÓN DE GESTOS -->
+
+            <img id="previewFoto" style="max-width: 100%; margin-top: 10px; display: none; border-radius: 8px;">
+            
+            <button id="guardarFunda" class="btn-primary" style="margin-top: 20px;">Guardar</button>
+            <button onclick="ocultarFormulario()" style="background: none; border: none; color: #ff3b30; width: 100%; margin-top: 10px; cursor: pointer;">Cancelar</button>
         </div>
-        
-        <label>Nombre del producto</label>
-        <input id="nombre" placeholder="Ej: Auriculares Bluetooth Pro">
-
-        <label>Categoría</label>
-        <select id="categoriaSelect"></select>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <label id="labelStock" style="margin-bottom: 0;">Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
-          <button type="button" id="btnToggleModelo" style="padding: 6px 12px; font-size: 12px; background: #6e6e73; color: white; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer;">🚫 No Modelo</button>
-        </div>
-        
-        <div id="cajaFormateador" style="display: none; margin-bottom: 15px; background: #f5f5f7; padding: 12px; border-radius: 12px; border: 1px dashed #d2d2d7;">
-           <p style="font-size: 13px; color: #6e6e73; margin-top: 0; margin-bottom: 8px;">Pegá tu lista de stock cruda acá (Ej: Iph 11 Pro x2):</p>
-           <textarea id="textoCrudoStock" rows="6" style="width: 100%; border-radius: 8px; border: 1px solid #d2d2d7; padding: 8px; font-family: monospace; resize: none; margin-bottom: 8px; box-sizing: border-box"></textarea>
-           <button type="button" id="btnProcesarStock" style="width: 100%; background: #34c759; color: white;">Convertir a Formato Automático 🚀</button>
-        </div>
-
-        <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
-        <input id="stockTotalSencillo" type="number" placeholder="Ej: 45 (Total de piezas en stock)" style="display: none; margin-bottom: 15px;">
-        
-        <label>Costo de lista ($)</label>
-        <input id="costo" type="number" placeholder="0">
-        
-        <label>Precio de venta ($)</label>
-        <input id="venta" type="number" placeholder="0">
-
-        <label>Foto del producto</label>
-        <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
-        
-        <img id="previewFoto" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
-        
-        <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
-          <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
-              <input type="checkbox" id="toggleFondo" checked style="width: auto; margin: 0;">
-              Aplicar Fondo de Estudio
-            </label>
-
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-              <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-                Opacidad de la Sombra: <span id="valorSombra">35%</span>
-              </label>
-              <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
-            </div>
-          </div>
-
-          <p style="text-align:center; font-size: 13px; color: #6e6e73; margin-bottom: 8px;">
-            👆 Deslizá a los lados para rotar. Pellizcá (o usá la rueda del mouse) para zoom.
-          </p>
-          
-          <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #f5f5f7;">
-            <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
-          </div>
-        </div>
-        <div class="modal-buttons">
-          <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
-          <button id="guardarFunda">Guardar</button>
-        </div>
-      </div>
-    </div>  
-
-    <div id="modalAsistente" style="display:none;">
-      <div class="modal-content">
-        <h3>🤖 Asistente Virtual de Ventas</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente:</p>
-        
-        <label>Nombre del producto</label>
-        <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar...">
-        <datalist id="listaProductos"></datalist>
-
-        <label>Modelo / Variante vendida</label>
-        <input id="asistenteModelo" placeholder="Ej: 12, Blanco, Único">
-
-        <label>Unidades vendidas</label>
-        <input id="asistenteUnidades" type="number" value="1" min="1">
-
-        <div class="modal-buttons">
-          <button type="button" onclick="ocultarAsistente()" class="btn-secundario">Cerrar</button>
-          <button id="btnRegistrarVenta">Confirmar Venta 🛒</button>
-        </div>
-      </div>
     </div>
 
-    <div id="modalReservar" style="display:none;">
-      <div class="modal-content">
-        <h3>🛒 Añadir al Carrito</h3>
-        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
-        
-        <label>Seleccioná tu variante / modelo</label>
-        <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
-        
-        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
-        
-        <div class="modal-buttons">
-          <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
-          <button id="btnConfirmarWhatsApp" style="background: #0071e3; color: white; font-weight: 600;">Añadir al Carrito 🛒</button>
+    <!-- MODALS ADICIONALES (Carrito, Login, etc.) -->
+    <div id="modalCarrito" class="modal"><div class="modal-content">
+        <h2>Tu Carrito</h2>
+        <div id="listaItemsCarrito"></div>
+        <div style="text-align: right; font-weight: bold; margin: 15px 0;">Total: <span id="totalCarrito">$0</span></div>
+        <button id="btnComprarWhatsAppCarrito" class="btn-primary"></button>
+        <button onclick="cerrarCarrito()" style="background:none; border:none; margin-top:10px; width:100%;">Cerrar</button>
+    </div></div>
+
+    <div id="modalAdminLogin" class="modal"><div class="modal-content">
+        <h2>Acceso Admin</h2>
+        <input type="email" id="email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0;">
+        <input type="password" id="password" placeholder="Contraseña" style="width: 100%; padding: 10px; margin: 10px 0;">
+        <button id="btnLogin" class="btn-primary">Ingresar</button>
+    </div></div>
+
+    <div id="login" class="modal" style="display:flex;">
+        <div class="modal-content">
+            <h2 style="text-align:center;">Bienvenido a iNeo</h2>
+            <p style="text-align:center;">Ingresá tus datos para ver el catálogo</p>
+            <input type="text" id="registroNombre" placeholder="Tu Nombre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            <input type="text" id="registroTelefono" placeholder="WhatsApp (Ej: 1112345678)" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #d2d2d7; border-radius: 8px;">
+            <button id="btnRegistrarCliente" class="btn-primary">Entrar al Catálogo 🚀</button>
+            <button id="btnAbrirAdminModal" style="background:none; border:none; margin-top:20px; color:#6e6e73; width:100%; cursor:pointer; font-size:12px;">Soy Administrador</button>
         </div>
-      </div>
     </div>
 
-    <div id="pantallaClientes" style="display:none; padding: 20px 0;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0;">👥 Clientes Registrados</h2>
-        <button id="btnCerrarClientes" class="btn-secundario" style="width: max-content; padding: 8px 16px;">⬅️ Volver</button>
-      </div>
-      <div id="listaClientesRender"></div>
+    <!-- SIDEBAR -->
+    <div id="sidebarOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none;"></div>
+    <div id="sidebarMenu" style="position:fixed; top:0; left:-300px; width:280px; height:100%; background:white; transition:0.3s; z-index:1001; padding:20px;">
+        <h2 style="margin-top:0;">Menu</h2>
+        <button id="btnCambiarRol" class="btn-primary" style="margin-bottom:10px;">🔐 Cambiar Rol</button>
+        <button id="btnGestorCategorias" class="btn-primary" style="background:#6e6e73; display:none;">📂 Categorías</button>
+        <button id="btnVerClientes" class="btn-primary" style="background:#5856d6; display:none; margin-top:10px;">👥 Clientes</button>
     </div>
 
-    <div id="fundas"></div>
-
-    <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
-
-    <button id="btnAbrirCarrito" style="position: fixed; bottom: 80px; right: 20px; background: #1d1d1f; color: white; border: none; border-radius: 50px; padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 998; display: none;">
-      🛒 Mi Pedido <span id="contadorCarrito" style="background: #ff2d55; border-radius: 50%; padding: 2px 6px; font-size: 12px; margin-left: 5px;">0</span>
-    </button>
-
-    <div id="modalCarrito" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); justify-content: flex-end; z-index: 9999;">
-      <div class="modal-carrito-content" style="background: white; width: 100%; max-width: 400px; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column;">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d2d2d7; padding-bottom: 15px; margin-bottom: 15px;">
-          <h2 style="margin: 0; font-size: 20px;">🛒 Resumen de Compra</h2>
-          <button id="btnCerrarCarrito" style="background: none; border: none; font-size: 18px; cursor: pointer;">❌</button>
-        </div>
-        
-        <div id="listaItemsCarrito" style="flex-grow: 1; overflow-y: auto;">
-          </div>
-        
-        <div style="border-top: 1px solid #d2d2d7; padding-top: 15px; margin-top: auto;">
-          <h3 style="display: flex; justify-content: space-between; font-size: 18px;">Total: <span id="totalCarrito">$0</span></h3>
-          <button id="btnComprarWhatsAppCarrito" style="width: 100%; background: #25D366; color: white; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">
-            Enviar Pedido a WhatsApp 💬
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <div id="modalRegistroCliente" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); justify-content: center; align-items: center; z-index: 9999; padding: 20px; box-sizing: border-box;">
-    <div class="modal-content">
-      <h3>👋 ¡Bienvenido a iNeo Cases!</h3>
-      <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Para ver el catálogo y hacer reservas, dejanos tus datos:</p>
-      
-      <label>Nombre y Apellido</label>
-      <input id="registroNombre" type="text" placeholder="Ej: Juan Pérez">
-      
-      <label>WhatsApp (Sin 0 ni 15)</label>
-      <input id="registroTelefono" type="number" placeholder="Ej: 1145678901">
-      
-      <div class="modal-buttons" style="margin-top: 15px;">
-        <button id="btnRegistrarCliente" style="width: 100%;">Entrar al Catálogo 🚀</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="app.js"></script>
-
+    <script type="module" src="app.js"></script>
 </body>
 </html>
