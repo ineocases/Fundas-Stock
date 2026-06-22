@@ -164,36 +164,6 @@
         
         <img id="previewFoto" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
         
-        <div id="controlCamposPro" style="display: none; margin: 15px 0; font-family: -apple-system, sans-serif;">
-          <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
-              <input type="checkbox" id="toggleFondo" checked style="width: auto; margin: 0;">
-              Aplicar Fondo de Estudio
-            </label>
-
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-              <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-                Opacidad de la Sombra: <span id="valorSombra">35%</span>
-              </label>
-              <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-              <label for="sliderRotacion" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-                Rotación: <span id="valorRotacion">0°</span>
-              </label>
-              <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #1d1d1f;">
-            </div>
-          </div>
-
-          <p style="text-align:center; font-size: 13px; color: #6e6e73; margin-bottom: 8px;">
-            👆 Deslizá a los lados para rotar. Pellizcá (o usá la rueda del mouse) para zoom.
-          </p>
-          
-          <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #f5f5f7;">
-            <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
-          </div>
-        </div>
         <div class="modal-buttons">
           <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
           <button id="guardarFunda">Guardar</button>
@@ -236,6 +206,53 @@
         <div class="modal-buttons">
           <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
           <button id="btnConfirmarWhatsApp" style="background: #0071e3; color: white; font-weight: 600;">Añadir al Carrito 🛒</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalFotoPro" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 10000; padding: 20px; box-sizing: border-box;">
+      <div class="modal-content" style="max-width: 550px; width: 100%; max-height: 90vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <h3>📸 Editor Inteligente de Foto Pro</h3>
+        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Remové el fondo de tu producto y colocale un fondo de estudio premium.</p>
+        
+        <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #f5f5f7; position: relative;">
+          <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
+        </div>
+        <p style="text-align:center; font-size: 12px; color: #6e6e73; margin-top: 8px; margin-bottom: 15px;">
+          👆 Arrastrá para rotar/mover. Pellizcá (o usá la rueda del mouse) para controlar el zoom.
+        </p>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <button type="button" id="btnBorrarFondo" style="flex: 1; background: linear-gradient(135deg, #ff2d55, #ff9500); color: white; font-weight: bold; padding: 12px; border-radius: 12px; border: none; cursor: pointer;">✨ Borrar Fondo</button>
+          <button type="button" id="btnReEditar" style="background: #6e6e73; color: white; padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600;">🔄 Re-editar Foto</button>
+        </div>
+
+        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estilo de Fondo</label>
+        <select id="selectFondoPro" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 15px; font-size: 15px; background: white;">
+          <option value="estudio">Fondo Blanco de Estudio (fondo-estudio.png)</option>
+          <option value="blanco">Blanco Liso</option>
+          <option value="original">Original (Dejar como está)</option>
+        </select>
+
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
+              Opacidad de la Sombra: <span id="valorSombra">35%</span>
+            </label>
+            <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label for="sliderRotacion" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
+              Rotación Fina: <span id="valorRotacion">0°</span>
+            </label>
+            <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #1d1d1f;">
+          </div>
+        </div>
+
+        <div class="modal-buttons" style="display: flex; gap: 10px;">
+          <button type="button" id="btnCerrarFotoPro" class="btn-secundario" style="flex: 1;">Cancelar</button>
+          <button type="button" id="btnGuardarFotoPro" style="flex: 1; background: #0071e3; color: white; font-weight: bold;">Listo ✅</button>
         </div>
       </div>
     </div>
