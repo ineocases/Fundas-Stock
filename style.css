@@ -1,40 +1,39 @@
 /* ==========================================================================
-   SISTEMA DE DISEÑO: VARIABLES GLOBALES (Apple-Style)
+   SISTEMA DE DISEÑO: VARIABLES GLOBALES (Aesthetic from image_0.png)
    ========================================================================== */
 :root {
-    /* Paleta de Colores */
+    /* Paleta de Colores (Clean & Apple-esque) */
     --bg-app: #f5f5f7;
     --bg-surface: #ffffff;
-    --bg-surface-translucent: rgba(255, 255, 255, 0.88);
     
-    --color-primary: #0071e3;
-    --color-primary-hover: #0077ed;
-    --color-success: #28a745;
-    --color-success-hover: #218838;
-    --color-danger: #ff3b30;
-    --color-danger-hover: #d63028;
+    --color-primary: #000000; /* Deep black for main buttons and text */
+    --color-primary-hover: #1d1d1f;
+    --color-secondary: #f2f2f7; /* Lighter gray for badges, inactive pills */
+    --color-secondary-hover: #e5e5ea;
     
     --text-main: #1d1d1f;
     --text-secondary: #6e6e73;
     --text-muted: #86868b;
+    --text-success: #28a745; /* Still use green for profit */
+    --text-danger: #ff3b30; /* Still use red for profit or actions */
     
     --border-light: #d2d2d7;
     --border-lighter: #e5e5ea;
+    --border-heavy: #000000;
 
-    /* Sombras y Profundidad */
+    /* Sombras (Minimal) */
+    --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.05);
     --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.15);
-    --shadow-focus: 0 0 0 4px rgba(0, 113, 227, 0.15);
 
-    /* Radios de borde */
+    /* Radios de borde (Rounded) */
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 20px;
     --radius-modal: 24px;
     --radius-pill: 980px;
 
-    /* Tipografía y Transiciones */
+    /* Tipografía (Clean, Modern) */
     --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -46,9 +45,9 @@
 body {
     font-family: var(--font-base);
     background: var(--bg-app);
-    max-width: 1200px;
+    max-width: 1400px; /* Slightly wider max-width for modern feel */
     margin: auto;
-    padding: 20px;
+    padding: 20px 40px; /* More side padding */
     color: var(--text-main);
     -webkit-font-smoothing: antialiased;
 }
@@ -61,138 +60,13 @@ h1 {
 }
 
 /* ==========================================================================
-   CONTROLES DE FORMULARIO (Inputs, Selects, Botones)
-   ========================================================================== */
-.top-bar {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-}
-
-#buscar {
-    flex: 1;
-    min-width: 200px;
-    margin-bottom: 0;
-}
-
-input, select, textarea {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    background: var(--bg-surface);
-    font-size: 16px; /* Evita auto-zoom en iOS */
-    box-sizing: border-box;
-    margin-bottom: 15px;
-    transition: var(--transition-fast);
-    color: var(--text-main);
-}
-
-input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-focus);
-}
-
-label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 5px;
-}
-
-button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    background: var(--color-primary);
-    color: white;
-    font-size: 15px;
-    font-weight: 600;
-    transition: var(--transition-fast);
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-button:hover {
-    background: var(--color-primary-hover);
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: scale(0.97);
-}
-
-#btnImportarExcel { background: var(--color-success); }
-#btnImportarExcel:hover { background: var(--color-success-hover); }
-
-/* ==========================================================================
-   CATEGORÍAS (Pills y CRUD)
-   ========================================================================== */
-.categorias-container {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 5px 0 20px 0;
-    margin-bottom: 15px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-}
-
-.categorias-container::-webkit-scrollbar { display: none; }
-
-.categoria-pill {
-    background: var(--border-lighter);
-    color: var(--text-main);
-    padding: 8px 18px;
-    border-radius: var(--radius-pill);
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: var(--transition-fast);
-    -webkit-tap-highlight-color: transparent;
-}
-
-.categoria-pill:hover { background: var(--border-light); }
-.categoria-pill.active {
-    background: var(--text-main);
-    color: var(--bg-surface);
-}
-
-.item-crud-categoria {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: var(--bg-surface);
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    margin-bottom: 8px;
-    border: 1px solid var(--border-lighter);
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.btn-eliminar-cat {
-    background: var(--color-danger);
-    color: white;
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-}
-.btn-eliminar-cat:hover { background: var(--color-danger-hover); }
-
-/* ==========================================================================
    ENCABEZADO Y NAVEGACIÓN
    ========================================================================== */
 .header-logo {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 25px;
+    margin-bottom: 30px; /* Increased margin */
     width: 100%;
 }
 
@@ -215,7 +89,6 @@ button:active {
     height: 50px;
     display: block;
     object-fit: contain;
-    flex-shrink: 0;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
@@ -247,21 +120,245 @@ button:active {
 
 .menu-hamburguesa:hover { background: transparent; transform: none; }
 
-/* --- SIDEBAR --- */
+/* ==========================================================================
+   CONTROLES DE FORMULARIO (Top-bar, Search, etc.)
+   ========================================================================== */
+.top-bar {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px; /* Margin for separation */
+    justify-content: center; /* Center top-bar contents */
+}
+
+#buscar {
+    flex: none; /* Fixed width as per image */
+    width: 100%; /* Spans full width of container */
+    max-width: 900px; /* Max width as per image */
+    text-align: center; /* Centered placeholder text */
+    padding: 14px 20px 14px 45px; /* Pad for centered text and icon */
+    position: relative; /* For icon overlay */
+}
+
+/* Placeholder styles */
+#buscar::placeholder {
+    color: var(--text-muted);
+}
+
+/* Pseudo-element for centered magnify glass icon in search input */
+.top-bar:has(#buscar) {
+    position: relative;
+    max-width: 900px; /* Re-apply max width to container */
+    margin: 0 auto 25px auto; /* Centered with margin */
+}
+
+.top-bar:has(#buscar)::before {
+    content: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
+    position: absolute;
+    left: calc(50% - 130px); /* Position icon before centered text */
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   CATEGORÍAS (Pills)
+   ========================================================================== */
+.categorias-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 5px 0 20px 0;
+    margin-bottom: 25px; /* Margin below pills */
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    justify-content: center; /* Centered category list */
+}
+
+.categorias-container::-webkit-scrollbar { display: none; }
+
+.categoria-pill {
+    background: var(--color-secondary);
+    color: var(--text-main);
+    padding: 8px 18px;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.categoria-pill:hover { background: var(--color-secondary-hover); }
+
+/* Active category styling: Black background, white text */
+.categoria-pill.active {
+    background: var(--color-primary);
+    color: var(--bg-surface);
+}
+
+/* ==========================================================================
+   GRILLA DE PRODUCTOS (Cards)
+   ========================================================================== */
+#fundas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4-column grid as per image */
+    gap: 20px;
+    transition: var(--transition-smooth);
+}
+
+.card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-minimal); /* Smaller, more distinct shadow */
+    border: 1px solid var(--border-lighter);
+    overflow: hidden;
+    position: relative;
+    transition: var(--transition-smooth);
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   TARJETA INDIVIDUAL (Card elements)
+   ========================================================================== */
+/* Badge (Category) positioned top-left */
+.badge-categoria {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--color-secondary);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 5;
+}
+
+.card-img {
+    width: 100%;
+    height: 280px; /* Fixed height for consistency */
+    object-fit: contain; /* Contain for product shapes, with background */
+    background: var(--bg-surface); /* Light gray for image container */
+    padding: 20px; /* Pad images inwards */
+    box-sizing: border-box; /* Include padding in dimensions */
+}
+
+/* Main card body sections */
+.card-body { padding: 20px; }
+
+/* Product Name/Title */
+.card-body h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: var(--text-main);
+}
+
+/* ==========================================================================
+   STOCK & MODEL DETAILS (Gray section with icon)
+   ========================================================================== */
+/* The Stock text (Gray, small, box icon) */
+.card-body p:has(b) {
+    font-size: 13px !important;
+    color: var(--text-secondary) !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px !important;
+}
+
+/* Pseudo-element for box icon before stock text */
+.card-body p:has(b)::before {
+    content: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236e6e73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-package"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>');
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Hide specific elements as per main client view */
+/* The buttons were already updated in JS, but I'll update their layout and visual logic here in CSS to match the image. */
+
+/* Large, Bold Price */
+.card-body p:last-of-type {
+    font-size: 20px !important;
+    color: var(--text-main) !important;
+    font-weight: 800 !important;
+    margin-bottom: 15px !important;
+    line-height: 1.2;
+}
+
+/* ==========================================================================
+   BOTONES DE TARJETA (Visual design from image)
+   ========================================================================== */
+/* Universal layout for card body text groups to separate from buttons */
+.card-body h2, .card-body p { margin-bottom: 0; }
+
+/* Main wide buttons for both states */
+.btn-ver-stock, .btn-ocultar-stock, .card-body button {
+    width: 100% !important;
+    font-size: 13px !important;
+    padding: 12px 10px !important;
+    border-radius: var(--radius-sm) !important;
+    text-transform: none !important;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px; /* Spacing between sections */
+    margin-bottom: 0 !important;
+}
+
+/* Main action button: Black background, white text */
+.btn-ver-stock, .btn-ocultar-stock, .card-body div:not(:last-child) button {
+    background: var(--color-primary) !important;
+    color: white !important;
+    border: none !important;
+}
+
+/* Lower button: White background, black border */
+/* The "+ Añadir" button in client view is in its own div, but I can target based on order or class. I'll target the element as it appears on the image. */
+.card-body div:last-child button {
+    background: var(--bg-surface) !important;
+    color: var(--color-primary) !important;
+    border: 1px solid var(--border-heavy) !important;
+}
+
+.card-body div:last-child button:hover {
+    background: var(--color-secondary) !important;
+}
+
+/* Profit and Admin specific elements */
+.card-body p:has(b):not(:has(b:contains(Ganancia))) { display: none; } /* Hide only stock total on client card as per image */
+
+/* Metrics (Gain) logic is only for admin view, and the image is only client view. I'll maintain that the gain styling continues as per provided CSS. */
+
+/* ==========================================================================
+   SIDEBAR & MODALS
+   ========================================================================== */
+/* Sidebar (Slide-in) */
 .sidebar {
     position: fixed;
-    top: 0; right: -280px; width: 280px; height: 100%;
-    background-color: var(--bg-surface-translucent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    top: 0;
+    right: -280px;
+    width: 280px;
+    height: 100%;
+    background-color: var(--bg-surface);
     box-shadow: -5px 0 30px rgba(0,0,0,0.05);
-    transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: var(--transition-smooth);
     z-index: 1000;
-    padding-top: 70px;
+    padding-top: 80px; /* Margin for header */
     box-sizing: border-box;
 }
 
-.sidebar.active { right: 0; }
+.sidebar.active {
+    right: 0;
+}
 
 .sidebar-btn {
     background: transparent;
@@ -281,6 +378,7 @@ button:active {
 .sidebar-btn:hover { background: rgba(0, 0, 0, 0.02); transform: none; }
 .sidebar-btn:active { background: rgba(0, 0, 0, 0.04); }
 
+/* Overlay for Sidebar and Modals */
 .sidebar-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -293,77 +391,15 @@ button:active {
 }
 .sidebar-overlay.active { display: block; }
 
-/* ==========================================================================
-   TARJETAS DE PRODUCTO (GRILLA)
-   ========================================================================== */
-#fundas {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
-    transition: var(--transition-smooth);
-}
-
-.card {
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-lighter);
-    overflow: hidden;
-    position: relative;
-    transition: var(--transition-smooth);
-}
-
-.card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-}
-
-.badge-categoria {
-    position: absolute;
-    top: 12px; left: 12px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    padding: 6px 12px;
-    border-radius: var(--radius-md);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--color-primary);
-    border: 1px solid rgba(0, 113, 227, 0.15);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    z-index: 5;
-}
-
-.card-img {
-    width: 100%;
-    height: 280px;
-    object-fit: cover;
-    background: var(--bg-app);
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.card:hover .card-img { transform: scale(1.04); }
-
-.card-body { padding: 20px; }
-.card-body h2 {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 8px 0;
-    color: var(--text-main);
-}
-
-/* ==========================================================================
-   MODALES Y VENTANAS EMERGENTES (REDISEÑO SEGURO)
-   ========================================================================== */
-/* No forzamos display en CSS. Confiamos en el HTML (display:none) y el JS (display:flex) */
-#agregar, #modalAsistente, #modalReservar, #modalCategorias, #modalCarrito, .modal-admin-overlay {
+/* Modals (Centers on desktop) */
+#agregar, #modalAsistente, #modalReservar, #modalCategorias, #modalCarrito, .modal-admin-overlay, #modalRegistroCliente {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     justify-content: center;
-    align-items: center; /* En escritorio se centran */
+    align-items: center; /* Centered in desktop view */
     z-index: 9999;
     padding: 20px;
     box-sizing: border-box;
@@ -397,104 +433,73 @@ button:active {
 .btn-secundario:hover { background: var(--border-light); }
 
 /* ==========================================================================
-   PANTALLAS DE LOGIN Y CARGA
+   INPUTS, SELECTS, TEXTAREAS (Modern, Clean)
    ========================================================================== */
-#login { 
-    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=80') no-repeat center center; 
-    background-size: cover; 
-    min-height: 100vh; 
-    /* El JS inyecta el display: flex aquí, así que el CSS se adapta */
-    justify-content: center; 
-    align-items: center; 
-    padding: 20px; 
-    box-sizing: border-box; 
-    position: relative; 
-}
-
-#login::before { 
-    content: ''; 
-    position: absolute; 
-    top: 0; left: 0; width: 100%; height: 100%; 
-    background: linear-gradient(135deg, rgba(10, 10, 12, 0.45) 0%, rgba(0, 113, 227, 0.25) 100%); 
-    z-index: 1; 
-}
-
-.login-container { 
-    width: 100%; 
-    max-width: 380px; 
-    background: var(--bg-surface-translucent); 
-    backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 28px; 
-    padding: 35px 24px; 
-    box-shadow: var(--shadow-lg); 
-    border: 1px solid rgba(255, 255, 255, 0.4); 
-    z-index: 2; 
-    display: flex; 
-    flex-direction: column; 
-    box-sizing: border-box;
-}
-
-.header-logo-welcome { text-align: center; margin-bottom: 25px; }
-
-.app-logo-welcome { 
-    width: 80px; height: 80px; 
-    margin-bottom: 10px; 
-    object-fit: contain;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-}
-
-.subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-top: 5px;
-    line-height: 1.4;
-}
-
-.btn-principal-welcome { 
-    width: 100%; padding: 14px; 
-    font-size: 16px; border-radius: 14px; 
-    margin-top: 5px; margin-bottom: 15px;
-}
-
-.btn-link-admin { 
-    background: rgba(0, 0, 0, 0.05); 
-    color: #515154; 
-    font-size: 13px; font-weight: 600; 
-    border: none; padding: 10px 16px; 
-    border-radius: var(--radius-pill);
-    margin: 0 auto; display: block;
-    width: max-content; cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-link-admin:hover { background: rgba(0, 0, 0, 0.09); transform: none; }
-
-/* Modal específico de Login Admin */
-.modal-admin-header { text-align: center; margin-bottom: 22px; }
-.modal-admin-header h3 { margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: var(--text-main); }
-.modal-admin-header p { margin: 0; font-size: 13px; color: var(--text-secondary); }
-.modal-admin-body label { margin-bottom: 6px; }
-.modal-admin-body input { margin-bottom: 18px; }
-
-.btn-admin-submit {
-    width: 100%; padding: 14px; 
-    font-size: 16px; border-radius: 14px; 
-    margin-top: 5px;
-}
-
-/* --- PANTALLA DE CARGA --- */
-#cargando {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+input, select, textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
     background: var(--bg-surface);
-    /* JS se ocupa de ocultarlo luego */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+    transition: var(--transition-fast);
+    color: var(--text-main);
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--text-muted); /* Darker on focus */
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05); /* Minimal highlight */
+}
+
+label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    background: var(--color-primary);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    transition: var(--transition-fast);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:hover {
+    background: var(--color-primary-hover);
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+#btnImportarExcel { background: var(--color-success); }
+#btnImportarExcel:hover { background: var(--color-success-hover); }
+
+/* Profit and Admin specific elements */
+.card-body p:has(b):not(:has(b:contains(Ganancia))) { display: none; } /* Hide only stock total on client card as per image */
+
+/* Profit Metrics Styling (Maintaining profit logic as green is useful) */
+.card-body p:has(b:contains(Ganancia)) {
+    color: var(--text-success) !important;
+}
+
+/* Profit Percentage logic from JS needs special targeting to maintain green styling */
+/* JS inyecta p con clase: `metrics-admin-text` */
+.metrics-admin-text {
+    color: var(--text-success) !important;
+    font-weight: 600;
 }
 
 /* ==========================================================================
@@ -502,8 +507,9 @@ button:active {
    ========================================================================== */
 .fab-asistente {
     position: fixed;
-    bottom: 30px; right: 30px;
-    background: var(--text-main);
+    bottom: 30px;
+    right: 30px;
+    background: var(--color-primary); /* Primary black fab */
     color: white;
     border-radius: var(--radius-pill);
     padding: 14px 22px;
@@ -517,40 +523,21 @@ button:active {
 }
 
 .fab-asistente:hover {
-    background: var(--color-primary);
+    background: var(--color-primary-hover);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
 }
 
-/* Clases utilitarias seguras */
+/* Clases utilitarias */
 .hidden, .d-none { display: none !important; }
-
-/* ==========================================================================
-   ANIMACIONES CLAVE
-   ========================================================================== */
-@keyframes deslizarPantalla {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes fadeInAdmin {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes scaleInModal {
-    from { transform: scale(0.94); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
 
 /* ==========================================================================
    RESPONSIVE DESIGN (OPTIMIZACIÓN MÓVIL)
    ========================================================================== */
+@media (max-width: 992px) {
+    #fundas { grid-template-columns: repeat(3, 1fr); }
+}
+
 @media (max-width: 600px) {
     body { padding: 12px; }
     h1 { font-size: 22px; }
@@ -561,7 +548,7 @@ button:active {
 
     .badge-categoria {
         top: 8px; left: 8px; padding: 4px 8px;
-        font-size: 9px; border-radius: var(--radius-sm);
+        font-size: 8px; border-radius: var(--radius-sm);
     }
 
     .card-body { padding: 10px; }
@@ -570,7 +557,12 @@ button:active {
         display: -webkit-box; -webkit-line-clamp: 2; 
         -webkit-box-orient: vertical; overflow: hidden; height: 36px; 
     }
-    .card-body p { font-size: 12px !important; margin-bottom: 8px !important; }
+    /* Updated small gray stock text in responsive as per body logic above */
+    .card-body p:has(b) { font-size: 11px !important; margin-bottom: 8px !important; }
+    .card-body p:has(b)::before { width: 14px; height: 14px; }
+
+    /* Large price in responsive */
+    .card-body p:last-of-type { font-size: 16px !important; font-weight: 700 !important; }
 
     .btn-ver-stock, .btn-ocultar-stock, .card-body button {
         padding: 8px 6px !important; font-size: 11px !important;
@@ -578,12 +570,12 @@ button:active {
     }
 
     /* En móviles, los modales regulares se pegan abajo tipo "Bottom Sheet" Apple */
-    #agregar, #modalAsistente, #modalReservar, #modalCategorias, #modalCarrito {
+    #agregar, #modalAsistente, #modalReservar, #modalCategorias, #modalCarrito, #modalRegistroCliente {
         align-items: flex-end;
         padding: 0; /* Para que toque los bordes laterales y abajo */
     }
 
-    /* El login de Admin y Cliente se mantiene centrado en móvil */
+    /* El login de Admin se mantiene centrado en móvil */
     .modal-admin-overlay { padding: 20px; align-items: center; }
 
     .modal-content {
