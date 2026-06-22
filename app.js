@@ -247,7 +247,6 @@ function solicitarDatosCliente() {
   const datosCliente = localStorage.getItem("clienteINeoDatos");
   if (!datosCliente) {
     document.getElementById("app").style.display = "none";
-    // Si por algún motivo entra a la app sin datos (ej: borró caché pero sigue la sesión), lo deslogueamos.
     signOut(auth);
     document.getElementById("login").style.display = "flex";
   }
@@ -290,7 +289,6 @@ async function procesarRegistroCliente() {
     localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
     document.getElementById("modalRegistroCliente").style.display = "none";
     
-    // Una vez procesado el número, forzamos el login que nos mandará directo al catálogo
     loginCliente();
     
   } catch (error) {
@@ -411,7 +409,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = carritoDeCompras.length;
+  contador.innerText = Split? carritoDeCompras.length : carritoDeCompras.length;
   btnAbrir.style.display = "block"; 
 }
 
@@ -1306,6 +1304,7 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
+// MODIFICADO: Usamos las clases de visibilidad '.d-none' para saltarnos el !important del CSS
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1313,13 +1312,13 @@ window.toggleStock = (btn, action) => {
   const btnOcultar = card.querySelector('.btn-ocultar-stock');
 
   if (action === 'show') {
-    stockDiv.style.display = 'block';
-    btnVer.style.display = 'none';
-    btnOcultar.style.display = 'block';
+    stockDiv.classList.remove('d-none');
+    btnVer.classList.add('d-none');
+    btnOcultar.classList.remove('d-none');
   } else {
-    stockDiv.style.display = 'none';
-    btnVer.style.display = 'block';
-    btnOcultar.style.display = 'none';
+    stockDiv.classList.add('d-none');
+    btnVer.classList.remove('d-none');
+    btnOcultar.classList.add('d-none');
   }
 };
 
@@ -1388,6 +1387,7 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
+// MODIFICADO: Estructura HTML interna completamente limpia para respetar el CSS y cambiar los botones correctamente
 function renderizarFundas(arrayDeFundas, textoBuscado = "") {
   const contenedor = document.getElementById("fundas");
   let html = "";
@@ -1407,27 +1407,26 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
     
+    // Evitamos desajustes en el CSS 'p:first-of-type' dejando siempre el primer párrafo ahí, pero d-none si es cliente y no tiene modelo.
+    const ocultarParrafoStock = (f.sinModelo && !esAdmin);
+
     let bloqueStockHTML = "";
     if (f.sinModelo) {
-      if (esAdmin) {
-        bloqueStockHTML = `<p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>`;
-      } else {
-        bloqueStockHTML = ``;
-      }
+      bloqueStockHTML = `
+        <p class="${ocultarParrafoStock ? 'd-none' : ''}">Stock Total: ${totalStock} u.</p>
+      `;
     } else {
       bloqueStockHTML = `
-        <p style="font-size: 16px; margin-bottom: 10px;"><b>Stock Total: ${totalStock} u.</b></p>
+        <p>Stock Total: ${totalStock} u.</p>
         <button onclick="toggleStock(this, 'show')" 
-                class="btn-ver-stock"
-                style="width:100%; margin-bottom:10px; background:#000000; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'none' : 'block'}">
-          🔍 Ver Stock por Modelo
+                class="btn-ver-stock ${mostrarDirecto ? 'd-none' : ''}">
+          Ver Stock por Modelo
         </button>
         <button onclick="toggleStock(this, 'hide')" 
-                class="btn-ocultar-stock"
-                style="width:100%; margin-bottom:10px; background:#000000; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'block' : 'none'}">
-          ⬆️ Ocultar Stock
+                class="btn-ocultar-stock ${mostrarDirecto ? '' : 'd-none'}">
+          Ocultar Stock
         </button>
-        <div class="stock-list" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5; display: ${mostrarDirecto ? 'block' : 'none'};">
+        <div class="stock-list ${mostrarDirecto ? '' : 'd-none'}" style="margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">
           ${listaModelosHTML}
         </div>
       `;
@@ -1447,7 +1446,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       `;
     }
 
-    // MODIFICADO: Botón "Añadir" en negro y texto blanco, sin logo de WhatsApp
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
@@ -1469,7 +1467,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
         
         ${bloqueStockHTML}
 
-        <p style="font-size: 17px; color:#000000; font-weight:700; margin-bottom: 2px;">$${f.venta ?? 0}</p>
+        <p>$${f.venta ?? 0}</p>
         
         ${bloqueMétricasAdmin}
         
