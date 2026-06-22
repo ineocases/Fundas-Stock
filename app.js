@@ -469,7 +469,7 @@ function actualizarUI_Carrito() {
   });
 
   totalEl.innerText = `$${total}`;
-  contador.innerText = carritoDeCompras.length; 
+  contador.innerText = carriageDeCompras.length; 
   btnAbrir.style.display = "block"; 
 }
 
@@ -525,67 +525,71 @@ function renderizarPildorasCategorias() {
   const contenedor = document.getElementById("filtrosCategorias");
   if (!contenedor) return;
 
-  let html = `<div class="categoria-pill ${categoriaSeleccionadaFiltro === 'Todas' ? 'active' : ''}" data-cat="Todas">Todas</div>`;
+  let html = `<div class="categoria-pill ${categoriaSeleccionadaFiltro === 'Todas' ? 'active' : ''}" onclick="filtrarPorPildora('Todas')">Todas</div>`;
   listaCategorias.forEach(cat => {
-    html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat.nombre ? 'active' : ''}" data-cat="${cat.nombre}">${cat.nombre}</div>`;
+    html += `<div class="categoria-pill ${categoriaSeleccionadaFiltro === cat.nombre ? 'active' : ''}" onclick="filtrarPorPildora('${cat.nombre}')">${cat.nombre}</div>`;
   });
   contenedor.innerHTML = html;
-
-  const pills = contenedor.querySelectorAll(".categoria-pill");
-  pills.forEach(pill => {
-    pill.onclick = function() {
-      categoriaSeleccionadaFiltro = this.getAttribute("data-cat");
-      pills.forEach(p => p.classList.remove("active"));
-      this.classList.add("active");
-      filtrarFundas();
-    };
-  });
 }
+
+window.filtrarPorPildora = function(nombreCategoria) {
+  categoriaSeleccionadaFiltro = nombreCategoria;
+  renderizarPildorasCategorias();
+  filtrarFundas();
+};
 
 function actualizarSelectFormulario() {
   const select = document.getElementById("categoriaSelect");
   if (!select) return;
-  select.innerHTML = listaCategorias.map(cat => `<option value="${cat.nombre}">${cat.nombre}</option>`).join("");
+  let html = "";
+  listaCategorias.forEach(cat => {
+    html += `<option value="${cat.nombre}">${cat.nombre}</option>`;
+  });
+  select.innerHTML = html;
 }
 
 function abrirModalCategorias() {
   toggleSidebar();
-  document.getElementById("nuevoNombreCategoria").value = "";
-  document.getElementById("modalCategorias").style.display = "flex";
+  document.getElementById("modalGestorCategorias").style.display = "flex";
 }
-function cerrarModalCategorias() { document.getElementById("modalCategorias").style.display = "none"; }
+
+function cerrarModalCategorias() {
+  document.getElementById("modalGestorCategorias").style.display = "none";
+  document.getElementById("nuevaCategoriaNombre").value = "";
+}
 
 async function crearNuevaCategoria() {
-  const input = document.getElementById("nuevoNombreCategoria");
-  const nombre = input.value.trim();
-  if (!nombre) return alert("Escribí un nombre para la categoría.");
-
-  const existe = listaCategorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase());
-  if (existe) return alert("Esa categoría ya existe.");
+  const nombre = document.getElementById("nuevaCategoriaNombre").value.trim();
+  if (!nombre) return alert("Ingresá un nombre válido para la categoría.");
 
   try {
     await addDoc(collection(db, "categorias"), { nombre: nombre });
-    input.value = "";
-    await cargarCategorias(); 
-  } catch (error) { console.error(error); }
+    document.getElementById("nuevaCategoriaNombre").value = "";
+    await cargarCategorias();
+  } catch (error) {
+    console.error("Error al crear categoría:", error);
+  }
 }
 
 async function eliminarCategoria(id, nombre) {
-  if (confirm(`¿Estás seguro que quieres eliminar la categoría "${nombre}"?`)) {
-    try {
-      await deleteDoc(doc(db, "categorias", id));
-      await cargarCategorias();
-    } catch (error) { console.error(error); }
+  if (!confirm(`¿Estás seguro de eliminar la categoría "${nombre}"? Las fundas con esta categoría quedarán sin clasificar.`)) return;
+  try {
+    await deleteDoc(doc(db, "categorias", id));
+    await cargarCategorias();
+  } catch (error) {
+    console.error("Error al eliminar categoría:", error);
   }
 }
 
 function renderizarListaCrudCategorias() {
   const contenedor = document.getElementById("listaCategoriasCrud");
   if (!contenedor) return;
+
   if (listaCategorias.length === 0) {
-    contenedor.innerHTML = `<p style="text-align:center; color:#6e6e73; font-size:13px;">No hay categorías creadas aún.</p>`;
+    contenedor.innerHTML = `<p style="text-align:center; color:#6e6e73; font-size:13px; margin-top:20px;">No hay categorías creadas aún.</p>`;
     return;
   }
+
   let html = "";
   listaCategorias.forEach(cat => {
     html += `
@@ -595,6 +599,7 @@ function renderizarListaCrudCategorias() {
       </div>`;
   });
   contenedor.innerHTML = html;
+
   contenedor.querySelectorAll(".btn-eliminar-cat").forEach(btn => {
     btn.onclick = function() {
       eliminarCategoria(this.getAttribute("data-id"), this.getAttribute("data-nombre"));
@@ -602,10 +607,11 @@ function renderizarListaCrudCategorias() {
   });
 }
 
-// 📥 PROCESADOR LECTOR DE EXCEL
-function procesarImportacionExcel(evento) {
+// 📊 IMPORTACIÓN MASIVA DESDE EXCEL
+async function procesarImportacionExcel(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
+
   const lector = new FileReader();
   lector.onload = async function(e) {
     try {
@@ -613,67 +619,112 @@ function procesarImportacionExcel(evento) {
       const libro = XLSX.read(datos, { type: 'array' });
       const hoja = libro.Sheets[libro.SheetNames[0]];
       const filas = XLSX.utils.sheet_to_json(hoja);
-      
+
       if (filas.length === 0) return alert("El archivo de Excel se encuentra vacío.");
 
-      if (confirm(`Se detectaron ${filas.length} artículos en el archivo. ¿Proceder a importarlos masivamente?`)) {
-        let importados = 0;
-        for (const fila of filas) {
-          let stockPorModeloArray = [];
-          if (fila.StockPorModelo) {
-            stockPorModeloArray = String(fila.StockPorModelo).split(",")
-              .map(item => {
-                const [modelo, cantidad] = item.split(":");
-                return { modelo: modelo ? modelo.trim() : "Único", stock: cantidad ? Number(cantidad.trim()) : 0 };
-              }).filter(item => item.modelo !== "");
+      if (confirm(`Se detectaron ${filas.length} filas en el archivo. ¿Deseas importarlas o actualizarlas en la base de datos?`)) {
+        const batch = writeBatch(db);
+        let contadorNuevos = 0;
+
+        for (let fila of filas) {
+          const nombreProducto = fila.Producto || fila.producto || fila.Nombre || fila.nombre;
+          if (!nombreProducto) continue;
+
+          const costoProd = Number(fila.Costo || fila.costo || 0);
+          const ventaProd = Number(fila.Venta || fila.venta || fila.Precio || fila.precio || 0);
+          const categoriaProd = fila.Categoria || fila.categoria || "Varios";
+          const imagenProd = fila.Foto || fila.foto || fila.Imagen || fila.imagen || "";
+
+          let stockArray = [];
+          let esSinModelo = true;
+
+          const variantesTexto = fila.Variantes || fila.variantes || fila.Modelos || fila.modelos || "";
+          if (variantesTexto) {
+            esSinModelo = false;
+            stockArray = variantesTexto.split(",").map(v => {
+              const [mod, cant] = v.split(":");
+              return {
+                modelo: mod ? mod.trim() : "",
+                stock: cant ? Number(cant.trim()) : 0
+              };
+            }).filter(item => item.modelo !== "");
+          } else {
+            const cantSencilla = Number(fila.Stock || fila.stock || fila.Cantidad || fila.cantidad || 0);
+            stockArray = [{ modelo: "Único", stock: cantSencilla }];
           }
 
-          const nuevoProducto = {
-            nombre: fila.Nombre || "Artículo Sin Nombre",
-            categoria: fila.Categoria || "Varios",
-            costo: Number(fila.Costo || 0),
-            venta: Number(fila.Venta || 0),
-            stockPorModelo: stockPorModeloArray,
-            foto: "",
-            orden: todasLasFundas.length + importados 
-          };
-          await addDoc(collection(db, "fundas"), nuevoProducto);
-          importados++;
+          const coincidenciaExistente = todasLasFundas.find(f => f.nombre.toLowerCase().trim() === nombreProducto.toLowerCase().trim());
+
+          if (coincidenciaExistente) {
+            const docRef = doc(db, "fundas", coincidenciaExistente.id);
+            batch.update(docRef, {
+              categoria: categoriaProd,
+              costo: costoProd,
+              venta: ventaProd,
+              stockPorModelo: stockArray,
+              sinModelo: esSinModelo,
+              foto: imagenProd || coincidenciaExistente.foto
+            });
+          } else {
+            const nuevaRef = doc(collection(db, "fundas"));
+            batch.set(nuevaRef, {
+              nombre: nombreProducto,
+              categoria: categoriaProd,
+              costo: costoProd,
+              venta: ventaProd,
+              stockPorModelo: stockArray,
+              sinModelo: esSinModelo,
+              foto: imagenProd || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60",
+              orden: todasLasFundas.length + contadorNuevos
+            });
+            contadorNuevos++;
+          }
         }
-        alert(`¡Listo! Se añadieron ${importados} productos correctamente. 🎉`);
-        document.getElementById("inputExcel").value = ""; 
-        cargarFundas(); 
+
+        await batch.commit();
+        alert("¡Importación y actualización de Excel completada con éxito!");
+        await cargarFundas();
       }
-    } catch (error) {
-      console.error("Error al importar:", error);
-      alert("Hubo problemas al procesar las celdas del Excel. Valida los nombres de columnas.");
+    } catch (err) {
+      console.error("Error al procesar archivo Excel:", err);
+      alert("Error al leer el archivo Excel. Asegurate de que tenga el formato correcto.");
     }
+    evento.target.value = ""; 
   };
   lector.readAsArrayBuffer(archivo);
 }
 
-// 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO (MODAL FOTO PRO)
+// 📸 --- ESTUDIO FOTOGRÁFICO INTERACTIVO (FOTO PRO COPIADO DESDE ORIGINAL) ---
 function abrirEditorFotoPro() {
-  if (!imagenOriginalTemporal) {
-    alert("Por favor, selecciona una foto de tu galería antes de abrir el Editor Pro.");
+  if (!fotoBase64) {
+    alert("Primero debés cargar o seleccionar una foto en el formulario.");
     return;
   }
   document.getElementById("modalFotoPro").style.display = "flex";
   
-  // Reseteamos valores visuales del modal a su estado base
-  document.getElementById("sliderSombra").value = 35;
-  document.getElementById("valorSombra").innerText = "35%";
-  document.getElementById("sliderRotacion").value = 0;
-  document.getElementById("valorRotacion").innerText = "0°";
-  document.getElementById("selectFondoPro").value = tipoFondoElegido;
-
   porcentajeEscala = 0.72;
   rotacionGrados = 0;
   canvasPosX = 500;
   canvasPosY = 500;
   opacidadSombra = 0.35;
+  tipoFondoElegido = "estudio";
 
-  dibujarCanvasGestos();
+  document.getElementById("selectFondoPro").value = "estudio";
+  document.getElementById("sliderSombra").value = "35";
+  document.getElementById("valorSombra").innerText = "35%";
+  document.getElementById("sliderRotacion").value = "0";
+  document.getElementById("valorRotacion").innerText = "0°";
+
+  document.getElementById("btnBorrarFondo").style.display = "inline-block";
+  document.getElementById("btnReEditar").style.display = "none";
+
+  imagenOriginalTemporal = new Image();
+  imagenOriginalTemporal.src = fotoBase64;
+  imagenOriginalTemporal.onload = () => {
+    imagenRecortadaTemporal = null;
+    fotoTransparenteBase64 = "";
+    dibujarCanvasGestos();
+  };
 }
 
 function cerrarEditorFotoPro() {
@@ -681,143 +732,140 @@ function cerrarEditorFotoPro() {
 }
 
 async function ejecutarBorradoFondoIA() {
-  const fileInput = document.getElementById("fotoInput");
-  const file = fileInput.files[0];
-  if (!file && !fotoTransparenteBase64) return alert("No se encontró la imagen original para procesar.");
-
   const btn = document.getElementById("btnBorrarFondo");
-  const textoOriginal = btn.innerText;
-  btn.innerText = "⏳ Borrando...";
   btn.disabled = true;
+  btn.innerText = "⏳ Removiendo Fondo...";
 
   try {
+    const rawBase64 = fotoBase64.split(",")[1];
     const formData = new FormData();
-    formData.append("image_file", file);
+    formData.append("image_file_b64", rawBase64);
     formData.append("size", "auto");
 
-    const respuestaAPI = await fetch("https://api.remove.bg/v1.0/removebg", {
+    const respuesta = await fetch("https://api.remove.bg/v1.3/removebg", {
       method: "POST",
       headers: { "X-Api-Key": REMOVE_BG_API_KEY },
       body: formData
     });
 
-    if (!respuestaAPI.ok) throw new Error("Error en la API de Remove.bg.");
+    if (!respuesta.ok) throw new Error("Fallo en API de Remove.bg");
 
-    const blobImagenRecortada = await respuestaAPI.blob();
-    const reader = new FileReader();
-    
-    reader.onloadend = function() {
-      fotoTransparenteBase64 = reader.result; 
+    const blob = await respuesta.blob();
+    const lector = new FileReader();
+    lector.onloadend = () => {
+      fotoTransparenteBase64 = lector.result;
       imagenRecortadaTemporal = new Image();
-      imagenRecortadaTemporal.crossOrigin = "anonymous";
-      imagenRecortadaTemporal.onload = () => {
-        dibujarCanvasGestos();
-        btn.innerText = textoOriginal;
-        btn.disabled = false;
-      };
       imagenRecortadaTemporal.src = fotoTransparenteBase64;
+      imagenRecortadaTemporal.onload = () => {
+        btn.disabled = false;
+        btn.innerText = "✨ Fondo Removido!";
+        btn.style.display = "none";
+        document.getElementById("btnReEditar").style.display = "inline-block";
+        dibujarCanvasGestos();
+      };
     };
-    reader.readAsDataURL(blobImagenRecortada);
+    lector.readAsDataURL(blob);
 
-  } catch (err) {
-    console.error(err);
-    alert("Hubo un problemita al conectar con Remove.bg. Verifica tu API Key o conexión.");
-    btn.innerText = textoOriginal;
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo remover el fondo. Verificá tu API Key o conexión.");
     btn.disabled = false;
+    btn.innerText = "✨ Borrar Fondo con IA";
   }
 }
 
 function reEditarMontaje() {
-  porcentajeEscala = 0.72;
-  rotacionGrados = 0;
-  canvasPosX = 500;
-  canvasPosY = 500;
-  
-  if (document.getElementById("sliderRotacion")) {
-    document.getElementById("sliderRotacion").value = 0;
-    document.getElementById("valorRotacion").innerText = "0°";
-  }
+  imagenRecortadaTemporal = null;
+  fotoTransparenteBase64 = "";
+  document.getElementById("btnReEditar").style.display = "none";
+  document.getElementById("btnBorrarFondo").style.display = "inline-block";
+  document.getElementById("btnBorrarFondo").innerText = "✨ Borrar Fondo con IA";
   dibujarCanvasGestos();
 }
 
 function configurarGestosCanvas() {
-  const canvas = document.getElementById("canvasGestos");
+  const canvas = document.getElementById("canvasFotoPro");
   if (!canvas) return;
 
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let prevTouchDist = null;
+  let estaArrastrando = false;
+  let ultimaX, ultimaY;
+  let distanciaInicialPinch = 0;
 
-  canvas.onpointerdown = (e) => { 
-    isDragging = true; 
-    startX = e.clientX; 
-    startY = e.clientY; 
-    canvas.style.cursor = "grabbing"; 
-    canvas.setPointerCapture(e.pointerId);
-  };
-  
-  canvas.onpointerup = (e) => { 
-    isDragging = false; 
-    canvas.style.cursor = "grab"; 
-    canvas.releasePointerCapture(e.pointerId);
-    prevTouchDist = null;
-  };
+  // Soporte Mouse
+  canvas.addEventListener("mousedown", (e) => {
+    estaArrastrando = true;
+    ultimaX = e.clientX;
+    ultimaY = e.clientY;
+  });
 
-  canvas.onpointermove = (e) => {
-    if (!isDragging) return;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    canvasPosX += (e.clientX - startX) * scaleX;
-    canvasPosY += (e.clientY - startY) * scaleY;
-    
-    startX = e.clientX;
-    startY = e.clientY;
+  canvas.addEventListener("mousemove", (e) => {
+    if (!estaArrastrando) return;
+    const dx = e.clientX - ultimaX;
+    const dy = e.clientY - ultimaY;
+    canvasPosX += dx * 2; 
+    canvasPosY += dy * 2; 
+    ultimaX = e.clientX;
+    ultimaY = e.clientY;
     dibujarCanvasGestos();
-  };
+  });
 
-  canvas.onwheel = (e) => {
+  window.addEventListener("mouseup", () => { estaArrastrando = false; });
+
+  // Soporte Rueda de Mouse para Zoom rápido
+  canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
     if (e.deltaY < 0) {
-      porcentajeEscala = Math.min(porcentajeEscala + 0.05, 3.5); 
+      porcentajeEscala = Math.min(porcentajeEscala + 0.04, 3);
     } else {
-      porcentajeEscala = Math.max(porcentajeEscala - 0.05, 0.1); 
+      porcentajeEscala = Math.max(porcentajeEscala - 0.04, 0.1);
     }
     dibujarCanvasGestos();
-  };
+  }, { passive: false });
 
-  canvas.ontouchstart = (e) => {
-    if (e.touches.length === 2) {
-      prevTouchDist = Math.hypot(
+  // Soporte Táctil (Mobile Gestures)
+  canvas.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 1) {
+      estaArrastrando = true;
+      ultimaX = e.touches[0].clientX;
+      ultimaY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      estaArrastrando = false;
+      distanciaInicialPinch = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
     }
-  };
+  });
 
-  canvas.ontouchmove = (e) => {
-    if (e.touches.length === 2 && prevTouchDist) {
-      e.preventDefault(); 
-      const currentDist = Math.hypot(
+  canvas.addEventListener("touchmove", (e) => {
+    if (estaArrastrando && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - ultimaX;
+      const dy = e.touches[0].clientY - ultimaY;
+      canvasPosX += dx * 2;
+      canvasPosY += dy * 2;
+      ultimaX = e.touches[0].clientX;
+      ultimaY = e.touches[0].clientY;
+      dibujarCanvasGestos();
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      porcentajeEscala *= (currentDist / prevTouchDist);
-      porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 3.5));
-      prevTouchDist = currentDist;
+      const factor = dist / distanciaInicialPinch;
+      distanciaInicialPinch = dist;
+      porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala * factor, 3));
       dibujarCanvasGestos();
     }
-  };
+  });
+
+  canvas.addEventListener("touchend", () => { estaArrastrando = false; });
 }
 
 function dibujarCanvasGestos() {
-  const canvas = document.getElementById("canvasGestos");
+  const canvas = document.getElementById("canvasFotoPro");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  
-  // Usamos la imagen recortada si existe, de lo contrario la original base
+
   let imagenADibujar = imagenRecortadaTemporal || imagenOriginalTemporal;
   if (!imagenADibujar) return;
 
@@ -828,208 +876,174 @@ function dibujarCanvasGestos() {
     if (imgFondoEstudio.complete && imgFondoEstudio.naturalWidth > 0) {
       ctx.drawImage(imgFondoEstudio, 0, 0, canvas.width, canvas.height);
     } else {
-      const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
+      const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 700);
       grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(1, "#e5e5ea");
+      grad.addColorStop(1, "#d2d2d7");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   } else if (tipoFondoElegido === "blanco") {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else if (tipoFondoElegido === "original") {
-    // Si elige original, idealmente renderizamos la foto sin transparencia al fondo
-    // o simplemente la dejamos sin fondo artificial para que quede como venía de fábrica.
+  } else {
+    ctx.fillStyle = "#f5f5f7";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (imagenOriginalTemporal) {
+      ctx.drawImage(imagenOriginalTemporal, 0, 0, canvas.width, canvas.height);
+    }
   }
+
+  // Si el fondo es el original y no hay recorte, no volvemos a dibujar el objeto arriba
+  if (tipoFondoElegido === "original" && !imagenRecortadaTemporal) return;
 
   ctx.save();
-  ctx.translate(canvasPosX, canvasPosY); 
-  ctx.rotate(rotacionGrados * Math.PI / 180); 
-  
-  // La sombra solo se aplica si no elegimos el fondo "original"
-  if (opacidadSombra > 0 && tipoFondoElegido !== "original") {
+  ctx.translate(canvasPosX, canvasPosY);
+  ctx.rotate((rotacionGrados * Math.PI) / 180);
+
+  const wO = imagenADibujar.naturalWidth || 600;
+  const hO = imagenADibujar.naturalHeight || 600;
+  const maxDim = Math.max(wO, hO);
+  const factorFit = 800 / maxDim;
+  const finalW = wO * factorFit * porcentajeEscala;
+  const finalH = hO * factorFit * porcentajeEscala;
+
+  // Dibujar sombra suave estilizada de Apple si hay recorte
+  if (imagenRecortadaTemporal && opacidadSombra > 0) {
     ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetX = 30; 
-    ctx.shadowOffsetY = 40; 
+    ctx.shadowBlur = 45;
+    ctx.shadowOffsetX = 10;
+    ctx.shadowOffsetY = 25;
   }
 
-  const limitePixel = 1000 * porcentajeEscala;
-  const escala = Math.min(limitePixel / imagenADibujar.width, limitePixel / imagenADibujar.height);
-  const anchoFinal = imagenADibujar.width * escala;
-  const altoFinal = imagenADibujar.height * escala;
-
-  ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
+  ctx.drawImage(imagenADibujar, -finalW / 2, -finalH / 2, finalW, finalH);
   ctx.restore();
 }
 
 async function aplicarMontajeFinal() {
-  const canvas = document.getElementById("canvasGestos");
-  if (!canvas) return;
+  const btn = document.getElementById("btnGuardarFotoPro");
+  btn.disabled = true;
+  btn.innerText = "⏳ Guardando en Formulario...";
 
-  fotoBase64 = canvas.toDataURL("image/png"); 
-  
-  const preview = document.getElementById("previewFoto");
-  preview.src = fotoBase64;
-  preview.style.display = "block";
+  try {
+    const canvas = document.getElementById("canvasFotoPro");
+    const base64MontajeCompleto = canvas.toDataURL("image/jpeg", 0.9);
 
-  cerrarEditorFotoPro();
+    // Actualizamos la vista previa del formulario principal
+    const preview = document.getElementById("previewFoto");
+    preview.src = base64MontajeCompleto;
+    preview.style.display = "block";
+
+    // Reasignamos las variables globales correspondientes
+    fotoBase64 = base64MontajeCompleto;
+
+    alert("¡Montaje fotográfico aplicado con éxito al formulario!");
+    cerrarEditorFotoPro();
+  } catch (error) {
+    console.error(error);
+    alert("Hubo un problema al aplicar el lienzo.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Aplicar Estudio a Producto";
+  }
 }
 
-// --- HERRAMIENTAS DE FORMATEO Y STOCK ---
+// --- FORMATEADOR INTELIGENTE DE TEXTO ---
+function toggleFormateador() {
+  const modal = document.getElementById("modalFormatearTexto");
+  if (modal.style.display === "flex") {
+    modal.style.display = "none";
+  } else {
+    modal.style.display = "flex";
+    document.getElementById("textoIngresoStock").value = "";
+    document.getElementById("textoIngresoStock").focus();
+  }
+}
+
 function toggleMenuMenuIA() {
   const menu = document.getElementById("menuAccionesIA");
-  if(menu) menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
-}
-
-function toggleFormateador() {
-  const caja = document.getElementById("cajaFormateador");
-  if(caja) caja.style.display = (caja.style.display === "none" || caja.style.display === "") ? "block" : "none";
+  menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
 
 function procesarTextoStock() {
-  const textoCrudo = document.getElementById("textoCrudoStock").value;
-  if (!textoCrudo.trim()) return alert("Pegá una lista primero.");
+  const rawText = document.getElementById("textoIngresoStock").value.trim();
+  if (!rawText) return alert("Por favor ingresá algún texto descriptivo.");
 
-  const lineas = textoCrudo.split('\n');
-  const resultado = [];
+  try {
+    let lineas = rawText.split("\n");
+    let nombreDetectado = "";
+    let modelosDetectados = [];
+    let precioVenta = 0;
 
-  lineas.forEach(linea => {
-    let str = linea.trim();
-    if (!str) return;
+    lineas.forEach(linea => {
+      let l = linea.toLowerCase();
+      if (l.includes("funda") || l.includes("case") || l.includes("funda premium")) {
+        nombreDetectado = linea.replace(/funda|case/gi, "").trim();
+        nombreDetectado = "Funda " + nombreDetectado.charAt(0).toUpperCase() + nombreDetectado.slice(1);
+      }
+      if (l.includes("iphone") || l.includes("samsung") || l.includes("moto") || l.includes("xiaomi")) {
+        let partes = linea.split(/[:\-]/);
+        if (partes.length >= 2) {
+          let mod = partes[0].trim();
+          let cant = parseInt(partes[1].replace(/[^\d]/g, "")) || 0;
+          modelosDetectados.push(`${mod}:${cant}`);
+        } else {
+          modelosDetectados.push(`${linea.trim()}:1`);
+        }
+      }
+      if (l.includes("$") || l.includes("precio") || l.includes("venta")) {
+        let num = parseInt(linea.replace(/[^\d]/g, ""));
+        if (num > 0) precioVenta = num;
+      }
+    });
 
-    let cantidad = 1; 
-    const matchCant = str.match(/x\s*(\d+)$/i);
-    if (matchCant) {
-      cantidad = matchCant[1];
-      str = str.replace(/x\s*\d+$/i, '').trim(); 
+    if (nombreDetectado) document.getElementById("nombre").value = nombreDetectado;
+    if (precioVenta > 0) document.getElementById("venta").value = precioVenta;
+    if (modelosDetectados.length > 0) {
+      document.getElementById("stockPorModelo").value = modelosDetectados.join(", ");
+      if (esProductoSinModelo) {
+        toggleModoModelo();
+      }
     }
 
-    str = str.replace(/^(Iph|iphone|i)\s*/i, '');
-    str = str.replace(/\bpm\b/ig, 'Pro Max');
-    str = str.replace(/\bp\b/ig, 'Pro');
-    str = str.replace(/\bplus\b/ig, 'Plus');
+    alert("¡Texto procesado! Se autocompletaron los campos detectados en el formulario.");
+    toggleFormateador();
 
-    if (str.length > 0) str = str.charAt(0).toUpperCase() + str.slice(1);
-    resultado.push(`${str}:${cantidad}`);
-  });
-
-  document.getElementById("stockPorModelo").value = resultado.join(', ');
-  document.getElementById("textoCrudoStock").value = "";
-  document.getElementById("cajaFormateador").style.display = "none";
-}
-
-function toggleModoModelo() {
-  esProductoSinModelo = !esProductoSinModelo;
-  const labelStock = document.getElementById('labelStock');
-  const stockPorModelo = document.getElementById('stockPorModelo');
-  const stockTotalSencillo = document.getElementById('stockTotalSencillo');
-  const cajaFormateador = document.getElementById('cajaFormateador');
-  const btnToggleModelo = document.getElementById('btnToggleModelo');
-
-  if (esProductoSinModelo) {
-    labelStock.textContent = "Cantidad Total de Piezas en Stock";
-    stockPorModelo.style.display = 'none';
-    stockTotalSencillo.style.display = 'block';
-    if (cajaFormateador) cajaFormateador.style.display = 'none';
-    btnToggleModelo.textContent = "✨ Usar Variantes";
-    btnToggleModelo.style.background = "#0071e3";
-    stockPorModelo.value = "";
-  } else {
-    labelStock.textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
-    stockPorModelo.style.display = 'block';
-    stockTotalSencillo.style.display = 'none';
-    btnToggleModelo.textContent = "🚫 No Modelo";
-    btnToggleModelo.style.background = "#6e6e73";
-    stockTotalSencillo.value = "";
+  } catch (err) {
+    console.error(err);
+    alert("No se pudo parsear el bloque de texto. Verifique el formato e intente nuevamente.");
   }
 }
 
-// --- GESTIÓN DE FORMULARIO DE PRODUCTO ---
-function procesarImagen(evento) {
-  const archivo = evento.target.files[0];
-  if (!archivo) return;
-
-  const btnGuardar = document.getElementById("guardarFunda");
-  btnGuardar.disabled = true;
-
-  const lector = new FileReader();
-  lector.onload = function (e) {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = function () {
-      
-      // Guardamos la imagen original en memoria para el editor Pro
-      imagenOriginalTemporal = img;
-      imagenRecortadaTemporal = null; // Reseteamos recorte anterior si sube una nueva
-      fotoTransparenteBase64 = "";
-
-      const canvas = document.createElement("canvas");
-      canvas.width = 500;
-      canvas.height = 500;
-      const ctx = canvas.getContext("2d");
-
-      const ladoMenor = Math.min(img.width, img.height);
-      const sx = (img.width - ladoMenor) / 2;
-      const sy = (img.height - ladoMenor) / 2;
-
-      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
-      fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
-
-      const preview = document.getElementById("previewFoto");
-      preview.src = fotoBase64;
-      preview.style.display = "block";
-
-      btnGuardar.disabled = false;
-    };
-    img.src = e.target.result;
-  };
-  lector.readAsDataURL(archivo);
-}
-
+// --- GESTIÓN DE FORMULARIO DE PRODUCTOS ---
 function mostrarFormulario() {
-  if (!esAdmin) return;
-  if (listaCategorias.length === 0) {
-    alert("⚠️ Primero debés crear al menos una categoría desde el menú lateral.");
-    return;
-  }
+  ocultarAsistente();
+  document.getElementById("nombre").value = "";
+  document.getElementById("stockPorModelo").value = "";
+  document.getElementById("stockTotalSencillo").value = "";
+  document.getElementById("costo").value = "";
+  document.getElementById("venta").value = "";
+  document.getElementById("previewFoto").removeAttribute("src");
+  document.getElementById("previewFoto").style.display = "none";
   
   idFundaEditando = null;
-  fotoBase64 = ""; 
+  fotoBase64 = "";
   fotoTransparenteBase64 = "";
   urlTransparenteGuardada = "";
   imagenOriginalTemporal = null;
   imagenRecortadaTemporal = null;
-  
-  document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
-  document.getElementById("guardarFunda").innerText = "Guardar";
-  document.getElementById("guardarFunda").disabled = false;
-  
-  document.getElementById("nombre").value = "";
-  if(document.getElementById("categoriaSelect").options.length > 0) document.getElementById("categoriaSelect").selectedIndex = 0;
-  
-  esProductoSinModelo = false;
-  document.getElementById('labelStock').textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
-  document.getElementById('stockPorModelo').style.display = 'block';
-  document.getElementById('stockTotalSencillo').style.display = 'none';
-  document.getElementById('stockPorModelo').value = "";
-  document.getElementById('stockTotalSencillo').value = "";
-  
-  const btnToggleModelo = document.getElementById('btnToggleModelo');
-  btnToggleModelo.textContent = "🚫 No Modelo";
-  btnToggleModelo.style.background = "#6e6e73";
-  
-  document.getElementById("costo").value = "";
-  document.getElementById("venta").value = "";
-  document.getElementById("fotoInput").value = "";
-  
-  document.getElementById("previewFoto").style.display = "none";
-  
-  if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
-  if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
-  if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
-  if(document.getElementById("btnReeditarMontaje")) document.getElementById("btnReeditarMontaje").style.display = "none";
 
+  esProductoSinModelo = false;
+  const btnToggleModelo = document.getElementById("btnToggleModelo");
+  const compContainer = document.getElementById("campoCompatibilidadesContainer");
+  const sencContainer = document.getElementById("campoStockSencilloContainer");
+  
+  btnToggleModelo.textContent = "📱 Por Modelo";
+  btnToggleModelo.style.background = "#0071e3";
+  compContainer.style.display = "block";
+  sencContainer.style.display = "none";
+
+  document.getElementById("fundas").style.display = "none";
+  document.getElementById("pantallaClientes").style.display = "none";
   document.getElementById("agregar").style.display = "flex";
 }
 
@@ -1043,6 +1057,25 @@ function ocultarFormulario() {
   document.getElementById("agregar").style.display = "none";
 }
 
+function toggleModoModelo() {
+  esProductoSinModelo = !esProductoSinModelo;
+  const btnToggleModelo = document.getElementById("btnToggleModelo");
+  const compContainer = document.getElementById("campoCompatibilidadesContainer");
+  const sencContainer = document.getElementById("campoStockSencilloContainer");
+
+  if (esProductoSinModelo) {
+    btnToggleModelo.textContent = "🚫 No Modelo";
+    btnToggleModelo.style.background = "#6e6e73";
+    compContainer.style.display = "none";
+    sencContainer.style.display = "block";
+  } else {
+    btnToggleModelo.textContent = "📱 Por Modelo";
+    btnToggleModelo.style.background = "#0071e3";
+    compContainer.style.display = "block";
+    sencContainer.style.display = "none";
+  }
+}
+
 function mostrarAsistente() {
   if (!esAdmin) return;
   document.getElementById("asistenteProducto").value = "";
@@ -1050,106 +1083,99 @@ function mostrarAsistente() {
   document.getElementById("asistenteUnidades").value = "1";
   document.getElementById("modalAsistente").style.display = "flex";
 }
-function ocultarAsistente() { document.getElementById("modalAsistente").style.display = "none"; }
+
+function ocultarAsistente() {
+  document.getElementById("modalAsistente").style.display = "none";
+}
 
 function actualizarDatalistBuscador() {
   const datalist = document.getElementById("sugerenciasBuscador");
   if (!datalist) return;
-  
   const sugerencias = new Set();
   todasLasFundas.forEach(f => {
-    if (f.nombre) sugerencias.add(f.nombre); 
+    if (f.nombre) sugerencias.add(f.nombre);
     if (Array.isArray(f.stockPorModelo)) {
       f.stockPorModelo.forEach(m => {
-        if (m.modelo) sugerencias.add(m.modelo.trim()); 
+        if (m.modelo && m.modelo !== "Único") sugerencias.add(m.modelo);
       });
     }
   });
-  
-  datalist.innerHTML = Array.from(sugerencias).sort().map(texto => `<option value="${texto}"></option>`).join("");
+  let html = "";
+  sugerencias.forEach(val => {
+    html += `<option value="${val}"></option>`;
+  });
+  datalist.innerHTML = html;
 }
 
-// --- CRUD DE FUNDAS ---
-async function cargarFundas() {
-  try {
-    const snapshot = await getDocs(collection(db, "fundas"));
-    todasLasFundas = []; 
-    let necesitaMigracion = false;
+function procesarImagen(e) {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
 
-    snapshot.forEach((doc) => {
-      const datos = doc.data();
-      if (datos.orden === undefined) necesitaMigracion = true;
-      todasLasFundas.push({ id: doc.id, ...datos });
-    });
-
-    if (necesitaMigracion) {
-      console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
-      const batch = writeBatch(db);
-      todasLasFundas.forEach((funda, index) => {
-        if (funda.orden === undefined) {
-          const docRef = doc(db, "fundas", funda.id);
-          batch.update(docRef, { orden: index });
-          funda.orden = index; 
-        }
-      });
-      await batch.commit();
-    }
-
-    todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  const lector = new FileReader();
+  lector.onload = function(evento) {
+    fotoBase64 = evento.target.result;
+    const preview = document.getElementById("previewFoto");
+    preview.src = fotoBase64;
+    preview.style.display = "block";
     
-    actualizarDatalistAsistente();
-    actualizarDatalistBuscador(); 
-    filtrarFundas();
-  } catch (error) { console.error("Error al cargar o migrar fundas:", error); }
+    // Reseteamos estados anteriores de Foto Pro al cambiar de imagen
+    imagenOriginalTemporal = null;
+    imagenRecortadaTemporal = null;
+    fotoTransparenteBase64 = "";
+    urlTransparenteGuardada = "";
+  };
+  lector.readAsDataURL(archivo);
 }
 
-function actualizarDatalistAsistente() {
-  const datalist = document.getElementById("listaProductos");
-  if (!datalist) return;
-  const nombresUnicos = [...new Set(todasLasFundas.map(f => f.nombre).filter(Boolean))];
-  datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
+async function subirAImgbb(base64Data) {
+  const rawBase64 = base64Data.split(",")[1];
+  const cuerpo = new FormData();
+  cuerpo.append("image", rawBase64);
+
+  const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    method: "POST",
+    body: cuerpo
+  });
+  const dataJSON = await respuesta.json();
+  if (dataJSON.success) {
+    return dataJSON.data.url;
+  } else {
+    throw new Error("Fallo al subir a ImgBB");
+  }
 }
 
 async function guardarFunda() {
-  if (!esAdmin) return;
-  const btnGuardar = document.getElementById("guardarFunda");
-  const textoOriginal = btnGuardar.innerText;
-  
-  btnGuardar.disabled = true;
-  btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
+  const btn = document.getElementById("guardarFunda");
+  btn.disabled = true;
+  btn.innerText = "⏳ Guardando...";
 
-  let urlImagenFinal = fotoBase64; 
-  let urlTransparenteFinal = urlTransparenteGuardada; 
+  let urlImagenFinal = "";
+  let urlTransparenteFinal = "";
 
-  const subirAImgBB = async (base64) => {
-    const base64Clean = base64.split(',')[1];
-    const formData = new FormData();
-    formData.append("image", base64Clean);
-    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData
-    });
-    const resultado = await respuesta.json();
-    if (!resultado.success) throw new Error("Error en ImgBB");
-    return resultado.data.url;
-  };
-
+  // 1. Manejo de Subida de Imagenes a ImgBB
   try {
-    if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
-      urlTransparenteFinal = await subirAImgBB(fotoTransparenteBase64);
-    }
     if (fotoBase64 && fotoBase64.startsWith("data:image")) {
-      urlImagenFinal = await subirAImgBB(fotoBase64);
+      urlImagenFinal = await subirAImgbb(fotoBase64);
+    } else if (idFundaEditando) {
+      const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+      if (vieja) urlImagenFinal = vieja.foto || "";
     }
-    btnGuardar.innerText = "💾 Guardando datos..."; 
+
+    if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
+      urlTransparenteFinal = await subirAImgbb(fotoTransparenteBase64);
+    } else if (idFundaEditando) {
+      const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+      if (vieja) urlTransparenteFinal = vieja.fotoTransparente || "";
+    }
   } catch (err) {
-    console.error(err);
-    alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
-    btnGuardar.disabled = false;
-    btnGuardar.innerText = textoOriginal;
+    console.error("Error al alojar imágenes:", err);
+    alert("Error al subir la imagen a la nube. Probá de nuevo.");
+    btn.disabled = false;
+    btn.innerText = "Guardar Case 💾";
     return;
   }
 
+  // 2. Armado del Array de Stock según Modo Seleccionado
   let stockPorModeloArray = [];
   if (esProductoSinModelo) {
     const unidadesTotales = Number(document.getElementById("stockTotalSencillo").value) || 0;
@@ -1159,19 +1185,22 @@ async function guardarFunda() {
     stockPorModeloArray = compatiblesInput.split(",")
       .map(item => {
         const [modelo, cantidad] = item.split(":");
-        return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 };
+        return {
+          modelo: modelo ? modelo.trim() : "",
+          stock: cantidad ? Number(cantidad.trim()) : 0
+        };
       }).filter(item => item.modelo !== "");
   }
 
   const datosFunda = {
     nombre: document.getElementById("nombre").value,
-    categoria: document.getElementById("categoriaSelect").value, 
+    categoria: document.getElementById("categoriaSelect").value,
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
-    foto: urlImagenFinal, 
-    fotoTransparente: urlTransparenteFinal, 
-    sinModelo: esProductoSinModelo 
+    foto: urlImagenFinal,
+    fotoTransparente: urlTransparenteFinal,
+    sinModelo: esProductoSinModelo
   };
 
   if (!idFundaEditando) datosFunda.orden = todasLasFundas.length;
@@ -1179,82 +1208,65 @@ async function guardarFunda() {
   try {
     if (idFundaEditando) {
       if (urlImagenFinal === "" && !fotoBase64) {
-         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.foto = vieja ? (vieja.foto || "") : "";
-      }
-      if (urlTransparenteFinal === "" && !fotoTransparenteBase64) {
-         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.fotoTransparente = vieja ? (vieja.fotoTransparente || "") : "";
+        const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
+        if (vieja && vieja.foto) datosFunda.foto = vieja.foto;
       }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
-      alert("Artículo actualizado 🎉");
     } else {
+      if (!datosFunda.foto) {
+        datosFunda.foto = "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60";
+      }
       await addDoc(collection(db, "fundas"), datosFunda);
-      alert("Artículo guardado 🎉");
     }
+
     ocultarFormulario();
-    cargarFundas();
+    document.getElementById("fundas").style.display = "grid";
+    await cargarFundas();
+
   } catch (error) {
-    console.error(error);
-    alert("Error al guardar en base de datos.");
+    console.error("Error al guardar:", error);
+    alert("Error de conexión al guardar en la base de datos.");
   } finally {
-    btnGuardar.disabled = false;
-    btnGuardar.innerText = textoOriginal;
+    btn.disabled = false;
+    btn.innerText = "Guardar Case 💾";
   }
 }
 
-async function eliminarFunda(id) {
-  if (!esAdmin) return;
-  if (confirm("¿Seguro que deseas eliminar este artículo?")) {
-    try {
-      await deleteDoc(doc(db, "fundas", id));
-      cargarFundas();
-    } catch (error) { console.error(error); }
-  }
-}
-
-function abrirEditarFunda(id) {
-  if (!esAdmin) return;
+window.editarFunda = function(id) {
   const funda = todasLasFundas.find(f => f.id === id);
   if (!funda) return;
 
+  mostrarFormulario();
   idFundaEditando = id;
-  fotoBase64 = "";
-  fotoTransparenteBase64 = "";
-  urlTransparenteGuardada = funda.fotoTransparente || "";
-  imagenOriginalTemporal = null;
-  imagenRecortadaTemporal = null;
 
-  document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
   document.getElementById("nombre").value = funda.nombre || "";
-  document.getElementById("categoriaSelect").value = funda.categoria || (listaCategorias[0] ? listaCategorias[0].nombre : "");
-  document.getElementById("costo").value = funda.costo ?? 0;
-  document.getElementById("venta").value = funda.venta ?? 0;
+  document.getElementById("categoriaSelect").value = funda.categoria || "";
+  document.getElementById("costo").value = funda.costo ?? "";
+  document.getElementById("venta").value = funda.venta ?? "";
+
+  fotoBase64 = funda.foto || "";
+  fotoTransparenteBase64 = funda.fotoTransparente || "";
 
   esProductoSinModelo = !!funda.sinModelo;
-  const labelStock = document.getElementById('labelStock');
-  const stockPorModelo = document.getElementById('stockPorModelo');
-  const stockTotalSencillo = document.getElementById('stockTotalSencillo');
-  const btnToggleModelo = document.getElementById('btnToggleModelo');
+  const btnToggleModelo = document.getElementById("btnToggleModelo");
+  const compContainer = document.getElementById("campoCompatibilidadesContainer");
+  const sencContainer = document.getElementById("campoStockSencilloContainer");
+  const stockTotalSencillo = document.getElementById("stockTotalSencillo");
 
   if (esProductoSinModelo) {
-    labelStock.textContent = "Cantidad Total de Piezas en Stock";
-    stockPorModelo.style.display = 'none';
-    stockTotalSencillo.style.display = 'block';
-    btnToggleModelo.textContent = "✨ Usar Variantes";
-    btnToggleModelo.style.background = "#0071e3";
-    
-    const primerItem = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
-    stockTotalSencillo.value = primerItem;
-    stockPorModelo.value = "";
-  } else {
-    labelStock.textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
-    stockPorModelo.style.display = 'block';
-    stockTotalSencillo.style.display = 'none';
     btnToggleModelo.textContent = "🚫 No Modelo";
     btnToggleModelo.style.background = "#6e6e73";
+    compContainer.style.display = "none";
+    sencContainer.style.display = "block";
+    if (Array.isArray(funda.stockPorModelo) && funda.stockPorModelo.length > 0) {
+      stockTotalSencillo.value = funda.stockPorModelo[0].stock || 0;
+    }
+  } else {
+    btnToggleModelo.textContent = "📱 Por Modelo";
+    btnToggleModelo.style.background = "#0071e3";
+    compContainer.style.display = "block";
+    sencContainer.style.display = "none";
     stockTotalSencillo.value = "";
-
     if (Array.isArray(funda.stockPorModelo)) {
       document.getElementById("stockPorModelo").value = funda.stockPorModelo.map(m => `${m.modelo}:${m.stock}`).join(", ");
     }
@@ -1268,329 +1280,166 @@ function abrirEditarFunda(id) {
     // Convertimos la imagen previa de imgbb en el original temporal para habilitar el re-editado pro
     const imgOld = new Image();
     imgOld.crossOrigin = "anonymous";
-    imgOld.onload = () => { imagenOriginalTemporal = imgOld; };
     imgOld.src = funda.foto;
-    
-  } else {
-    preview.style.display = "none";
-  }
-
-  let btnReeditar = document.getElementById("btnReeditarMontaje");
-  if (!btnReeditar) {
-    btnReeditar = document.createElement("button");
-    btnReeditar.id = "btnReeditarMontaje";
-    btnReeditar.style.cssText = "width: 100%; background: #5856d6; margin-bottom: 15px; color: white; padding: 12px; border-radius: 12px; border:none; font-weight:bold; cursor:pointer;";
-    btnReeditar.innerText = "🖼️ Re-editar Montaje Guardado (No gasta API)";
-    preview.parentNode.insertBefore(btnReeditar, preview);
-  }
-
-  if (funda.fotoTransparente) {
-    btnReeditar.style.display = "block";
-    btnReeditar.onclick = (e) => {
-      e.preventDefault();
-      // Si ya hay fondo transparente, lo bajamos y abrimos el editor pro
-      const imgRecorteViejo = new Image();
-      imgRecorteViejo.crossOrigin = "anonymous";
-      imgRecorteViejo.onload = () => {
-        imagenRecortadaTemporal = imgRecorteViejo;
-        abrirEditorFotoPro();
-      };
-      imgRecorteViejo.src = funda.fotoTransparente;
+    imgOld.onload = () => {
+      imagenOriginalTemporal = imgOld;
+      if (funda.fotoTransparente) {
+        const imgTrans = new Image();
+        imgTrans.crossOrigin = "anonymous";
+        imgTrans.src = funda.fotoTransparente;
+        imgTrans.onload = () => {
+          imagenRecortadaTemporal = imgTrans;
+          fotoTransparenteBase64 = funda.fotoTransparente;
+        };
+      }
     };
   } else {
-    btnReeditar.style.display = "none";
-  }
-
-  if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
-  if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
-  if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
-
-  document.getElementById("guardarFunda").innerText = "Actualizar";
-  document.getElementById("agregar").style.display = "flex";
-}
-
-async function procesarVentaAsistente() {
-  if (!esAdmin) return;
-  const prodBuscado = document.getElementById("asistenteProducto").value.trim().toLowerCase();
-  const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
-  const unidadesAVender = Number(document.getElementById("asistenteUnidades").value);
-
-  const fundaEncontrada = todasLasFundas.find(f => f.nombre && f.nombre.toLowerCase() === prodBuscado);
-  if (!fundaEncontrada) return alert("Producto no encontrado.");
-
-  if (fundaEncontrada.sinModelo) {
-    if (!fundaEncontrada.stockPorModelo || fundaEncontrada.stockPorModelo.length === 0) {
-      fundaEncontrada.stockPorModelo = [{ modelo: "Único", stock: 0 }];
-    }
-    const modeloStock = fundaEncontrada.stockPorModelo[0];
-    if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
-
-    modeloStock.stock -= unidadesAVender;
-    try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
-      alert(`¡Venta registrada!`);
-      ocultarAsistente();
-      cargarFundas();
-    } catch (error) { console.error(error); }
-    return;
-  }
-
-  if (Array.isArray(fundaEncontrada.stockPorModelo)) {
-    const modeloStock = fundaEncontrada.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
-    if (!modeloStock) return alert("Variante/Modelo no encontrado.");
-    if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
-
-    modeloStock.stock -= unidadesAVender;
-    try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
-      alert(`¡Venta registrada!`);
-      ocultarAsistente();
-      cargarFundas();
-    } catch (error) { console.error(error); }
-  }
-}
-
-// --- UTILIDADES ---
-window.eliminarFunda = eliminarFunda;
-window.abrirEditarFunda = abrirEditarFunda;
-window.ocultarFormulario = ocultarFormulario;
-window.ocultarAsistente = ocultarAsistente;
-window.eliminarItemCarrito = eliminarItemCarrito; 
-
-function abrirModalReservar(id) {
-  const funda = todasLasFundas.find(f => f.id === id);
-  if (!funda) return;
-
-  fundaReservando = funda;
-  document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
-  document.getElementById("reservaPrecio").innerText = `$${funda.venta ?? 0}`;
-
-  const selectModelo = document.getElementById("reservaModelo");
-  selectModelo.innerHTML = "";
-
-  if (funda.sinModelo) {
-    const totalStock = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
-    if (totalStock <= 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
-      document.getElementById("btnConfirmarWhatsApp").disabled = true;
-    } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      selectModelo.innerHTML = `<option value="Único">Estándar / Único</option>`;
-    }
-  } else if (Array.isArray(funda.stockPorModelo)) {
-    const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
-    if (modelsDisponibles.length === 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
-      document.getElementById("btnConfirmarWhatsApp").disabled = true;
-    } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      modelsDisponibles.forEach(m => {
-        const option = document.createElement("option");
-        option.value = m.modelo;
-        option.innerText = `${m.modelo} (${m.stock} u.)`;
-        selectModelo.appendChild(option);
-      });
-    }
-  } else {
-    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
-    document.getElementById("btnConfirmarWhatsApp").disabled = false;
-  }
-  document.getElementById("modalReservar").style.display = "flex";
-}
-window.abrirModalReservar = abrirModalReservar;
-
-function cerrarModalReservar() {
-  fundaReservando = null;
-  document.getElementById("modalReservar").style.display = "none";
-}
-window.cerrarModalReservar = cerrarModalReservar;
-
-// MÓDULO: Monitorea de manera fluida y adaptativa la carga de las fotos
-function controlarCargaDeImagenes() {
-  const imagenes = document.querySelectorAll("#fundas .card-img");
-  const totalImagenes = imagenes.length;
-  const loader = document.getElementById("cargando");
-  const barraProgreso = document.getElementById("loaderProgreso");
-
-  if (totalImagenes === 0) {
-    if (barraProgreso) barraProgreso.style.width = "100%";
-    setTimeout(() => {
-      if (loader) {
-        loader.style.opacity = "0";
-        setTimeout(() => { loader.style.display = "none"; }, 400);
-      }
-    }, 300);
-    return;
-  }
-
-  let imagenesCargadas = 0;
-
-  function verificarFin() {
-    imagenesCargadas++;
-    
-    const porcentajeBase = 92;
-    const porcentajeRestante = 8;
-    const porcentaje = porcentajeBase + ((imagenesCargadas / totalImagenes) * porcentajeRestante);
-    
-    if (barraProgreso) {
-      barraProgreso.style.width = `${porcentaje}%`;
-    }
-
-    if (imagenesCargadas === totalImagenes) {
-      setTimeout(() => {
-        if (loader) {
-          loader.style.opacity = "0";
-          loader.style.transition = "opacity 0.4s ease";
-          setTimeout(() => {
-            loader.style.display = "none";
-          }, 400);
-        }
-      }, 300);
-    }
-  }
-
-  imagenes.forEach((img) => {
-    if (img.complete) {
-      verificarFin();
-    } else {
-      img.addEventListener("load", verificarFin);
-      img.addEventListener("error", verificarFin);
-    }
-  });
-}
-
-// NUEVO: Manipulamos el CSS "inline" con '!important' para ganarle al style.css de móviles
-window.toggleStock = (btn, action) => {
-  const card = btn.closest('.card');
-  const stockDiv = card.querySelector('.stock-list');
-  const btnVer = card.querySelector('.btn-ver-stock');
-  const btnOcultar = card.querySelector('.btn-ocultar-stock');
-
-  if (action === 'show') {
-    stockDiv.style.setProperty('display', 'block', 'important');
-    btnVer.style.setProperty('display', 'none', 'important');
-    btnOcultar.style.setProperty('display', 'block', 'important');
-  } else {
-    stockDiv.style.setProperty('display', 'none', 'important');
-    btnVer.style.setProperty('display', 'block', 'important');
-    btnOcultar.style.setProperty('display', 'none', 'important');
+    preview.removeAttribute("src");
+    preview.style.display = "none";
   }
 };
 
-function coincideModelo(modelo, textoBuscado) {
-  const mod = String(modelo).toLowerCase().trim();
-  const txt = textoBuscado.toLowerCase().trim();
-  
-  if (!mod.includes(txt)) return false;
-
-  if (/\d/.test(txt)) {
-    const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
-    for (let variante of variantes) {
-      if (mod.includes(variante) && !txt.includes(variante)) return false;
-    }
+window.eliminarFunda = async function(id) {
+  if (!confirm("¿Seguro que querés eliminar esta funda permanentemente?")) return;
+  try {
+    await deleteDoc(doc(db, "fundas", id));
+    await cargarFundas();
+  } catch (error) {
+    console.error("Error al eliminar:", error);
   }
-  return true;
+};
+
+// --- SISTEMA REVOLUCIONARIO DE ASISTENTE DE VENTAS RÁPIDAS ---
+async function procesarVentaAsistente() {
+  const btn = document.getElementById("btnRegistrarVenta");
+  const nombreBuscado = document.getElementById("asistenteProducto").value.trim().toLowerCase();
+  const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
+  const unidadesAVender = Number(document.getElementById("asistenteUnidades").value) || 1;
+
+  if (!nombreBuscado) return alert("Por favor indica el nombre del producto.");
+
+  const producto = todasLasFundas.find(f => f.nombre.toLowerCase().trim() === nombreBuscado);
+  if (!producto) return alert("Producto no encontrado exacto. Escribilo tal cual figura en el catálogo.");
+
+  if (!Array.isArray(producto.stockPorModelo) || producto.stockPorModelo.length === 0) {
+    return alert("Este producto no posee variantes ni stock registrado.");
+  }
+
+  let varianteModificable = null;
+  if (producto.sinModelo) {
+    varianteModificable = producto.stockPorModelo[0];
+  } else {
+    if (!modeloBuscado) return alert("Este producto requiere especificar un modelo exacto.");
+    varianteModificable = producto.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
+  }
+
+  if (!varianteModificable) return alert("Variante/Modelo no encontrado para este producto.");
+
+  if (varianteModificable.stock < unidadesAVender) {
+    return alert(`Stock insuficiente. Solo quedan ${varianteModificable.stock} unidades de esta variante.`);
+  }
+
+  btn.disabled = true;
+  btn.innerText = "⏳ Impactando Stock...";
+
+  try {
+    varianteModificable.stock -= unidadesAVender;
+    await updateDoc(doc(db, "fundas", producto.id), {
+      stockPorModelo: producto.stockPorModelo
+    });
+
+    alert(`¡Venta procesada con éxito! Se descontaron ${unidadesAVender} unidades de la variante.`);
+    ocultarAsistente();
+    await cargarFundas();
+
+  } catch (err) {
+    console.error(err);
+    alert("Ocurrió un error al intentar impactar la base de datos.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Registrar Descuento en Firebase ⚡";
+  }
 }
 
-function habilitarReordenamiento() {
-    if (!esAdmin) return; 
-    const contenedor = document.getElementById('fundas');
-    if (!contenedor) return;
-
-    if (sortableInstance) sortableInstance.destroy();
+// --- CARGA, RENDERIZADO Y FILTRADO CON DRAG & DROP MULTIPLATAFORMA ---
+async function cargarFundas() {
+  try {
+    const q = query(collection(db, "fundas"), orderBy("orden", "asc"));
+    const snapshot = await getDocs(q);
+    let lista = [];
+    snapshot.forEach(doc => {
+      lista.push({ id: doc.id, ...doc.data() });
+    });
+    todasLasFundas = lista;
     
-    sortableInstance = new Sortable(contenedor, {
-        animation: 150,
-        handle: '.drag-handle', 
-        ghostClass: 'sortable-ghost', 
-        onEnd: async (evt) => {
-            if (evt.oldIndex === evt.newIndex) return;
-            console.log("Sincronizando nuevo orden visual con Firebase...");
-            await actualizarOrdenEnFirebase();
-        }
-    });
-}
+    actualizarDatalistBuscador();
+    renderizarFundas(todasLasFundas);
 
-async function actualizarOrdenEnFirebase() {
-    const tarjetas = document.querySelectorAll('#fundas .card');
-    const batch = writeBatch(db); 
-
-    tarjetas.forEach((tarjeta, index) => {
-        const id = tarjeta.dataset.id;
-        if (id) {
-          const docRef = doc(db, "fundas", id); 
-          batch.update(docRef, { orden: index });
-        }
-    });
-
-    try {
-        await batch.commit();
-        tarjetas.forEach((tarjeta, index) => {
-            const id = tarjeta.dataset.id;
-            const fundaLocal = todasLasFundas.find(f => f.id === id);
-            if (fundaLocal) fundaLocal.orden = index;
-        });
-        todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    } catch (error) {
-        console.error("Error guardando el ordenamiento:", error);
-        alert("No se pudo persistir el orden en la base de datos.");
+    const loader = document.getElementById("cargando");
+    if (loader) {
+      loader.style.opacity = "0";
+      setTimeout(() => { loader.style.display = "none"; }, 400);
     }
+  } catch (error) {
+    console.error("Error al descargar catálogo:", error);
+  }
 }
 
-function renderizarFundas(arrayDeFundas, textoBuscado = "") {
-  const contenedor = document.getElementById("fundas");
+function renderizarFundas(listaDeFundas) {
+  const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
   let html = "";
 
-  arrayDeFundas.forEach((f) => {
-    const modelosTotales = f.stockPorModelo || [];
-    const modelosFiltrados = (textoBuscado !== "")
-      ? modelosTotales.filter(m => coincideModelo(m.modelo, textoBuscado))
-      : modelosTotales;
-
-    const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
-    const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
-
-    const listaModelosHTML = modelosFiltrados.map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`).join("<br>");
-    const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-    const estiloOculto = (f.sinModelo && !esAdmin) ? 'style="display: none !important;"' : '';
-
+  listaDeFundas.forEach((f) => {
     let bloqueStockHTML = "";
-    if (f.sinModelo) {
-      bloqueStockHTML = `<p ${estiloOculto}>Stock Total: ${totalStock} u.</p>`;
+    let tieneStockGlobal = false;
+
+    if (Array.isArray(f.stockPorModelo)) {
+      f.stockPorModelo.forEach(m => { if (m.stock > 0) tieneStockGlobal = true; });
+
+      if (f.sinModelo) {
+        const cant = (f.stockPorModelo[0] && f.stockPorModelo[0].stock) || 0;
+        bloqueStockHTML = `<p class="${cant > 0 ? 'stock-disponible' : 'stock-agotado'}">Stock: ${cant} u.</p>`;
+      } else {
+        let detalleModelos = f.stockPorModelo.map(m => `• ${m.modelo}: ${m.stock} u.`).join("<br>");
+        bloqueStockHTML = `
+          <div class="stock-container-lista">
+             <button class="btn-ver-stock" onclick="this.nextElementSibling.style.display='block'; this.style.display='none'">📱 Ver Modelos Disponibles</button>
+             <div class="modelos-lista-desplegable" style="display:none;">
+                <button class="btn-ocultar-stock" onclick="this.parentElement.previousElementSibling.style.display='block'; this.parentElement.style.display='none'">🙈 Ocultar Detalle</button>
+                <p style="margin:8px 0 0 0; font-size:12px; line-height:1.4; color:#515154;">${detalleModelos}</p>
+             </div>
+          </div>`;
+      }
+    }
+
+    let bloqueAcciones = "";
+    if (esAdmin) {
+      bloqueAcciones = `
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button onclick="editarFunda('${f.id}')" style="flex:1; background:#86868b; color:white; border:none; padding:8px; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">Editar</button>
+          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">🗑️</button>
+        </div>`;
     } else {
-      // NUEVO: Agregamos el style="display: none !important;" directo al HTML para anular el CSS del celular
-      const styleVerStock = mostrarDirecto ? 'display: none !important;' : 'display: block !important;';
-      const styleOcultarStock = mostrarDirecto ? 'display: block !important;' : 'display: none !important;';
-      
-      bloqueStockHTML = `
-        <p>Stock Total: ${totalStock} u.</p>
-        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock" style="${styleVerStock}">Ver stock por modelo</button>
-        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock" style="${styleOcultarStock}">Ocultar Stock</button>
-        <div class="stock-list" style="${styleOcultarStock} margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
-      `;
+      bloqueAcciones = `
+        <button onclick="abrirModalReservar('${f.id}')" style="width:100%; background:#0071e3; color:white; border:none; padding:10px; border-radius:8px; font-weight:600; margin-top:12px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;">
+          🛒 Agregar al Carrito
+        </button>`;
     }
 
     let bloqueMétricasAdmin = "";
     if (esAdmin) {
-      const costo = f.costo || 0;
-      const venta = f.venta || 0;
-      const gananciaPesos = venta - costo;
-      const porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
-      bloqueMétricasAdmin = `<p style="font-size: 14px; color: #43a047; font-weight: 600; margin: 4px 0 12px 0;">📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)</p>`;
+      const ganancia = (f.venta || 0) - (f.costo || 0);
+      bloqueMétricasAdmin = `
+        <div style="background:#f5f5f7; padding:8px; border-radius:8px; margin-top:8px; font-size:11px; color:#6e6e73;">
+          <strong>Costo:</strong> $${f.costo || 0} | <strong>Rendimiento:</strong> <span style="color:#28a745; font-weight:bold;">+$${ganancia}</span>
+        </div>`;
     }
 
-    let bloqueAcciones = esAdmin ? `
-        <div style="margin-top: 15px; display: flex; gap: 5px;">
-          <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
-          <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
-        </div>` : `
-        <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
-        </div>`;
+    const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60";
 
     html += `
-    <div class="card" data-id="${f.id}" style="position: relative;">
-      ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
+    <div class="card" data-id="${f.id}" style="opacity: ${tieneStockGlobal ? '1' : '0.55'};">
+      ${esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas" ? `<div class="drag-handle" style="position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.85); padding: 4px 8px; border-radius: 6px; cursor: move; font-size: 14px;">☰</div>` : ''}
       <div class="badge-categoria">${f.categoria || "Varios"}</div>
       <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
       <div class="card-body">
@@ -1625,10 +1474,133 @@ function filtrarFundas() {
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     let compatibleCoincide = false;
     if (Array.isArray(f.stockPorModelo)) {
-      compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
+      compatibleCoincide = f.stockPorModelo.some(m => m.modelo.toLowerCase().includes(textoBuscado));
     }
     return nombreCoincide || compatibleCoincide;
   });
 
-  renderizarFundas(fundasFiltradas, textoBuscado);
+  renderizarFundas(fundasFiltradas);
 }
+
+function habilitarReordenamiento() {
+  const el = document.getElementById("fundas");
+  if (!el) return;
+
+  if (sortableInstance) {
+    sortableInstance.destroy();
+  }
+
+  sortableInstance = new Sortable(el, {
+    handle: ".drag-handle",
+    animation: 150,
+    ghostClass: "sortable-ghost",
+    onEnd: async function () {
+      const cards = el.querySelectorAll(".card");
+      const nuevosOrdenes = [];
+      cards.forEach((card, index) => {
+        nuevosOrdenes.push({
+          id: card.getAttribute("data-id"),
+          nuevoOrden: index
+        });
+      });
+      await actualizarOrdenEnFirebase(nuevosOrdenes);
+    }
+  });
+}
+
+async function actualizarOrdenEnFirebase(listaOrdenada) {
+  try {
+    const batch = writeBatch(db);
+    listaOrdenada.forEach(item => {
+      const docRef = doc(db, "fundas", item.id);
+      batch.update(docRef, { orden: item.nuevoOrden });
+    });
+    await batch.commit();
+    console.log("Nuevo orden establecido con éxito.");
+  } catch (error) {
+    console.error("Error al guardar nuevo orden de arrastre:", error);
+  }
+}
+
+function controlarCargaDeImagenes() {
+  const imagenes = document.querySelectorAll(".card-img");
+  if (imagenes.length === 0) return;
+
+  let cargadas = 0;
+  imagenes.forEach(img => {
+    if (img.complete) {
+      cargadas++;
+    } else {
+      img.addEventListener("load", () => {
+        cargadas++;
+        if (cargadas === imagenes.length) {
+          ocultarLoaderCompleto();
+        }
+      });
+      img.addEventListener("error", () => {
+        cargadas++;
+        if (cargadas === imagenes.length) {
+          ocultarLoaderCompleto();
+        }
+      });
+    }
+  });
+
+  if (cargadas === imagenes.length) {
+    ocultarLoaderCompleto();
+  }
+}
+
+function ocultarLoaderCompleto() {
+  const loader = document.getElementById("cargando");
+  if (loader) {
+    loader.style.opacity = "0";
+    setTimeout(() => { loader.style.display = "none"; }, 400);
+  }
+}
+
+// --- MODAL DE RESERVAS / DETALLE DE PRODUCTO PARA CLIENTES ---
+window.abrirModalReservar = function(id) {
+  const funda = todasLasFundas.find(f => f.id === id);
+  if (!funda) return;
+
+  fundaReservando = funda;
+  document.getElementById("reservaNombre").innerText = funda.nombre || "Sin nombre";
+  document.getElementById("reservaPrecio").innerText = `$${funda.venta || 0}`;
+  
+  const imgEl = document.getElementById("reservaFoto");
+  imgEl.src = funda.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60";
+
+  const select = document.getElementById("reservaModelo");
+  const containerSelect = document.getElementById("contenedorSelectorReserva");
+  select.innerHTML = "";
+
+  if (funda.sinModelo) {
+    containerSelect.style.display = "none";
+  } else {
+    containerSelect.style.display = "block";
+    if (Array.isArray(funda.stockPorModelo)) {
+      funda.stockPorModelo.forEach(m => {
+        if (m.stock > 0) {
+          const op = document.createElement("option");
+          op.value = m.modelo;
+          op.innerText = `${m.modelo} (Disponibles: ${m.stock})`;
+          select.appendChild(op);
+        }
+      });
+    }
+    if (select.children.length === 0) {
+      const op = document.createElement("option");
+      op.value = "";
+      op.innerText = "Sin stock de variantes";
+      select.appendChild(op);
+    }
+  }
+
+  document.getElementById("modalReservar").style.display = "flex";
+};
+
+window.cerrarModalReservar = function() {
+  document.getElementById("modalReservar").style.display = "none";
+  fundaReservando = null;
+};
