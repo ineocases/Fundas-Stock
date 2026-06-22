@@ -20,6 +20,40 @@
     </div>
   </div>
 
+  // --- Importaciones (Firebase, etc. según tu configuración) ---
+// import { ... } from "firebase/firestore";
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicialización de elementos UI
+    const modalCategorias = document.getElementById('modalCategorias');
+    const btnGestor = document.getElementById('btnGestorCategorias');
+    const btnCerrarCategorias = document.getElementById('btnCerrarCategorias');
+
+    // 2. Definición de funciones
+    const abrirModalCategorias = () => {
+        if (modalCategorias) modalCategorias.style.display = 'flex';
+    };
+
+    const cerrarModalCategorias = () => {
+        if (modalCategorias) modalCategorias.style.display = 'none';
+    };
+
+    // 3. Asignación de Eventos (Esto soluciona el error ReferenceError)
+    if (btnGestor) {
+        btnGestor.addEventListener('click', abrirModalCategorias);
+    }
+
+    if (btnCerrarCategorias) {
+        btnCerrarCategorias.addEventListener('click', cerrarModalCategorias);
+    }
+
+    // --- Aquí podés seguir agregando tus otras funciones ---
+    // Ejemplo:
+    // document.getElementById('btnNuevaFunda').addEventListener('click', () => { ... });
+    
+    console.log("iNeo Cases: Sistema cargado correctamente.");
+});
+  
   <div id="login" style="display:none;">
     <div class="login-container">
       <div class="login-welcome">
