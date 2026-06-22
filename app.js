@@ -1416,7 +1416,7 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
       }
     } else {
       bloqueStockHTML = `
-        <p style="font-size: 16px; margin-bottom: 10px;">📦 <b>Stock Total: ${totalStock} u.</b></p>
+        <p style="font-size: 16px; margin-bottom: 10px;"><b>Stock Total: ${totalStock} u.</b></p>
         <button onclick="toggleStock(this, 'show')" 
                 class="btn-ver-stock"
                 style="width:100%; margin-bottom:10px; background:#000000; color:white; border:none; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; display: ${mostrarDirecto ? 'none' : 'block'}">
