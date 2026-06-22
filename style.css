@@ -747,3 +747,80 @@ button:active {
         padding: 12px 18px; font-size: 14px;
     }
 }
+/* ==========================================================================
+   OPTIMIZACIÓN DE LOGOS (iNeo Cases) - Carga, Login y Mobile
+   ========================================================================== */
+
+/* 1. Pantalla de Carga (Loader) */
+.loader-logo {
+    width: 160px;               /* Tamaño ideal y visible en PC */
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.05)); /* Sombra suave */
+    animation: pulseApple 2.5s infinite ease-in-out;  /* Animación sutil premium */
+}
+
+/* Contenedor del loader para asegurar alineación perfecta */
+.loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 2. Pantalla de Login */
+.app-logo-welcome {
+    width: 135px;               /* Agrandado elegante para PC */
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    margin: 0 auto 16px auto;   /* Centrado automático y separación */
+    display: block;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.04));
+    transition: transform 0.3s ease;
+}
+
+.app-logo-welcome:hover {
+    transform: scale(1.02);     /* Feedback interactivo al pasar el mouse */
+}
+
+/* Asegurar el centrado del texto del login respecto al logo */
+.header-logo-welcome {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+/* 3. Ajustes específicos para Celulares (Responsivo) */
+@media (max-width: 768px) {
+    .loader-logo {
+        width: 125px;           /* Proporción perfecta para pantallas chicas */
+        margin-bottom: 20px;
+    }
+
+    .app-logo-welcome {
+        width: 110px;           /* Evita que sature el formulario en celulares */
+        margin-bottom: 12px;
+    }
+    
+    .header-logo-welcome h1 {
+        font-size: 24px !important; /* Ajuste opcional de título en celular */
+    }
+}
+
+/* --- Animación de pulso suave estilo Apple --- */
+@keyframes pulseApple {
+    0% {
+        transform: scale(1);
+        opacity: 0.95;
+    }
+    50% {
+        transform: scale(1.03);  /* Crece de forma casi imperceptible */
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.95;
+    }
+}
