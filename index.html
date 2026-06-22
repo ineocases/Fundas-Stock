@@ -74,12 +74,8 @@
       </button>
     </div>
     
-    <!-- NUEVO: Banner Promocional Responsivo integrado al inicio de la app -->
-    <div class="banner-promocional" style="margin: 10px 0; width: 100%; border-radius: 12px; overflow: hidden;">
-      <picture>
-        <source media="(max-width: 600px)" srcset="banner-mobile.jpg">
-        <img src="banner-desktop.jpg" alt="Promociones Especiales" class="banner-img" style="width: 100%; height: auto; display: block;">
-      </picture>
+    <div id="banner-tienda" class="banner-container-view hidden">
+      <img id="imgBannerActual" src="" alt="Banner Promocional iNeo Cases">
     </div>
     
     <div class="top-bar">
@@ -97,6 +93,8 @@
       <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
       <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
       <button id="btnVerClientes" class="sidebar-btn" style="display: none;">👥 Ver Clientes Registrados</button>
+      <button class="sidebar-btn" id="btnAbrirBanner" style="display: none;">🖼️ Cambiar Banner</button>
+      <button class="sidebar-btn" id="btnAbrirDescuentos" style="display: none;">🏷️ Menú Descuentos</button>
     </div>
 
     <div id="modalCategorias" style="display:none;">
@@ -166,15 +164,6 @@
         
         <label>Precio de venta ($)</label>
         <input id="venta" type="number" placeholder="0">
-
-        <!-- NUEVO: Sección de Ofertas y Descuentos agregada al panel de administración -->
-        <div class="seccion-ofertas-form" style="background: #fff0f0; padding: 16px; border-radius: 12px; margin-bottom: 15px; border: 1px dashed #ff3b30; margin-top: 15px;">
-          <label style="color: #d63028; font-weight: 600; display: block; margin-bottom: 4px;">Precio de Oferta ($) (Opcional)</label>
-          <input id="precioOferta" type="number" placeholder="Ej: 4500" style="margin-bottom: 12px; width: 100%; box-sizing: border-box;">
-          
-          <label style="color: #d63028; font-weight: 600; display: block; margin-bottom: 4px;">Etiqueta Promo (Opcional)</label>
-          <input id="etiquetaPromo" type="text" placeholder="Ej: 20% OFF / Hot Sale" style="margin-bottom: 0; width: 100%; box-sizing: border-box;">
-        </div>
 
         <label>Foto del producto</label>
         <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
@@ -325,6 +314,38 @@
       
       <div class="modal-buttons" style="margin-top: 15px;">
         <button id="btnRegistrarCliente" style="width: 100%;">Entrar al Catálogo 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalBanner" style="display:none;" class="modal-admin-overlay">
+    <div class="modal-content">
+      <h3>🖼️ Banner de la Tienda</h3>
+      <p class="subtitle">
+        Medida óptima recomendada: <b>1200 x 450 píxeles</b> (Relación de aspecto panorámica). Asegurate de usar este formato para mantener la estética limpia estilo Apple.
+      </p>
+      
+      <label>Seleccionar Imagen del Banner</label>
+      <input type="file" id="inputFotoBanner" accept="image/*">
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn-secundario" id="btnCerrarBanner">Cancelar</button>
+        <button type="button" id="btnGuardarBanner">Subir y Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalDescuentos" style="display:none;" class="modal-admin-overlay">
+    <div class="modal-content">
+      <h3>🏷️ Panel de Descuentos Globales</h3>
+      <p class="subtitle">Definí un porcentaje de descuento global. Se guardará de manera permanente y modificará los precios visibles de forma automática.</p>
+      
+      <label>Porcentaje de Descuento (%)</label>
+      <input type="number" id="inputPorcentajeDescuento" min="0" max="100" placeholder="Ej: 15 (Dejá en 0 para quitar)">
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn-secundario" id="btnCerrarDescuentos">Cancelar</button>
+        <button type="button" id="btnGuardarDescuentos">Aplicar y Guardar</button>
       </div>
     </div>
   </div>
