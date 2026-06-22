@@ -120,6 +120,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("btnImportarExcel")) document.getElementById("btnImportarExcel").onclick = () => document.getElementById("inputExcel").click();
   if(document.getElementById("inputExcel")) document.getElementById("inputExcel").onchange = procesarImportacionExcel;
 
+  // NUEVO: Eventos para Banner
+  if(document.getElementById("btnGestorBanner")) document.getElementById("btnGestorBanner").onclick = abrirModalBanner;
+  if(document.getElementById("btnCerrarBanner")) document.getElementById("btnCerrarBanner").onclick = cerrarModalBanner;
+  if(document.getElementById("btnGuardarBanner")) document.getElementById("btnGuardarBanner").onclick = guardarConfigBanner;
+  if(document.getElementById("inputBannerImagen")) document.getElementById("inputBannerImagen").onchange = previsualizarBannerAdmin;
+
   if(document.getElementById("btnAccionesIA")) document.getElementById("btnAccionesIA").onclick = toggleMenuMenuIA;
   if(document.getElementById("btnMenuFormatear")) document.getElementById("btnMenuFormatear").onclick = () => {
     document.getElementById("menuAccionesIA").style.display = "none";
@@ -238,6 +244,7 @@ onAuthStateChanged(auth, async (user) => {
       const btnGestorCategorias = document.getElementById("btnGestorCategorias");
       const btnImportarExcel = document.getElementById("btnImportarExcel");
       const btnVerClientes = document.getElementById("btnVerClientes");
+      const btnGestorBanner = document.getElementById("btnGestorBanner");
 
       if (esAdmin) {
         if(btnCambiarRol) btnCambiarRol.innerHTML = "📱 Cambiar a Cliente";
@@ -246,6 +253,7 @@ onAuthStateChanged(auth, async (user) => {
         if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "flex";
         if(btnGestorCategorias) btnGestorCategorias.style.display = "block";
         if(btnVerClientes) btnVerClientes.style.display = "block";
+        if(btnGestorBanner) btnGestorBanner.style.display = "block";
       } else {
         if(btnCambiarRol) btnCambiarRol.innerHTML = "🔐 Cambiar a Admin";
         if(document.getElementById("btnNuevaFunda")) document.getElementById("btnNuevaFunda").style.display = "none";
@@ -253,11 +261,13 @@ onAuthStateChanged(auth, async (user) => {
         if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").style.display = "none";
         if(btnGestorCategorias) btnGestorCategorias.style.display = "none";
         if(btnVerClientes) btnVerClientes.style.display = "none";
+        if(btnGestorBanner) btnGestorBanner.style.display = "none";
         
         solicitarDatosCliente();
       }
       
       if (barra) barra.style.width = "70%"; 
+      await cargarBanner(); // Carga de Banner
       await cargarCategorias();
       
       if (barra) barra.style.width = "92%"; 
@@ -304,6 +314,125 @@ async function loginCliente() {
     alert("Error al ingresar en modo cliente.");
     console.error(error);
   }
+}
+
+// --- LÓGICA DE GESTIÓN DE BANNER Y DESCUENTOS ---
+async function cargarBanner() {
+  try {
+    const docRef = await getDoc(doc(db, "config", "banner"));
+    const contenedor = document.getElementById("contenedorBannerCliente");
+    const img = document.getElementById("imagenCabezalCliente");
+    const alerta = document.getElementById("alertaDescuento");
+
+    if (docRef.exists()) {
+      const data = docRef.data();
+      let mostrarContenedor = false;
+
+      // Configurar vista cliente
+      if (data.url) {
+        img.src = data.url;
+        img.style.display = "block";
+        mostrarContenedor = true;
+      } else {
+        img.style.display = "none";
+      }
+
+      if (data.tipo && data.tipo !== "ninguno" && data.descuento) {
+        const texto = data.tipo === "porcentaje" ? `${data.descuento}%` : `$${data.descuento}`;
+        alerta.innerText = `¡Aprovechá un descuento de ${texto} en tu compra!`;
+        alerta.style.display = "block";
+        mostrarContenedor = true;
+      } else {
+        alerta.style.display = "none";
+      }
+
+      contenedor.style.display = mostrarContenedor ? "block" : "none";
+      
+      // Precargar datos en modal de admin
+      if (document.getElementById("urlBannerActual")) document.getElementById("urlBannerActual").value = data.url || "";
+      if (document.getElementById("tipoDescuentoBanner")) document.getElementById("tipoDescuentoBanner").value = data.tipo || "ninguno";
+      if (document.getElementById("valorDescuentoBanner")) document.getElementById("valorDescuentoBanner").value = data.descuento || "";
+      if (data.url && document.getElementById("previewBannerAdmin")) {
+          document.getElementById("previewBannerAdmin").src = data.url;
+          document.getElementById("previewBannerAdmin").style.display = "block";
+      }
+    } else {
+      contenedor.style.display = "none";
+    }
+  } catch (e) {
+    console.error("Error cargando banner:", e);
+  }
+}
+
+function abrirModalBanner() {
+    toggleSidebar();
+    document.getElementById("modalBanner").style.display = "flex";
+}
+function cerrarModalBanner() {
+    document.getElementById("modalBanner").style.display = "none";
+}
+
+function previsualizarBannerAdmin(evento) {
+    const archivo = evento.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = function(e) {
+        const preview = document.getElementById("previewBannerAdmin");
+        preview.src = e.target.result;
+        preview.style.display = "block";
+    };
+    lector.readAsDataURL(archivo);
+}
+
+async function guardarConfigBanner() {
+    const btnGuardar = document.getElementById("btnGuardarBanner");
+    const originalText = btnGuardar.innerText;
+    btnGuardar.disabled = true;
+    btnGuardar.innerText = "⏳ Guardando...";
+
+    try {
+        let urlFinal = document.getElementById("urlBannerActual").value;
+        const inputImagen = document.getElementById("inputBannerImagen");
+
+        if (inputImagen.files.length > 0) {
+            const file = inputImagen.files[0];
+            const formData = new FormData();
+            formData.append("image", file);
+
+            const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: "POST",
+                body: formData
+            });
+            const resultado = await respuesta.json();
+            if (resultado.success) {
+                urlFinal = resultado.data.url;
+            } else {
+                throw new Error("Error subiendo imagen a ImgBB");
+            }
+        }
+
+        const tipo = document.getElementById("tipoDescuentoBanner").value;
+        const descuento = document.getElementById("valorDescuentoBanner").value;
+
+        await setDoc(doc(db, "config", "banner"), {
+            url: urlFinal,
+            tipo: tipo,
+            descuento: descuento,
+            fechaActualizacion: new Date().toISOString()
+        });
+
+        alert("Banner y descuento guardados correctamente 🎉");
+        cerrarModalBanner();
+        cargarBanner(); 
+
+    } catch (e) {
+        console.error(e);
+        alert("Hubo un error al guardar el banner.");
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.innerText = originalText;
+        document.getElementById("inputBannerImagen").value = ""; 
+    }
 }
 
 // --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
@@ -660,7 +789,6 @@ function abrirEditorFotoPro() {
   }
   document.getElementById("modalFotoPro").style.display = "flex";
   
-  // Reseteamos valores visuales del modal a su estado base
   document.getElementById("sliderSombra").value = 35;
   document.getElementById("valorSombra").innerText = "35%";
   document.getElementById("sliderRotacion").value = 0;
@@ -817,13 +945,11 @@ function dibujarCanvasGestos() {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   
-  // Usamos la imagen recortada si existe, de lo contrario la original base
   let imagenADibujar = imagenRecortadaTemporal || imagenOriginalTemporal;
   if (!imagenADibujar) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Lógica del selector de fondos
   if (tipoFondoElegido === "estudio") {
     if (imgFondoEstudio.complete && imgFondoEstudio.naturalWidth > 0) {
       ctx.drawImage(imgFondoEstudio, 0, 0, canvas.width, canvas.height);
@@ -837,16 +963,12 @@ function dibujarCanvasGestos() {
   } else if (tipoFondoElegido === "blanco") {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else if (tipoFondoElegido === "original") {
-    // Si elige original, idealmente renderizamos la foto sin transparencia al fondo
-    // o simplemente la dejamos sin fondo artificial para que quede como venía de fábrica.
   }
 
   ctx.save();
   ctx.translate(canvasPosX, canvasPosY); 
   ctx.rotate(rotacionGrados * Math.PI / 180); 
   
-  // La sombra solo se aplica si no elegimos el fondo "original"
   if (opacidadSombra > 0 && tipoFondoElegido !== "original") {
     ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
     ctx.shadowBlur = 40;
@@ -959,9 +1081,8 @@ function procesarImagen(evento) {
     img.crossOrigin = "anonymous";
     img.onload = function () {
       
-      // Guardamos la imagen original en memoria para el editor Pro
       imagenOriginalTemporal = img;
-      imagenRecortadaTemporal = null; // Reseteamos recorte anterior si sube una nueva
+      imagenRecortadaTemporal = null; 
       fotoTransparenteBase64 = "";
 
       const canvas = document.createElement("canvas");
@@ -1265,7 +1386,6 @@ function abrirEditarFunda(id) {
     preview.src = funda.foto;
     preview.style.display = "block";
     
-    // Convertimos la imagen previa de imgbb en el original temporal para habilitar el re-editado pro
     const imgOld = new Image();
     imgOld.crossOrigin = "anonymous";
     imgOld.onload = () => { imagenOriginalTemporal = imgOld; };
@@ -1288,7 +1408,6 @@ function abrirEditarFunda(id) {
     btnReeditar.style.display = "block";
     btnReeditar.onclick = (e) => {
       e.preventDefault();
-      // Si ya hay fondo transparente, lo bajamos y abrimos el editor pro
       const imgRecorteViejo = new Image();
       imgRecorteViejo.crossOrigin = "anonymous";
       imgRecorteViejo.onload = () => {
@@ -1405,7 +1524,6 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
-// MÓDULO: Monitorea de manera fluida y adaptativa la carga de las fotos
 function controlarCargaDeImagenes() {
   const imagenes = document.querySelectorAll("#fundas .card-img");
   const totalImagenes = imagenes.length;
@@ -1459,7 +1577,6 @@ function controlarCargaDeImagenes() {
   });
 }
 
-// NUEVO: Manipulamos el CSS "inline" con '!important' para ganarle al style.css de móviles
 window.toggleStock = (btn, action) => {
   const card = btn.closest('.card');
   const stockDiv = card.querySelector('.stock-list');
@@ -1558,7 +1675,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     if (f.sinModelo) {
       bloqueStockHTML = `<p ${estiloOculto}>Stock Total: ${totalStock} u.</p>`;
     } else {
-      // NUEVO: Agregamos el style="display: none !important;" directo al HTML para anular el CSS del celular
       const styleVerStock = mostrarDirecto ? 'display: none !important;' : 'display: block !important;';
       const styleOcultarStock = mostrarDirecto ? 'display: block !important;' : 'display: none !important;';
       
@@ -1609,7 +1725,6 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
     habilitarReordenamiento();
   }
 
-  // Dispara el listener de imágenes si el loader sigue visible en pantalla
   const loader = document.getElementById("cargando");
   if (loader && window.getComputedStyle(loader).display !== "none") {
     controlarCargaDeImagenes();
