@@ -6,9 +6,9 @@
     --bg-app: #f5f5f7;
     --bg-surface: #ffffff;
     
-    --color-primary: #000000; /* Deep black for main buttons and text */
+    --color-primary: #000000; /* Negro profundo para botones principales */
     --color-primary-hover: #1d1d1f;
-    --color-secondary: #f2f2f7; /* Lighter gray for badges, inactive pills */
+    --color-secondary: #f2f2f7; /* Gris claro para el botón Añadir */
     --color-secondary-hover: #e5e5ea;
     
     --text-main: #1d1d1f;
@@ -228,13 +228,14 @@ h1 {
     z-index: 5;
 }
 
-/* 📸 FOTOS TOTALMENTE NATURALES (Sin modificaciones forzadas de tamaño) */
+/* 📸 FOTOS INTEGRALES NATURALES (Tamaño gestionado por vos luego) */
 .card-img {
     width: 100%;
     display: block;
     object-fit: contain;
 }
 
+/* Ajustamos el cuerpo de la tarjeta a Flexbox para controlar el orden descendente estricto */
 .card-body { 
     padding: 20px; 
     display: flex;
@@ -246,6 +247,7 @@ h1 {
     font-weight: 700;
     margin: 0 0 8px 0;
     color: var(--text-main);
+    order: 1; /* Primero el título */
 }
 
 /* Información de stock con ícono */
@@ -256,6 +258,7 @@ h1 {
     align-items: center;
     gap: 6px;
     margin-bottom: 12px !important;
+    order: 2; /* Segundo el stock */
 }
 
 .card-body p:has(b)::before {
@@ -264,30 +267,28 @@ h1 {
     flex-shrink: 0;
 }
 
-/* 🏷️ PRECIO DESTACADO */
+/* 🏷️ PRECIO DESTACADO (Arriba de los botones) */
 .card-body p:last-of-type {
     font-size: 20px !important;
     color: var(--text-main) !important;
     font-weight: 800 !important;
+    margin-top: 5px !important;
     margin-bottom: 15px !important;
     line-height: 1.2;
-    order: 1; /* Posicionado firmemente arriba de los botones */
+    order: 3; /* Tercero el precio */
 }
 
 /* Ocultar el total numérico general en la vista del cliente */
 .card-body p:has(b):not(:has(b:contains(Ganancia))) { display: none; }
 
-/* ==========================================================================
-   BOTONES DE TARJETA (Estructura y Jerarquía debajo del precio)
-   ========================================================================== */
-/* Contenedor o wrapper genérico de las acciones dentro de la tarjeta */
+/* Forzamos a que los contenedores generados dinámicamente sigan el flujo */
 .card-body div {
     display: flex;
     flex-direction: column;
     width: 100%;
 }
 
-/* 🔘 BOTÓN PRINCIPAL (Ver Stock Completo / Acciones Principales) */
+/* Estilos comunes para botones dentro de las tarjetas */
 .btn-ver-stock, .btn-ocultar-stock, .card-body button {
     width: 100% !important;
     font-size: 13px !important;
@@ -300,30 +301,36 @@ h1 {
     margin-bottom: 0 !important;
 }
 
-/* Botón Ver Stock / Ocultar (Negro Sólido) */
+/* 🔘 BOTÓN PRINCIPAL: VER STOCK (Negro Sólido - Justo abajo del precio) */
 .btn-ver-stock, .btn-ocultar-stock, .card-body div:not(:last-child) button {
     background: var(--color-primary) !important;
     color: white !important;
     border: none !important;
-    order: 2; /* Inmediatamente abajo del precio */
+}
+.card-body div:not(:last-child) {
+    order: 4; /* Cuarto en jerarquía */
 }
 
-/* ➕ BOTÓN AÑADIR (Fondo gris claro, SIN BORDES) */
+/* ➕ BOTÓN AÑADIR (Fondo gris claro, ABAJO DE TODO, SIN BORDES) */
 .card-body div:last-child button {
     background: var(--color-secondary) !important;
     color: var(--text-main) !important;
-    border: none !important; /* Eliminado el borde negro */
-    order: 3; /* El último en el flujo inferior */
+    border: none !important; /* Totalmente limpio sin bordes */
 }
 
 .card-body div:last-child button:hover {
     background: var(--color-secondary-hover) !important;
 }
 
+.card-body div:last-child {
+    order: 5; /* Quinto en jerarquía: Al final absoluto */
+}
+
 /* Métricas Admin (Mantener formato verde) */
 .card-body p:has(b:contains(Ganancia)), .metrics-admin-text {
     color: var(--text-success) !important;
     font-weight: 600;
+    order: 6; /* Si es admin, las métricas se colocan al final */
 }
 
 /* ==========================================================================
