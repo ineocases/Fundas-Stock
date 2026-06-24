@@ -8,8 +8,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <link rel="icon" type="image/x-icon" href="icono.png">
-</head>
+  
+  <link rel="icon" type="image/png" href="icono.png">
+  <link rel="apple-touch-icon" href="icono.png"> </head>
 <body>
 
   <div id="cargando">
@@ -242,6 +243,14 @@
         </select>
 
         <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+          
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label for="sliderBrillo" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
+              Brillo de la Foto: <span id="valorBrillo">100%</span>
+            </label>
+            <input type="range" id="sliderBrillo" min="50" max="200" value="100" style="width: 100%; accent-color: #1d1d1f;">
+          </div>
+
           <div style="display: flex; flex-direction: column; gap: 5px;">
             <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
               Opacidad de la Sombra: <span id="valorSombra">35%</span>
@@ -256,7 +265,6 @@
             <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #1d1d1f;">
           </div>
         </div>
-
         <div class="modal-buttons" style="display: flex; gap: 10px;">
           <button type="button" id="btnCerrarFotoPro" class="btn-secundario" style="flex: 1;">Cancelar</button>
           <button type="button" id="btnGuardarFotoPro" style="flex: 1; background: #0071e3; color: white; font-weight: bold;">Listo ✅</button>
