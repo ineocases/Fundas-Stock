@@ -38,9 +38,11 @@ let fundaReservando = null;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
-// Nuevas variables globales para Banner y Descuentos
-let descuentoGlobal = 0;
+// Variables globales para Banner y Descuentos Avanzados
 let urlBannerActual = "";
+let descuentoGlobal = 0;
+let tipoDescuento = "global"; // "global" o "especifico"
+let productosDescuento = []; // Array con IDs de productos si es específico
 
 // 📸 VARIABLES PARA FOTO PRO INTERACTIVA (MODAL SEPARADO)
 let imagenOriginalTemporal = null; 
@@ -51,7 +53,7 @@ let opacidadSombra = 0.35;
 let tipoFondoElegido = "estudio";
 let porcentajeEscala = 0.72; 
 let rotacionGrados = 0;
-let nivelBrillo = 100; // <-- NUEVA VARIABLE DE BRILLO
+let nivelBrillo = 100;
 let canvasPosX = 500;
 let canvasPosY = 500;
 let imgFondoEstudio = new Image();
@@ -157,12 +159,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnGuardarBanner").onclick = subirYGuardarBanner;
   }
 
+  // --- NUEVA LÓGICA DE UI PARA DESCUENTOS ---
   if(document.getElementById("btnAbrirDescuentos")) {
     document.getElementById("btnAbrirDescuentos").onclick = () => {
       toggleSidebar();
       document.getElementById("inputPorcentajeDescuento").value = descuentoGlobal;
+      document.getElementById("selectTipoDescuento").value = tipoDescuento;
+      renderizarListaDescuentosUI();
+      toggleSeleccionProductosUI();
       document.getElementById("modalDescuentos").style.display = "flex";
     };
+  }
+  if(document.getElementById("selectTipoDescuento")) {
+    document.getElementById("selectTipoDescuento").onchange = toggleSeleccionProductosUI;
   }
   if(document.getElementById("btnCerrarDescuentos")) {
     document.getElementById("btnCerrarDescuentos").onclick = () => {
@@ -209,8 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
       dibujarCanvasGestos();
     };
   }
-  
-  // <-- EVENTO NUEVO PARA EL BRILLO -->
   if(document.getElementById("sliderBrillo")) {
     document.getElementById("sliderBrillo").oninput = (e) => {
       nivelBrillo = parseInt(e.target.value);
@@ -218,7 +225,6 @@ document.addEventListener("DOMContentLoaded", () => {
       dibujarCanvasGestos();
     };
   }
-  
   if(document.getElementById("btnGuardarFotoPro")) {
     document.getElementById("btnGuardarFotoPro").onclick = aplicarMontajeFinal;
   }
@@ -234,8 +240,12 @@ async function cargarConfiguracionTienda() {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      descuentoGlobal = data.descuento || 0;
       urlBannerActual = data.bannerUrl || "";
+      
+      // Cargar configuraciones de descuento avanzadas
+      descuentoGlobal = data.descuento || 0;
+      tipoDescuento = data.tipo || "global";
+      productosDescuento = data.productosIds || [];
       
       const contenedorBanner = document.getElementById("contenedorBannerTienda");
       const imgBanner = document.getElementById("imgBannerTienda");
@@ -243,7 +253,6 @@ async function cargarConfiguracionTienda() {
       if (urlBannerActual && contenedorBanner && imgBanner) {
         imgBanner.src = urlBannerActual;
         
-        // Lo insertamos dinámicamente arriba del buscador si existe el contenedor de herramientas
         const appDiv = document.getElementById("app");
         const topBar = document.querySelector(".top-bar");
         if (appDiv && topBar) {
@@ -313,28 +322,77 @@ async function subirYGuardarBanner() {
   }
 }
 
-async function guardarDescuentoGlobal() {
-  const input = document.getElementById("inputPorcentajeDescuento");
-  const valor = parseInt(input.value) || 0;
+// --- FUNCIONES EXCLUSIVAS PARA DESCUENTOS ESPECÍFICOS ---
+function toggleSeleccionProductosUI() {
+  const tipo = document.getElementById("selectTipoDescuento").value;
+  document.getElementById("contenedorListaProductos").style.display = tipo === "especifico" ? "block" : "none";
+}
 
-  if (valor < 0 || valor > 100) return alert("Ingresá un porcentaje entre 0 y 100.");
+function renderizarListaDescuentosUI() {
+  const contenedor = document.getElementById("listaProductosCheck");
+  if (!contenedor) return;
+  
+  if (todasLasFundas.length === 0) {
+    contenedor.innerHTML = "<p style='font-size:13px; color:#6e6e73;'>No hay productos cargados en la tienda aún.</p>";
+    return;
+  }
+
+  contenedor.innerHTML = todasLasFundas.map(f => {
+      const isChecked = productosDescuento.includes(f.id) ? "checked" : "";
+      return `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px;">
+          <input type="checkbox" id="chk-desc-${f.id}" value="${f.id}" ${isChecked} style="width: 20px; height: 20px; margin: 0; accent-color: #0071e3; cursor: pointer;">
+          <label for="chk-desc-${f.id}" style="margin: 0; font-size: 14px; font-weight: 500; cursor: pointer; color: #1d1d1f;">${f.nombre}</label>
+      </div>`;
+  }).join("");
+}
+
+async function guardarDescuentoGlobal() {
+  const selectTipo = document.getElementById("selectTipoDescuento").value;
+  const valor = parseInt(document.getElementById("inputPorcentajeDescuento").value) || 0;
+
+  if (valor < 0 || valor > 100) return alert("Ingresá un porcentaje válido entre 0 y 100.");
 
   const btn = document.getElementById("btnGuardarDescuentos");
   btn.disabled = true;
   btn.innerText = "⏳ Guardando...";
 
+  let seleccionados = [];
+  
+  if (selectTipo === "especifico") {
+     const checkboxes = document.querySelectorAll('#listaProductosCheck input[type="checkbox"]:checked');
+     seleccionados = Array.from(checkboxes).map(cb => cb.value);
+     
+     if (seleccionados.length === 0 && valor > 0) {
+         alert("Seleccioná al menos un producto para aplicar el descuento específico.");
+         btn.disabled = false;
+         btn.innerText = "Aplicar Cambios";
+         return;
+     }
+  }
+
   try {
-    await setDoc(doc(db, "configuracion", "tienda"), { descuento: valor }, { merge: true });
+    await setDoc(doc(db, "configuracion", "tienda"), { 
+      descuento: valor,
+      tipo: selectTipo,
+      productosIds: seleccionados
+    }, { merge: true });
+    
+    // Actualizar variables globales al instante
     descuentoGlobal = valor;
+    tipoDescuento = selectTipo;
+    productosDescuento = seleccionados;
+
     document.getElementById("modalDescuentos").style.display = "none";
-    alert(`Descuento del ${valor}% aplicado.`);
-    renderizarFundas(todasLasFundas); // Re-renderiza para actualizar los precios
+    alert(`¡Configuración de descuentos actualizada con éxito!`);
+    
+    renderizarFundas(todasLasFundas); // Re-renderiza para actualizar todos los precios
   } catch (err) {
     console.error(err);
     alert("Error al guardar el descuento.");
   } finally {
     btn.disabled = false;
-    btn.innerText = "Aplicar";
+    btn.innerText = "Aplicar Cambios";
   }
 }
 
@@ -572,9 +630,18 @@ function agregarAlCarrito() {
       return;
   }
 
-  // Aplicamos descuento al precio final que se guarda en el carrito
+  // --- REVISIÓN SI APLICA DESCUENTO ANTES DE AGREGAR ---
+  let aplicaDescuento = false;
+  if (descuentoGlobal > 0) {
+      if (tipoDescuento === "global") {
+          aplicaDescuento = true;
+      } else if (tipoDescuento === "especifico" && productosDescuento.includes(fundaReservando.id)) {
+          aplicaDescuento = true;
+      }
+  }
+
   const precioOriginal = fundaReservando.venta || 0;
-  const precioFinal = descuentoGlobal > 0 ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
+  const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
 
   const item = {
       id: fundaReservando.id,
@@ -837,7 +904,6 @@ function abrirEditorFotoPro() {
   document.getElementById("valorRotacion").innerText = "0°";
   document.getElementById("selectFondoPro").value = tipoFondoElegido;
 
-  // <-- RESET DE BRILLO PARA QUE INICIE EN 100 -->
   if(document.getElementById("sliderBrillo")) {
     document.getElementById("sliderBrillo").value = 100;
     document.getElementById("valorBrillo").innerText = "100%";
@@ -916,7 +982,6 @@ function reEditarMontaje() {
     document.getElementById("valorRotacion").innerText = "0°";
   }
   
-  // <-- RESET DE BRILLO EN UI -->
   if (document.getElementById("sliderBrillo")) {
     document.getElementById("sliderBrillo").value = 100;
     document.getElementById("valorBrillo").innerText = "100%";
@@ -1044,9 +1109,7 @@ function dibujarCanvasGestos() {
   const anchoFinal = imagenADibujar.width * escala;
   const altoFinal = imagenADibujar.height * escala;
 
-  // <-- APLICAMOS EL FILTRO DE BRILLO AL CANVAS JUSTO ANTES DE PINTAR -->
   ctx.filter = `brightness(${nivelBrillo}%)`;
-
   ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
   
   // El restore resetea todos los filtros, escalas y rotaciones para el próximo dibujo
@@ -1552,9 +1615,18 @@ function abrirModalReservar(id) {
   fundaReservando = funda;
   document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
   
-  // Reflejamos el precio con descuento al reservar
+  // --- REVISIÓN SI APLICA DESCUENTO EN VISTA PREVIA ---
+  let aplicaDescuento = false;
+  if (descuentoGlobal > 0) {
+      if (tipoDescuento === "global") {
+          aplicaDescuento = true;
+      } else if (tipoDescuento === "especifico" && productosDescuento.includes(funda.id)) {
+          aplicaDescuento = true;
+      }
+  }
+
   const precioOriginal = funda.venta || 0;
-  const precioFinal = descuentoGlobal > 0 ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
+  const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
   document.getElementById("reservaPrecio").innerText = `$${precioFinal}`;
 
   const selectModelo = document.getElementById("reservaModelo");
@@ -1778,11 +1850,20 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
           <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
         </div>`;
 
-    // --- CÁLCULO E INYECCIÓN DE PRECIO EN LÍNEA (SIN TOCAR STYLE.CSS) ---
+    // --- CÁLCULO E INYECCIÓN DE PRECIO ACTUALIZADA ---
     let bloquePrecioHTML = "";
     const precioOriginal = f.venta ?? 0;
+    let aplicaDescuento = false;
     
     if (descuentoGlobal > 0) {
+        if (tipoDescuento === "global") {
+            aplicaDescuento = true;
+        } else if (tipoDescuento === "especifico" && productosDescuento.includes(f.id)) {
+            aplicaDescuento = true;
+        }
+    }
+    
+    if (aplicaDescuento) {
       const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
       bloquePrecioHTML = `
         <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
