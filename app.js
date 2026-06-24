@@ -51,6 +51,7 @@ let opacidadSombra = 0.35;
 let tipoFondoElegido = "estudio";
 let porcentajeEscala = 0.72; 
 let rotacionGrados = 0;
+let nivelBrillo = 100; // <-- NUEVA VARIABLE DE BRILLO
 let canvasPosX = 500;
 let canvasPosY = 500;
 let imgFondoEstudio = new Image();
@@ -208,6 +209,16 @@ document.addEventListener("DOMContentLoaded", () => {
       dibujarCanvasGestos();
     };
   }
+  
+  // <-- EVENTO NUEVO PARA EL BRILLO -->
+  if(document.getElementById("sliderBrillo")) {
+    document.getElementById("sliderBrillo").oninput = (e) => {
+      nivelBrillo = parseInt(e.target.value);
+      document.getElementById("valorBrillo").innerText = e.target.value + "%";
+      dibujarCanvasGestos();
+    };
+  }
+  
   if(document.getElementById("btnGuardarFotoPro")) {
     document.getElementById("btnGuardarFotoPro").onclick = aplicarMontajeFinal;
   }
@@ -826,8 +837,15 @@ function abrirEditorFotoPro() {
   document.getElementById("valorRotacion").innerText = "0°";
   document.getElementById("selectFondoPro").value = tipoFondoElegido;
 
+  // <-- RESET DE BRILLO PARA QUE INICIE EN 100 -->
+  if(document.getElementById("sliderBrillo")) {
+    document.getElementById("sliderBrillo").value = 100;
+    document.getElementById("valorBrillo").innerText = "100%";
+  }
+
   porcentajeEscala = 0.72;
   rotacionGrados = 0;
+  nivelBrillo = 100;
   canvasPosX = 500;
   canvasPosY = 500;
   opacidadSombra = 0.35;
@@ -889,6 +907,7 @@ async function ejecutarBorradoFondoIA() {
 function reEditarMontaje() {
   porcentajeEscala = 0.72;
   rotacionGrados = 0;
+  nivelBrillo = 100; // Reset variable de brillo
   canvasPosX = 500;
   canvasPosY = 500;
   
@@ -896,6 +915,13 @@ function reEditarMontaje() {
     document.getElementById("sliderRotacion").value = 0;
     document.getElementById("valorRotacion").innerText = "0°";
   }
+  
+  // <-- RESET DE BRILLO EN UI -->
+  if (document.getElementById("sliderBrillo")) {
+    document.getElementById("sliderBrillo").value = 100;
+    document.getElementById("valorBrillo").innerText = "100%";
+  }
+
   dibujarCanvasGestos();
 }
 
@@ -1018,7 +1044,12 @@ function dibujarCanvasGestos() {
   const anchoFinal = imagenADibujar.width * escala;
   const altoFinal = imagenADibujar.height * escala;
 
+  // <-- APLICAMOS EL FILTRO DE BRILLO AL CANVAS JUSTO ANTES DE PINTAR -->
+  ctx.filter = `brightness(${nivelBrillo}%)`;
+
   ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
+  
+  // El restore resetea todos los filtros, escalas y rotaciones para el próximo dibujo
   ctx.restore();
 }
 
