@@ -556,6 +556,10 @@ async function procesarRegistroCliente() {
   btn.innerText = "⏳ Ingresando...";
 
   try {
+    // 1. PRIMERO iniciamos sesión anónima para que Firebase nos de permiso de escritura
+    await signInAnonymously(auth);
+
+    // 2. AHORA SI guardamos los datos en Firestore
     const docRef = doc(db, "clientes", telefono); 
     const docSnap = await getDoc(docRef);
 
@@ -575,7 +579,7 @@ async function procesarRegistroCliente() {
 
     localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
     document.getElementById("modalRegistroCliente").style.display = "none";
-    loginCliente();
+    // Eliminamos la llamada a loginCliente() acá abajo porque ya lo hicimos arriba.
     
   } catch (error) {
     console.error("Error al registrar cliente:", error);
