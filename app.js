@@ -27,8 +27,8 @@ const NUMERO_WHATSAPP = "5491170089123";
 const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
 
 // ☁️ CLOUDINARY - IMPORTANTE: Reemplazá el string de abajo con el nombre real de tu cuenta de Cloudinary.
-const CLOUDINARY_CLOUD_NAME = "TU_CLOUD_NAME_AQUI"; 
-const CLOUDINARY_UPLOAD_PRESET = "atalogo_ineo";
+const CLOUDINARY_CLOUD_NAME = "dwhvbnypz"; 
+const CLOUDINARY_UPLOAD_PRESET = "catalogo_ineo";
 
 // ==========================================================================
 // CONTROL DE SESIÓN, ROLES Y SEGURIDAD DUAL
