@@ -506,14 +506,12 @@ async function ejecutarCambioRol() {
   toggleSidebar(); 
   await signOut(auth);
   
-  if (esAdmin) {
-    loginCliente();
-  } else {
-    document.getElementById("app").style.display = "none";
-    document.getElementById("login").style.display = "flex";
-    document.getElementById("email").value = "";
-    document.getElementById("password").value = "";
-  }
+  // SOLUCIÓN: Cierra la sesión y manda directamente a la vista del login principal para elegir cómo ingresar
+  document.getElementById("app").style.display = "none";
+  document.getElementById("modalAdminLogin").style.display = "none";
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("email").value = "";
+  document.getElementById("password").value = "";
 }
 
 // --- AUTENTICACIÓN PROTEGIDA CON PROGRESO REAL ---
@@ -1972,14 +1970,15 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
         bloqueStockHTML = `<p style="color: #ff3b30 !important; font-weight: 600 !important;">Sin Stock</p>`;
     }
 
+    // SOLUCIÓN AL BOTÓN OCULTAR: Agregamos !important en el style inline
     if (!f.sinModelo && Array.isArray(f.stockPorModelo)) {
-        stockDetalleHTML = `<div class="stock-list" style="display: none; background: #f5f5f7; padding: 10px; border-radius: 8px;">`;
+        stockDetalleHTML = `<div class="stock-list" style="display: none !important; background: #f5f5f7; padding: 10px; border-radius: 8px;">`;
         f.stockPorModelo.forEach(m => {
             stockDetalleHTML += `<p style="font-size: 12px; margin: 2px 0;">${m.modelo}: <b>${m.stock} u.</b></p>`;
         });
         stockDetalleHTML += `</div>
-        <button class="btn-ver-stock" onclick="toggleStock(this, 'show')">Ver variantes</button>
-        <button class="btn-ocultar-stock" style="display:none;" onclick="toggleStock(this, 'hide')">Ocultar variantes</button>`;
+        <button class="btn-ver-stock" style="display: block !important;" onclick="toggleStock(this, 'show')">Ver variantes</button>
+        <button class="btn-ocultar-stock" style="display: none !important;" onclick="toggleStock(this, 'hide')">Ocultar variantes</button>`;
     }
 
     // --- ACCIONES (EDITAR/ELIMINAR VS AÑADIR) ---
