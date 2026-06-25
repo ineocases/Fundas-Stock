@@ -1884,11 +1884,17 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-function renderizarFundas() {
-  const contenedor = document.getElementById("contenedorFundas");
-  contenedor.innerHTML = "";
+// ==========================================================================
+// RENDERIZADO DE PRODUCTOS Y FILTROS (CORREGIDO)
+// ==========================================================================
 
-  fundas.forEach((f) => {
+function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
+  const contenedor = document.getElementById("fundas");
+  if (!contenedor) return;
+
+  let htmlTotal = "";
+
+  fundasA_Mostrar.forEach((f) => {
     // --- VISTA EXCLUSIVA PARA EL ADMINISTRADOR ---
     let bloqueMétricasAdmin = "";
     if (esAdmin) {
@@ -1908,12 +1914,13 @@ function renderizarFundas() {
 
     // --- CONTROL DE PRECIOS ADAPTATIVOS PARA CLIENTES ---
     let bloquePrecioHTML = "";
-    if (!esAdmin) {
-      let aplicaDescuento = false;
-      if (descuentoGlobal > 0 && (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id)))) {
-          aplicaDescuento = true;
-      }
+    let aplicaDescuento = false;
+    
+    if (descuentoGlobal > 0 && (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id)))) {
+        aplicaDescuento = true;
+    }
 
+    if (!esAdmin) {
       if (rolUsuario === "mayorista") {
           let precioMayorista = (f.mayorista && f.mayorista > 0) ? f.mayorista : (f.venta || 0);
           if (aplicaDescuento) {
@@ -1923,14 +1930,14 @@ function renderizarFundas() {
                   <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase;">📦 Tarifa Mayorista</span>
                   <div style="display: flex; align-items: baseline; gap: 8px;">
                     <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
-                    <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important;">$${precioMayorista}</p>
+                    <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important; margin: 0 !important;">$${precioMayorista}</p>
                   </div>
                 </div>`;
           } else {
               bloquePrecioHTML = `
                 <div style="margin: 5px 0 15px 0; order: 3;">
                   <span style="font-size: 11px; font-weight: 700; color: #ff9500;">📦 Tarifa Mayorista</span>
-                  <p style="font-size: 18px !important; font-weight: 800 !important;">$${precioMayorista}</p>
+                  <p style="font-size: 18px !important; font-weight: 800 !important; margin: 0 !important;">$${precioMayorista}</p>
                 </div>`;
           }
       } else {
@@ -1939,8 +1946,8 @@ function renderizarFundas() {
               const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
               bloquePrecioHTML = `
                 <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
-                  <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important;">$${precioDescuento}</p>
-                  <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important;">$${precioOriginal}</p>
+                  <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
+                  <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important; margin: 0 !important;">$${precioOriginal}</p>
                 </div>`;
           } else {
               bloquePrecioHTML = `<p style="font-size: 18px !important; font-weight: 800 !important; margin: 5px 0 15px 0; order: 3;">$${precioOriginal}</p>`;
@@ -1948,90 +1955,62 @@ function renderizarFundas() {
       }
     }
 
+    // --- STOCK VISUAL ---
+    let bloqueStockHTML = "";
+    let stockDetalleHTML = "";
+    let totalUnidades = 0;
+    
+    if (f.sinModelo) {
+        totalUnidades = Array.isArray(f.stockPorModelo) && f.stockPorModelo[0] ? f.stockPorModelo[0].stock : 0;
+    } else if (Array.isArray(f.stockPorModelo)) {
+        totalUnidades = f.stockPorModelo.reduce((acc, curr) => acc + curr.stock, 0);
+    }
+
+    if (totalUnidades > 0) {
+        bloqueStockHTML = `<p style="color: #43a047 !important; font-weight: 600 !important;">Stock: ${totalUnidades} u.</p>`;
+    } else {
+        bloqueStockHTML = `<p style="color: #ff3b30 !important; font-weight: 600 !important;">Sin Stock</p>`;
+    }
+
+    if (!f.sinModelo && Array.isArray(f.stockPorModelo)) {
+        stockDetalleHTML = `<div class="stock-list" style="display: none; background: #f5f5f7; padding: 10px; border-radius: 8px;">`;
+        f.stockPorModelo.forEach(m => {
+            stockDetalleHTML += `<p style="font-size: 12px; margin: 2px 0;">${m.modelo}: <b>${m.stock} u.</b></p>`;
+        });
+        stockDetalleHTML += `</div>
+        <button class="btn-ver-stock" onclick="toggleStock(this, 'show')">Ver variantes</button>
+        <button class="btn-ocultar-stock" style="display:none;" onclick="toggleStock(this, 'hide')">Ocultar variantes</button>`;
+    }
+
     // --- ACCIONES (EDITAR/ELIMINAR VS AÑADIR) ---
     let bloqueAcciones = esAdmin ? `
-        <div style="margin-top: 15px; display: flex; gap: 5px;">
+        <div style="margin-top: 15px; display: flex; gap: 5px; order: 10;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
-        <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #000; color: #fff; width: 100%; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
+        <div style="margin-top: 20px; order: 10;">
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #000; color: #fff; width: 100%; padding: 12px; border-radius: 12px; border:none; cursor:pointer;" ${totalUnidades === 0 ? 'disabled style="background: #ccc; cursor: not-allowed;"' : ''}>+ Añadir</button>
         </div>`;
 
+    let imagenUrl = f.foto || f.imagen || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60";
+
     // --- RENDERIZADO FINAL DE LA TARJETA ---
-    let html = `
-      <div class="card" style="display: flex; flex-direction: column;">
-        <img src="${f.imagen}" alt="${f.nombre}" style="width: 100%; border-radius: 8px;">
-        <h3 style="margin: 10px 0 5px 0; order: 2;">${f.nombre}</h3>
-        ${esAdmin ? bloqueMétricasAdmin : bloquePrecioHTML}
-        ${bloqueAcciones}
+    htmlTotal += `
+      <div class="card" data-id="${f.id}" style="position: relative; display: flex; flex-direction: column;">
+        ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
+        <div class="badge-categoria">${f.categoria || "Varios"}</div>
+        <img src="${imagenUrl}" alt="${f.nombre}" class="card-img" style="width: 100%; border-radius: 8px;">
+        <div class="card-body">
+          <h2 style="margin: 10px 0 5px 0; order: 1;">${f.nombre}</h2>
+          ${bloqueStockHTML}
+          ${stockDetalleHTML}
+          ${!esAdmin ? bloquePrecioHTML : bloqueMétricasAdmin}
+          ${bloqueAcciones}
+        </div>
       </div>`;
-    
-    contenedor.innerHTML += html;
   });
-}
-
-    // --- CONTROL DE PRECIOS ADAPTATIVOS POR ROL ---
-    let bloquePrecioHTML = "";
-    let aplicaDescuento = false;
-    
-    if (descuentoGlobal > 0) {
-        if (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id))) {
-            aplicaDescuento = true;
-        }
-    }
-
-    if (rolUsuario === "mayorista") {
-        let precioMayorista = (f.mayorista && f.mayorista > 0) ? f.mayorista : (f.venta || 0);
-        
-        if (aplicaDescuento) {
-            const precioDescuento = Math.round(precioMayorista * (1 - (descuentoGlobal / 100)));
-            bloquePrecioHTML = `
-              <div style="display: flex; flex-direction: column; gap: 4px; margin: 5px 0 15px 0; order: 3;">
-                <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase; letter-spacing: 0.5px;">📦 Tarifa Mayorista</span>
-                <div style="display: flex; align-items: baseline; gap: 8px;">
-                  <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
-                  <p style="font-size: 14px !important; font-weight: 500 !important; color: #86868b !important; text-decoration: line-through !important; margin: 0 !important;">$${precioMayorista}</p>
-                </div>
-              </div>`;
-        } else {
-            bloquePrecioHTML = `
-              <div style="display: flex; flex-direction: column; gap: 4px; margin: 5px 0 15px 0; order: 3;">
-                <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase; letter-spacing: 0.5px;">📦 Tarifa Mayorista</span>
-                <p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 0 !important;">$${precioMayorista}</p>
-              </div>`;
-        }
-    } else {
-        let precioOriginal = f.venta || 0;
-        
-        if (aplicaDescuento) {
-            const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
-            bloquePrecioHTML = `
-              <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
-                <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
-                <p style="font-size: 14px !important; font-weight: 500 !important; color: #86868b !important; text-decoration: line-through !important; margin: 0 !important;">$${precioOriginal}</p>
-              </div>`;
-        } else {
-            bloquePrecioHTML = `<p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 5px 0 15px 0 !important; order: 3;">$${precioOriginal}</p>`;
-        }
-    }
-
-    html += `
-    <div class="card" data-id="${f.id}" style="position: relative;">
-      ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
-      <div class="badge-categoria">${f.categoria || "Varios"}</div>
-      <img src="${imagenUrl}" alt="${f.nombre}" class="card-img">
-      <div class="card-body">
-        <h2>${f.nombre || "Sin nombre"}</h2>
-        ${bloqueStockHTML}
-        ${bloquePrecioHTML}
-        ${bloqueMétricasAdmin}
-        ${bloqueAcciones}
-      </div>
-    </div>
-    `;
-  }
-  document.getElementById("fundas").innerHTML = html;
+  
+  contenedor.innerHTML = htmlTotal;
 
   if (esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas") {
     habilitarReordenamiento();
@@ -2055,7 +2034,7 @@ function filtrarFundas() {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     return nombreCoincide || compatibleCoincide;
-  }
+  });
 
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
