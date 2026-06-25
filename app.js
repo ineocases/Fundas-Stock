@@ -2055,7 +2055,7 @@ function filtrarFundas() {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     return nombreCoincide || compatibleCoincide;
-  });
+  }
 
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
