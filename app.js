@@ -1180,14 +1180,17 @@ async function ejecutarBorradoFondoIA() {
 }
 
 // ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY
+// ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY (CORREGIDA PARA PNG)
 async function ejecutarMejoraIA() {
   if (indiceEdicionPro === null) return alert("Error de selección de imagen.");
   if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI") {
       return alert("⚠️ Falta configurar: Colocá tu 'Cloud Name' de Cloudinary en la parte superior del archivo app.js para poder usar la mejora de IA.");
   }
 
-  // Verificamos si estamos trabajando con la imagen recortada o la original
-  let imagenActualData = imagenRecortadaTemporal ? galeriaTemporal[indiceEdicionPro].transparenteBase64 : galeriaTemporal[indiceEdicionPro].base64;
+  // Detectamos si la imagen actual es la recortada (sin fondo) o la original
+  let esTransparente = !!imagenRecortadaTemporal;
+  
+  let imagenActualData = esTransparente ? galeriaTemporal[indiceEdicionPro].transparenteBase64 : galeriaTemporal[indiceEdicionPro].base64;
   let imgSrc = imagenActualData || galeriaTemporal[indiceEdicionPro].urlTransparente || galeriaTemporal[indiceEdicionPro].url;
   
   if (!imgSrc) return alert("No hay imagen para procesar.");
@@ -1202,7 +1205,7 @@ async function ejecutarMejoraIA() {
     formData.append("file", imgSrc);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
     
-    // Subimos a Cloudinary para aplicarle el filtro
+    // Subimos la foto temporalmente a Cloudinary
     const respuestaAPI = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { 
       method: "POST", 
       body: formData 
@@ -1211,10 +1214,17 @@ async function ejecutarMejoraIA() {
     const resultado = await respuestaAPI.json();
     if (resultado.error) throw new Error(resultado.error.message);
 
-    // Aplicamos transformaciones mágicas de Cloudinary (Mejora de foto y escalado)
-    const urlMejorada = resultado.secure_url.replace("/upload/", "/upload/e_improve,e_upscale/");
+    // 💡 SOLUCIÓN A LA TRANSPARENCIA:
+    // Si la foto está recortada (transparente), NO usamos e_improve porque elimina el fondo. 
+    // Usamos Upscale (escala la IA), Sharpen (enfoque) y forzamos el formato a PNG (f_png).
+    let parametrosCloudinary = esTransparente 
+        ? "e_upscale,e_sharpen:50,f_png" 
+        : "e_improve,e_upscale,f_png"; 
+
+    // Aplicamos los parámetros a la URL
+    const urlMejorada = resultado.secure_url.replace("/upload/", `/upload/${parametrosCloudinary}/`);
     
-    // Volvemos a traer la imagen a formato base64 para seguir usando el editor de lienzo
+    // Traemos la imagen procesada y la convertimos de nuevo a base64 para el canvas
     const blobRes = await fetch(urlMejorada);
     const blob = await blobRes.blob();
     const reader = new FileReader();
@@ -1222,7 +1232,7 @@ async function ejecutarMejoraIA() {
     reader.onloadend = function() {
       const base64Mejorada = reader.result;
       
-      if (imagenRecortadaTemporal) {
+      if (esTransparente) {
           galeriaTemporal[indiceEdicionPro].transparenteBase64 = base64Mejorada;
           imagenRecortadaTemporal = new Image();
           imagenRecortadaTemporal.crossOrigin = "anonymous";
