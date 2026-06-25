@@ -64,6 +64,27 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- [NUEVO] MODAL CONTRASEÑA MAYORISTA SOLUCIONADO -->
+  <!-- ========================================== -->
+  <div id="modalPasswordMayorista" style="display:none;" class="modal-admin-overlay">
+    <div class="modal-admin-content">
+      <div class="modal-admin-header">
+        <h3>Acceso Mayorista 📦</h3>
+        <p>Ingresá la contraseña comercial para acceder a los precios exclusivos.</p>
+      </div>
+      <div class="modal-admin-body">
+        <label for="passwordMayorista">Contraseña</label>
+        <input id="passwordMayorista" type="password" placeholder="••••••••">
+        <div class="modal-admin-buttons">
+          <button id="btnValidarMayorista" class="btn-admin-submit">Ingresar</button>
+          <button type="button" id="btnCerrarPasswordMayorista" class="btn-secundario" style="width: 100%; margin-top: 8px;">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ========================================== -->
+
   <div id="app" style="display:none;">
     <div class="header-logo">
       <div class="header-logo-left">
@@ -336,17 +357,29 @@
   <img id="imgBannerTienda" src="" style="width: 100%; height: auto; display: block; object-fit: cover;">
 </div>
 
+<!-- ========================================== -->
+<!-- [ACTUALIZADO] MODAL BANNER SOLUCIONADO -->
+<!-- ========================================== -->
 <div id="modalBanner" style="display:none;" class="modal-admin-overlay">
   <div class="modal-content">
     <h3 style="margin-top:0;">Banner de la Tienda</h3>
     <p style="color:#6e6e73; font-size:14px;">Subí una imagen horizontal para la cabecera.</p>
+    
+    <label>Destino del Banner:</label>
+    <select id="selectTipoBanner" style="margin-bottom: 15px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d2d2d7;">
+      <option value="general">Catálogo Público (General)</option>
+      <option value="mayorista">Catálogo Mayorista (Exclusivo)</option>
+    </select>
+
     <input type="file" id="inputFotoBanner" accept="image/*" style="padding: 8px;">
+    
     <div class="modal-buttons">
       <button type="button" class="btn-secundario" id="btnCerrarBanner">Cancelar</button>
       <button type="button" id="btnGuardarBanner">Subir y Aplicar</button>
     </div>
   </div>
 </div>
+<!-- ========================================== -->
 
 <div id="modalDescuentos" style="display:none;" class="modal-admin-overlay">
   <div class="modal-content">
