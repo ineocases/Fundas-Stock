@@ -484,7 +484,10 @@ button:active {
     color: var(--text-main);
     width: 100%;
 }
-.btn-secundario:hover { background: var(--border-light); }
+.btn-secundario:hover { 
+    background: var(--border-light); 
+    color: var(--text-main); 
+}
 
 /* ==========================================================================
    PANTALLAS DE LOGIN
