@@ -28,6 +28,7 @@ const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1";
 const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94";
 
 // Variables globales de control
+let rolUsuario = "cliente"; // Identifica si es "cliente" o "mayorista"
 let todasLasFundas = [];
 let listaCategorias = []; 
 let categoriaSeleccionadaFiltro = "Todas"; 
@@ -80,15 +81,28 @@ document.addEventListener("DOMContentLoaded", () => {
   // Asignación de eventos de la interfaz principal
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
   
+  function validarYEntrar() {
+    const datosCliente = localStorage.getItem("clienteINeoDatos");
+    if (!datosCliente) {
+      document.getElementById("modalRegistroCliente").style.display = "flex";
+    } else {
+      loginCliente();
+    }
+  }
+
   if(document.getElementById("btnCliente")) {
     document.getElementById("btnCliente").onclick = (e) => {
       e.preventDefault();
-      const datosCliente = localStorage.getItem("clienteINeoDatos");
-      if (!datosCliente) {
-        document.getElementById("modalRegistroCliente").style.display = "flex";
-      } else {
-        loginCliente();
-      }
+      rolUsuario = "cliente";
+      validarYEntrar();
+    };
+  }
+
+  if(document.getElementById("btnMayorista")) {
+    document.getElementById("btnMayorista").onclick = (e) => {
+      e.preventDefault();
+      rolUsuario = "mayorista";
+      validarYEntrar();
     };
   }
 
@@ -532,11 +546,14 @@ async function loginCliente() {
 
 // --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
 function solicitarDatosCliente() {
-  const datosCliente = localStorage.getItem("clienteINeoDatos");
-  if (!datosCliente) {
+  const datosClienteStr = localStorage.getItem("clienteINeoDatos");
+  if (!datosClienteStr) {
     document.getElementById("app").style.display = "none";
     signOut(auth);
     document.getElementById("login").style.display = "flex";
+  } else {
+    const datos = JSON.parse(datosClienteStr);
+    rolUsuario = datos.rol || "cliente"; // Recupera el rol guardado
   }
 }
 
@@ -555,11 +572,15 @@ async function procesarRegistroCliente() {
   btn.disabled = true;
   btn.innerText = "⏳ Ingresando...";
 
+  // SOLUCIÓN: Guardamos el LocalStorage PRIMERO.
+  // También aprovechamos para incluir el rol (cliente o mayorista)
+  localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono, rol: rolUsuario }));
+
   try {
-    // 1. PRIMERO iniciamos sesión anónima para que Firebase nos de permiso de escritura
+    // 1. Iniciamos sesión anónima (ahora no nos cerrará la sesión porque el LocalStorage ya existe)
     await signInAnonymously(auth);
 
-    // 2. AHORA SI guardamos los datos en Firestore
+    // 2. Guardamos los datos en Firestore
     const docRef = doc(db, "clientes", telefono); 
     const docSnap = await getDoc(docRef);
 
@@ -577,9 +598,7 @@ async function procesarRegistroCliente() {
       });
     }
 
-    localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono }));
     document.getElementById("modalRegistroCliente").style.display = "none";
-    // Eliminamos la llamada a loginCliente() acá abajo porque ya lo hicimos arriba.
     
   } catch (error) {
     console.error("Error al registrar cliente:", error);
@@ -644,7 +663,12 @@ function agregarAlCarrito() {
       }
   }
 
-  const precioOriginal = fundaReservando.venta || 0;
+  // Evaluamos qué precio usar dependiendo el rol
+  let precioOriginal = fundaReservando.venta || 0;
+  if (rolUsuario === "mayorista" && fundaReservando.mayorista > 0) {
+      precioOriginal = fundaReservando.mayorista;
+  }
+
   const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
 
   const item = {
@@ -874,6 +898,7 @@ function procesarImportacionExcel(evento) {
             categoria: fila.Categoria || "Varios",
             costo: Number(fila.Costo || 0),
             venta: Number(fila.Venta || 0),
+            mayorista: Number(fila.Mayorista || 0),
             stockPorModelo: stockPorModeloArray,
             foto: "",
             orden: todasLasFundas.length + importados 
@@ -1278,6 +1303,7 @@ function mostrarFormulario() {
   
   document.getElementById("costo").value = "";
   document.getElementById("venta").value = "";
+  if(document.getElementById("mayorista")) document.getElementById("mayorista").value = "";
   document.getElementById("fotoInput").value = "";
   
   document.getElementById("previewFoto").style.display = "none";
@@ -1426,6 +1452,7 @@ async function guardarFunda() {
     stockPorModelo: stockPorModeloArray,
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
+    mayorista: Number(document.getElementById("mayorista").value), 
     foto: urlImagenFinal, 
     fotoTransparente: urlTransparenteFinal, 
     sinModelo: esProductoSinModelo 
@@ -1487,6 +1514,7 @@ function abrirEditarFunda(id) {
   document.getElementById("categoriaSelect").value = funda.categoria || (listaCategorias[0] ? listaCategorias[0].nombre : "");
   document.getElementById("costo").value = funda.costo ?? 0;
   document.getElementById("venta").value = funda.venta ?? 0;
+  if(document.getElementById("mayorista")) document.getElementById("mayorista").value = funda.mayorista ?? 0;
 
   esProductoSinModelo = !!funda.sinModelo;
   const labelStock = document.getElementById('labelStock');
@@ -1629,7 +1657,12 @@ function abrirModalReservar(id) {
       }
   }
 
-  const precioOriginal = funda.venta || 0;
+  // Evaluamos qué precio usar dependiendo el rol
+  let precioOriginal = funda.venta || 0;
+  if (rolUsuario === "mayorista" && funda.mayorista > 0) {
+      precioOriginal = funda.mayorista;
+  }
+
   const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
   document.getElementById("reservaPrecio").innerText = `$${precioFinal}`;
 
@@ -1856,9 +1889,14 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
 
     // --- CÁLCULO E INYECCIÓN DE PRECIO ACTUALIZADA ---
     let bloquePrecioHTML = "";
-    const precioOriginal = f.venta ?? 0;
-    let aplicaDescuento = false;
     
+    // Evaluamos qué precio mostrar dependiendo del rol:
+    let precioOriginal = f.venta ?? 0;
+    if (rolUsuario === "mayorista" && f.mayorista > 0) {
+        precioOriginal = f.mayorista;
+    }
+
+    let aplicaDescuento = false;
     if (descuentoGlobal > 0) {
         if (tipoDescuento === "global") {
             aplicaDescuento = true;
