@@ -1884,55 +1884,92 @@ async function actualizarOrdenEnFirebase() {
     }
 }
 
-function renderizarFundas(arrayDeFundas, textoBuscado = "") {
-  const contenedor = document.getElementById("fundas");
-  let html = "";
+function renderizarFundas() {
+  const contenedor = document.getElementById("contenedorFundas");
+  contenedor.innerHTML = "";
 
-  arrayDeFundas.forEach((f) => {
-    const modelosTotales = f.stockPorModelo || [];
-    const modelosFiltrados = (textoBuscado !== "")
-      ? modelosTotales.filter(m => coincideModelo(m.modelo, textoBuscado))
-      : modelosTotales;
-
-    const totalStock = modelosTotales.reduce((acc, item) => acc + item.stock, 0);
-    const mostrarDirecto = (textoBuscado !== "" && modelosFiltrados.length > 0 && modelosFiltrados.length < modelosTotales.length);
-
-    const listaModelosHTML = modelosFiltrados.map(m => `• ${m.modelo}: <b>${m.stock} u.</b>`).join("<br>");
-    const imagenUrl = f.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500&auto=format&fit=crop&q=60";
-    const estiloOculto = (f.sinModelo && !esAdmin) ? 'style="display: none !important;"' : '';
-
-    let bloqueStockHTML = "";
-    if (f.sinModelo) {
-      bloqueStockHTML = `<p ${estiloOculto}>Stock Total: ${totalStock} u.</p>`;
-    } else {
-      const styleVerStock = mostrarDirecto ? 'display: none !important;' : 'display: block !important;';
-      const styleOcultarStock = mostrarDirecto ? 'display: block !important;' : 'display: none !important;';
-      
-      bloqueStockHTML = `
-        <p>Stock Total: ${totalStock} u.</p>
-        <button onclick="toggleStock(this, 'show')" class="btn-ver-stock" style="${styleVerStock}">Ver stock por modelo</button>
-        <button onclick="toggleStock(this, 'hide')" class="btn-ocultar-stock" style="${styleOcultarStock}">Ocultar Stock</button>
-        <div class="stock-list" style="${styleOcultarStock} margin: 10px 0 15px 5px; font-size: 14px; color: #515154; line-height: 1.5;">${listaModelosHTML}</div>
-      `;
-    }
-
+  fundas.forEach((f) => {
+    // --- VISTA EXCLUSIVA PARA EL ADMINISTRADOR ---
     let bloqueMétricasAdmin = "";
     if (esAdmin) {
       const costo = f.costo || 0;
       const venta = f.venta || 0;
+      const mayorista = f.mayorista || 0;
       const gananciaPesos = venta - costo;
       const porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
-      bloqueMétricasAdmin = `<p style="font-size: 14px; color: #43a047; font-weight: 600; margin: 4px 0 12px 0;">📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)</p>`;
+      
+      bloqueMétricasAdmin = `
+        <div style="margin: 5px 0 12px 0; order: 3;">
+          <p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 0 0 2px 0 !important;">$${venta}</p>
+          <p style="font-size: 13px !important; color: #ff9500 !important; font-weight: 600 !important; margin: 0 0 2px 0 !important;">📦 Mayorista: $${mayorista}</p>
+          <p style="font-size: 13px !important; color: #43a047 !important; font-weight: 600 !important; margin: 0 !important;">📈 Ganancia: $${gananciaPesos} (${porcentajeMargen}%)</p>
+        </div>`;
     }
 
+    // --- CONTROL DE PRECIOS ADAPTATIVOS PARA CLIENTES ---
+    let bloquePrecioHTML = "";
+    if (!esAdmin) {
+      let aplicaDescuento = false;
+      if (descuentoGlobal > 0 && (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id)))) {
+          aplicaDescuento = true;
+      }
+
+      if (rolUsuario === "mayorista") {
+          let precioMayorista = (f.mayorista && f.mayorista > 0) ? f.mayorista : (f.venta || 0);
+          if (aplicaDescuento) {
+              const precioDescuento = Math.round(precioMayorista * (1 - (descuentoGlobal / 100)));
+              bloquePrecioHTML = `
+                <div style="display: flex; flex-direction: column; gap: 4px; margin: 5px 0 15px 0; order: 3;">
+                  <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase;">📦 Tarifa Mayorista</span>
+                  <div style="display: flex; align-items: baseline; gap: 8px;">
+                    <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
+                    <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important;">$${precioMayorista}</p>
+                  </div>
+                </div>`;
+          } else {
+              bloquePrecioHTML = `
+                <div style="margin: 5px 0 15px 0; order: 3;">
+                  <span style="font-size: 11px; font-weight: 700; color: #ff9500;">📦 Tarifa Mayorista</span>
+                  <p style="font-size: 18px !important; font-weight: 800 !important;">$${precioMayorista}</p>
+                </div>`;
+          }
+      } else {
+          let precioOriginal = f.venta || 0;
+          if (aplicaDescuento) {
+              const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
+              bloquePrecioHTML = `
+                <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
+                  <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important;">$${precioDescuento}</p>
+                  <p style="font-size: 14px !important; text-decoration: line-through !important; color: #86868b !important;">$${precioOriginal}</p>
+                </div>`;
+          } else {
+              bloquePrecioHTML = `<p style="font-size: 18px !important; font-weight: 800 !important; margin: 5px 0 15px 0; order: 3;">$${precioOriginal}</p>`;
+          }
+      }
+    }
+
+    // --- ACCIONES (EDITAR/ELIMINAR VS AÑADIR) ---
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
         <div style="margin-top: 20px;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #000; color: #fff; width: 100%; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
         </div>`;
+
+    // --- RENDERIZADO FINAL DE LA TARJETA ---
+    let html = `
+      <div class="card" style="display: flex; flex-direction: column;">
+        <img src="${f.imagen}" alt="${f.nombre}" style="width: 100%; border-radius: 8px;">
+        <h3 style="margin: 10px 0 5px 0; order: 2;">${f.nombre}</h3>
+        ${esAdmin ? bloqueMétricasAdmin : bloquePrecioHTML}
+        ${bloqueAcciones}
+      </div>`;
+    
+    contenedor.innerHTML += html;
+  });
+}
 
     // --- CONTROL DE PRECIOS ADAPTATIVOS POR ROL ---
     let bloquePrecioHTML = "";
