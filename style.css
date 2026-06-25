@@ -815,3 +815,9 @@ button:active {
         font-size: 16px !important;
     }
 }
+/* ==========================================================================
+   GALERÍA CON SCROLL OCULTO
+   ========================================================================== */
+.galeria-hide-scrollbar::-webkit-scrollbar { 
+    display: none; 
+}
