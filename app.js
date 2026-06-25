@@ -2030,7 +2030,7 @@ function renderizarFundas() {
       </div>
     </div>
     `;
-  });
+  };
   document.getElementById("fundas").innerHTML = html;
 
   if (esAdmin && textoBuscado === "" && categoriaSeleccionadaFiltro === "Todas") {
