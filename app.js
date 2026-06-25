@@ -35,11 +35,25 @@ let todasLasFundas = [];
 let listaCategorias = []; 
 let categoriaSeleccionadaFiltro = "Todas"; 
 let idFundaEditando = null;
-let fotoBase64 = ""; 
 let esAdmin = false; 
 let fundaReservando = null; 
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
+
+// 📸 VARIABLES PARA GALERÍA Y FOTO PRO
+let galeriaTemporal = []; // Array que almacena objetos de imagen mientras editamos
+let indiceEdicionPro = null; // Saber qué índice de la galería estamos editando con la IA
+let imagenOriginalTemporal = null; 
+let imagenRecortadaTemporal = null; 
+let opacidadSombra = 0.35;
+let tipoFondoElegido = "estudio";
+let porcentajeEscala = 0.72; 
+let rotacionGrados = 0;
+let nivelBrillo = 100;
+let canvasPosX = 500;
+let canvasPosY = 500;
+let imgFondoEstudio = new Image();
+imgFondoEstudio.src = "fondo-estudio.png"; 
 
 // Variables globales para Descuentos Avanzados
 let descuentoGlobal = 0;
@@ -50,21 +64,6 @@ let productosDescuento = []; // Array con IDs de productos si es específico
 let urlBannerGeneral = "";
 let urlBannerMayorista = "";
 const PASSWORD_MAYORISTA = "mayorista2024"; // Contraseña para tus clientes mayoristas
-
-// 📸 VARIABLES PARA FOTO PRO INTERACTIVA (MODAL SEPARADO)
-let imagenOriginalTemporal = null; 
-let imagenRecortadaTemporal = null; 
-let fotoTransparenteBase64 = ""; 
-let urlTransparenteGuardada = ""; 
-let opacidadSombra = 0.35;
-let tipoFondoElegido = "estudio";
-let porcentajeEscala = 0.72; 
-let rotacionGrados = 0;
-let nivelBrillo = 100;
-let canvasPosX = 500;
-let canvasPosY = 500;
-let imgFondoEstudio = new Image();
-imgFondoEstudio.src = "fondo-estudio.png"; 
 
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
@@ -197,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("buscar")) document.getElementById("buscar").addEventListener("input", filtrarFundas);
   if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").onclick = mostrarAsistente;
   if(document.getElementById("btnRegistrarVenta")) document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
-  if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagen;
+  if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagenesList; // Múltiples Fotos
   
   if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = agregarAlCarrito;
   if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
@@ -336,12 +335,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- EVENTOS DEL MODAL FOTO PRO ---
-  if(document.getElementById("btnCrearFoto")) {
-    document.getElementById("btnCrearFoto").onclick = () => {
-      document.getElementById("menuAccionesIA").style.display = "none";
-      abrirEditorFotoPro();
-    };
-  }
   if(document.getElementById("btnCerrarFotoPro")) {
     document.getElementById("btnCerrarFotoPro").onclick = cerrarEditorFotoPro;
   }
@@ -506,7 +499,6 @@ async function ejecutarCambioRol() {
   toggleSidebar(); 
   await signOut(auth);
   
-  // SOLUCIÓN: Cierra la sesión y manda directamente a la vista del login principal para elegir cómo ingresar
   document.getElementById("app").style.display = "none";
   document.getElementById("modalAdminLogin").style.display = "none";
   document.getElementById("login").style.display = "flex";
@@ -730,12 +722,20 @@ function agregarAlCarrito() {
 
   const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
 
+  // Respaldo por si no tiene fotos
+  let fotoPrincipal = "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=100&auto=format&fit=crop&q=60";
+  if (fundaReservando.fotos && fundaReservando.fotos.length > 0) {
+      fotoPrincipal = fundaReservando.fotos[0].url;
+  } else if (fundaReservando.foto) {
+      fotoPrincipal = fundaReservando.foto;
+  }
+
   const item = {
       id: fundaReservando.id,
       nombre: fundaReservando.nombre,
       modelo: fundaReservando.sinModelo ? "Único" : modeloSeleccionado,
       precio: precioFinal,
-      foto: fundaReservando.foto || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=100&auto=format&fit=crop&q=60"
+      foto: fotoPrincipal
   };
 
   carritoDeCompras.push(item);
@@ -959,7 +959,7 @@ function procesarImportacionExcel(evento) {
             venta: Number(fila.Venta || 0),
             mayorista: Number(fila.Mayorista || 0),
             stockPorModelo: stockPorModeloArray,
-            foto: "",
+            fotos: [], // Lista vacía por defecto para las nuevas funciones
             orden: todasLasFundas.length + importados 
           };
           await addDoc(collection(db, "fundas"), nuevoProducto);
@@ -977,173 +977,279 @@ function procesarImportacionExcel(evento) {
   lector.readAsArrayBuffer(archivo);
 }
 
+// ==========================================================================
+// 🚀 GESTIÓN DE GALERÍA Y FOTO PRO (NUEVO)
+// ==========================================================================
+
+async function procesarImagenesList(evento) {
+  const archivos = Array.from(evento.target.files);
+  if (!archivos.length) return;
+
+  const btnGuardar = document.getElementById("guardarFunda");
+  btnGuardar.disabled = true;
+  btnGuardar.innerText = "⏳ Procesando Imágenes...";
+
+  for (const archivo of archivos) {
+    const base64 = await leerArchivoBase64(archivo);
+    galeriaTemporal.push({
+      idLocal: Date.now() + Math.random(),
+      base64: base64,
+      url: "",
+      transparenteBase64: "",
+      urlTransparente: ""
+    });
+  }
+
+  document.getElementById("fotoInput").value = ""; 
+  renderGaleriaFormulario();
+  
+  btnGuardar.disabled = false;
+  btnGuardar.innerText = idFundaEditando ? "Actualizar" : "Guardar";
+}
+
+function leerArchivoBase64(archivo) {
+  return new Promise((resolve) => {
+    const lector = new FileReader();
+    lector.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement("canvas");
+            canvas.width = 800; // Resolución optimizada
+            canvas.height = 800;
+        
+            const ctx = canvas.getContext("2d");
+            
+            // Fondo blanco para evitar fondos negros en PNGs transparentes al guardar en ImgBB
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, 800, 800);
+
+            const ladoMenor = Math.min(img.width, img.height);
+           
+            const sx = (img.width - ladoMenor) / 2;
+            const sy = (img.height - ladoMenor) / 2;
+
+            ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 800, 800);
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
+        }
+        img.src = e.target.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function renderGaleriaFormulario() {
+  const contenedor = document.getElementById("contenedorGaleria");
+  contenedor.innerHTML = "";
+  
+  if (galeriaTemporal.length === 0) {
+     contenedor.innerHTML = "<p style='font-size:13px; color:#6e6e73;'>No hay imágenes seleccionadas.</p>";
+     return;
+  }
+
+  galeriaTemporal.forEach((imgData, index) => {
+     const imgSrc = imgData.base64 || imgData.url;
+     const div = document.createElement("div");
+     div.style.cssText = "position: relative; flex-shrink: 0; width: 130px; border: 1px solid #d2d2d7; border-radius: 8px; overflow: hidden; background: white;";
+
+     div.innerHTML = `
+        ${index === 0 ? '<span style="position:absolute; top:4px; left:4px; background:#34c759; color:white; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:bold; z-index:2;">Principal</span>' : ''}
+        <img src="${imgSrc}" style="width: 100%; height: 130px; object-fit: cover; display: block;">
+      
+        <div style="padding: 6px; display: flex; flex-direction: column; gap: 5px;">
+           <button type="button" onclick="iniciarEdicionPro(${index})" style="padding: 6px; font-size: 11px; font-weight: bold; background: linear-gradient(135deg, #5856d6, #ff2d55); color: white; border: none; border-radius: 6px; cursor: pointer;">✨ Editor Pro</button>
+           <button type="button" onclick="eliminarImagenGaleria(${index})" style="padding: 6px; font-size: 11px; font-weight: bold; background: #ff3b30; color: white; border: none; border-radius: 6px; cursor: pointer;">🗑️ Quitar</button>
+        </div>
+     `;
+     contenedor.appendChild(div);
+  });
+}
+
+window.eliminarImagenGaleria = (index) => {
+   galeriaTemporal.splice(index, 1);
+   renderGaleriaFormulario();
+};
+
+window.iniciarEdicionPro = (index) => {
+    indiceEdicionPro = index;
+    const imgData = galeriaTemporal[index];
+
+    const imgOriginal = new Image();
+    imgOriginal.crossOrigin = "anonymous";
+    imgOriginal.onload = () => {
+        imagenOriginalTemporal = imgOriginal;
+
+        if (imgData.transparenteBase64 || imgData.urlTransparente) {
+      
+            const imgRecortada = new Image();
+            imgRecortada.crossOrigin = "anonymous";
+            imgRecortada.onload = () => {
+                imagenRecortadaTemporal = imgRecortada;
+                abrirEditorFotoPro();
+            };
+            imgRecortada.src = imgData.transparenteBase64 || imgData.urlTransparente;
+        } else {
+            imagenRecortadaTemporal = null;
+            abrirEditorFotoPro();
+        }
+    };
+    imgOriginal.src = imgData.base64 || imgData.url;
+};
+
 // 🚀 IA Y REMOVE BG CON CANVAS INTERACTIVO (MODAL FOTO PRO)
 function abrirEditorFotoPro() {
-  if (!imagenOriginalTemporal) {
-    alert("Por favor, selecciona una foto de tu galería antes de abrir el Editor Pro.");
-    return;
-  }
   document.getElementById("modalFotoPro").style.display = "flex";
-  
-  document.getElementById("sliderSombra").value = 35;
+  document.getElementById("sliderSombra").value = 35; 
   document.getElementById("valorSombra").innerText = "35%";
-  document.getElementById("sliderRotacion").value = 0;
+  document.getElementById("sliderRotacion").value = 0; 
   document.getElementById("valorRotacion").innerText = "0°";
   document.getElementById("selectFondoPro").value = tipoFondoElegido;
 
-  if(document.getElementById("sliderBrillo")) {
+  if(document.getElementById("sliderBrillo")) { 
     document.getElementById("sliderBrillo").value = 100;
-    document.getElementById("valorBrillo").innerText = "100%";
+    document.getElementById("valorBrillo").innerText = "100%"; 
   }
 
-  porcentajeEscala = 0.72;
-  rotacionGrados = 0;
-  nivelBrillo = 100;
-  canvasPosX = 500;
+  porcentajeEscala = 0.72; 
+  rotacionGrados = 0; 
+  nivelBrillo = 100; 
+  canvasPosX = 500; 
   canvasPosY = 500;
   opacidadSombra = 0.35;
-
   dibujarCanvasGestos();
 }
 
-function cerrarEditorFotoPro() {
+function cerrarEditorFotoPro() { 
   document.getElementById("modalFotoPro").style.display = "none";
 }
 
 async function ejecutarBorradoFondoIA() {
-  const fileInput = document.getElementById("fotoInput");
-  const file = fileInput.files[0];
-  if (!file && !fotoTransparenteBase64) return alert("No se encontró la imagen original para procesar.");
+  if (indiceEdicionPro === null) return alert("Error de selección de imagen.");
+  const imgData = galeriaTemporal[indiceEdicionPro];
+  const imgSrc = imgData.base64 || imgData.url;
+
+  if (!imgSrc) return alert("No hay imagen para procesar.");
 
   const btn = document.getElementById("btnBorrarFondo");
   const textoOriginal = btn.innerText;
-  btn.innerText = "⏳ Borrando...";
+  btn.innerText = "⏳ Borrando..."; 
   btn.disabled = true;
 
   try {
     const formData = new FormData();
-    formData.append("image_file", file);
+    if (imgSrc.startsWith("data:image")) {
+      formData.append("image_file_b64", imgSrc.split(',')[1]);
+    } else {
+      formData.append("image_url", imgSrc);
+    }
+    
     formData.append("size", "auto");
-
-    const respuestaAPI = await fetch("https://api.remove.bg/v1.0/removebg", {
-      method: "POST",
-      headers: { "X-Api-Key": REMOVE_BG_API_KEY },
-      body: formData
+    const respuestaAPI = await fetch("https://api.remove.bg/v1.0/removebg", { 
+      method: "POST", 
+      headers: { "X-Api-Key": REMOVE_BG_API_KEY }, 
+      body: formData 
     });
 
     if (!respuestaAPI.ok) throw new Error("Error en la API de Remove.bg.");
 
     const blobImagenRecortada = await respuestaAPI.blob();
     const reader = new FileReader();
-    
+
     reader.onloadend = function() {
-      fotoTransparenteBase64 = reader.result; 
+      const base64Recortada = reader.result;
+      galeriaTemporal[indiceEdicionPro].transparenteBase64 = base64Recortada; 
+
       imagenRecortadaTemporal = new Image();
       imagenRecortadaTemporal.crossOrigin = "anonymous";
-      imagenRecortadaTemporal.onload = () => {
-        dibujarCanvasGestos();
-        btn.innerText = textoOriginal;
-        btn.disabled = false;
+      imagenRecortadaTemporal.onload = () => { 
+        dibujarCanvasGestos(); 
+        btn.innerText = textoOriginal; 
+        btn.disabled = false; 
       };
-      imagenRecortadaTemporal.src = fotoTransparenteBase64;
+      imagenRecortadaTemporal.src = base64Recortada;
     };
+
     reader.readAsDataURL(blobImagenRecortada);
 
-  } catch (err) {
-    console.error(err);
-    alert("Hubo un problemita al conectar con Remove.bg. Verifica tu API Key o conexión.");
-    btn.innerText = textoOriginal;
+  } catch (err) { 
+    console.error(err); 
+    alert("Problemita con Remove.bg. Verifica API Key o conexión."); 
+    btn.innerText = textoOriginal; 
     btn.disabled = false;
   }
 }
 
 function reEditarMontaje() {
-  porcentajeEscala = 0.72;
-  rotacionGrados = 0;
+  porcentajeEscala = 0.72; 
+  rotacionGrados = 0; 
   nivelBrillo = 100; 
-  canvasPosX = 500;
+  canvasPosX = 500; 
   canvasPosY = 500;
-  
-  if (document.getElementById("sliderRotacion")) {
-    document.getElementById("sliderRotacion").value = 0;
-    document.getElementById("valorRotacion").innerText = "0°";
+
+  if (document.getElementById("sliderRotacion")) { 
+    document.getElementById("sliderRotacion").value = 0; 
+    document.getElementById("valorRotacion").innerText = "0°"; 
   }
-  
-  if (document.getElementById("sliderBrillo")) {
-    document.getElementById("sliderBrillo").value = 100;
+  if (document.getElementById("sliderBrillo")) { 
+    document.getElementById("sliderBrillo").value = 100; 
     document.getElementById("valorBrillo").innerText = "100%";
   }
-
   dibujarCanvasGestos();
 }
 
 function configurarGestosCanvas() {
   const canvas = document.getElementById("canvasGestos");
   if (!canvas) return;
-
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let prevTouchDist = null;
-
+  
+  let isDragging = false, startX = 0, startY = 0, prevTouchDist = null;
+  
   canvas.onpointerdown = (e) => { 
     isDragging = true; 
     startX = e.clientX; 
     startY = e.clientY; 
     canvas.style.cursor = "grabbing"; 
-    canvas.setPointerCapture(e.pointerId);
+    canvas.setPointerCapture(e.pointerId); 
   };
   
   canvas.onpointerup = (e) => { 
     isDragging = false; 
     canvas.style.cursor = "grab"; 
-    canvas.releasePointerCapture(e.pointerId);
-    prevTouchDist = null;
+    canvas.releasePointerCapture(e.pointerId); 
+    prevTouchDist = null; 
   };
-
+  
   canvas.onpointermove = (e) => {
     if (!isDragging) return;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    canvasPosX += (e.clientX - startX) * scaleX;
+    const rect = canvas.getBoundingClientRect(), scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    canvasPosX += (e.clientX - startX) * scaleX; 
     canvasPosY += (e.clientY - startY) * scaleY;
-    
-    startX = e.clientX;
+    startX = e.clientX; 
     startY = e.clientY;
     dibujarCanvasGestos();
   };
-
-  canvas.onwheel = (e) => {
-    e.preventDefault();
+  
+  canvas.onwheel = (e) => { 
+    e.preventDefault(); 
     if (e.deltaY < 0) {
-      porcentajeEscala = Math.min(porcentajeEscala + 0.05, 3.5); 
+      porcentajeEscala = Math.min(porcentajeEscala + 0.05, 3.5);
     } else {
       porcentajeEscala = Math.max(porcentajeEscala - 0.05, 0.1); 
     }
-    dibujarCanvasGestos();
+    dibujarCanvasGestos(); 
   };
-
-  canvas.ontouchstart = (e) => {
+  
+  canvas.ontouchstart = (e) => { 
     if (e.touches.length === 2) {
-      prevTouchDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
+      prevTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     }
   };
-
+  
   canvas.ontouchmove = (e) => {
     if (e.touches.length === 2 && prevTouchDist) {
-      e.preventDefault(); 
-      const currentDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      porcentajeEscala *= (currentDist / prevTouchDist);
+      e.preventDefault();
+      const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      porcentajeEscala *= (currentDist / prevTouchDist); 
       porcentajeEscala = Math.max(0.1, Math.min(porcentajeEscala, 3.5));
-      prevTouchDist = currentDist;
+      prevTouchDist = currentDist; 
       dibujarCanvasGestos();
     }
   };
@@ -1152,6 +1258,7 @@ function configurarGestosCanvas() {
 function dibujarCanvasGestos() {
   const canvas = document.getElementById("canvasGestos");
   if (!canvas) return;
+
   const ctx = canvas.getContext("2d");
   
   let imagenADibujar = imagenRecortadaTemporal || imagenOriginalTemporal;
@@ -1164,22 +1271,22 @@ function dibujarCanvasGestos() {
       ctx.drawImage(imgFondoEstudio, 0, 0, canvas.width, canvas.height);
     } else {
       const grad = ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
-      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0, "#ffffff"); 
       grad.addColorStop(1, "#e5e5ea");
-      ctx.fillStyle = grad;
+      ctx.fillStyle = grad; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-  } else if (tipoFondoElegido === "blanco") {
+  } else if (tipoFondoElegido === "blanco") { 
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height); 
   }
 
-  ctx.save();
+  ctx.save(); 
   ctx.translate(canvasPosX, canvasPosY); 
-  ctx.rotate(rotacionGrados * Math.PI / 180); 
-  
-  if (opacidadSombra > 0 && tipoFondoElegido !== "original") {
-    ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
+  ctx.rotate(rotacionGrados * Math.PI / 180);
+
+  if (opacidadSombra > 0 && tipoFondoElegido !== "original") { 
+    ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`; 
     ctx.shadowBlur = 40;
     ctx.shadowOffsetX = 30; 
     ctx.shadowOffsetY = 40; 
@@ -1187,25 +1294,21 @@ function dibujarCanvasGestos() {
 
   const limitePixel = 1000 * porcentajeEscala;
   const escala = Math.min(limitePixel / imagenADibujar.width, limitePixel / imagenADibujar.height);
-  const anchoFinal = imagenADibujar.width * escala;
-  const altoFinal = imagenADibujar.height * escala;
+  const anchoFinal = imagenADibujar.width * escala, altoFinal = imagenADibujar.height * escala;
 
   ctx.filter = `brightness(${nivelBrillo}%)`;
   ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
-  
   ctx.restore();
 }
 
 async function aplicarMontajeFinal() {
   const canvas = document.getElementById("canvasGestos");
-  if (!canvas) return;
+  if (!canvas || indiceEdicionPro === null) return;
 
-  fotoBase64 = canvas.toDataURL("image/png"); 
+  const fotoFinalBase64 = canvas.toDataURL("image/jpeg", 0.9); // Alta calidad
+  galeriaTemporal[indiceEdicionPro].base64 = fotoFinalBase64; 
   
-  const preview = document.getElementById("previewFoto");
-  preview.src = fotoBase64;
-  preview.style.display = "block";
-
+  renderGaleriaFormulario();
   cerrarEditorFotoPro();
 }
 
@@ -1224,25 +1327,21 @@ function procesarTextoStock() {
   const textoCrudo = document.getElementById("textoCrudoStock").value;
   if (!textoCrudo.trim()) return alert("Pegá una lista primero.");
 
-  const lineas = textoCrudo.split('\n');
+  const lineas = textoCrudo.split('\n'); 
   const resultado = [];
 
   lineas.forEach(linea => {
-    let str = linea.trim();
-    if (!str) return;
-
+    let str = linea.trim(); if (!str) return;
     let cantidad = 1; 
     const matchCant = str.match(/x\s*(\d+)$/i);
-    if (matchCant) {
-      cantidad = matchCant[1];
+    if (matchCant) { 
+      cantidad = matchCant[1]; 
       str = str.replace(/x\s*\d+$/i, '').trim(); 
     }
-
-    str = str.replace(/^(Iph|iphone|i)\s*/i, '');
-    str = str.replace(/\bpm\b/ig, 'Pro Max');
-    str = str.replace(/\bp\b/ig, 'Pro');
+    str = str.replace(/^(Iph|iphone|i)\s*/i, ''); 
+    str = str.replace(/\bpm\b/ig, 'Pro Max'); 
+    str = str.replace(/\bp\b/ig, 'Pro'); 
     str = str.replace(/\bplus\b/ig, 'Plus');
-
     if (str.length > 0) str = str.charAt(0).toUpperCase() + str.slice(1);
     resultado.push(`${str}:${cantidad}`);
   });
@@ -1254,71 +1353,31 @@ function procesarTextoStock() {
 
 function toggleModoModelo() {
   esProductoSinModelo = !esProductoSinModelo;
-  const labelStock = document.getElementById('labelStock');
-  const stockPorModelo = document.getElementById('stockPorModelo');
-  const stockTotalSencillo = document.getElementById('stockTotalSencillo');
-  const cajaFormateador = document.getElementById('cajaFormateador');
-  const btnToggleModelo = document.getElementById('btnToggleModelo');
-
+  const labelStock = document.getElementById('labelStock'), 
+        stockPorModelo = document.getElementById('stockPorModelo'), 
+        stockTotalSencillo = document.getElementById('stockTotalSencillo'), 
+        cajaFormateador = document.getElementById('cajaFormateador'), 
+        btnToggleModelo = document.getElementById('btnToggleModelo');
+        
   if (esProductoSinModelo) {
-    labelStock.textContent = "Cantidad Total de Piezas en Stock";
-    stockPorModelo.style.display = 'none';
+    labelStock.textContent = "Cantidad Total de Piezas en Stock"; 
+    stockPorModelo.style.display = 'none'; 
     stockTotalSencillo.style.display = 'block';
-    if (cajaFormateador) cajaFormateador.style.display = 'none';
-    btnToggleModelo.textContent = "✨ Usar Variantes";
-    btnToggleModelo.style.background = "#0071e3";
+    if (cajaFormateador) cajaFormateador.style.display = 'none'; 
+    btnToggleModelo.textContent = "✨ Usar Variantes"; 
+    btnToggleModelo.style.background = "#0071e3"; 
     stockPorModelo.value = "";
   } else {
-    labelStock.textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
+    labelStock.textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)"; 
     stockPorModelo.style.display = 'block';
     stockTotalSencillo.style.display = 'none';
-    btnToggleModelo.textContent = "🚫 No Modelo";
-    btnToggleModelo.style.background = "#6e6e73";
+    btnToggleModelo.textContent = "🚫 No Modelo"; 
+    btnToggleModelo.style.background = "#6e6e73"; 
     stockTotalSencillo.value = "";
   }
 }
 
 // --- GESTIÓN DE FORMULARIO DE PRODUCTO ---
-function procesarImagen(evento) {
-  const archivo = evento.target.files[0];
-  if (!archivo) return;
-
-  const btnGuardar = document.getElementById("guardarFunda");
-  btnGuardar.disabled = true;
-
-  const lector = new FileReader();
-  lector.onload = function (e) {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = function () {
-      
-      imagenOriginalTemporal = img;
-      imagenRecortadaTemporal = null; 
-      fotoTransparenteBase64 = "";
-
-      const canvas = document.createElement("canvas");
-      canvas.width = 500;
-      canvas.height = 500;
-      const ctx = canvas.getContext("2d");
-
-      const ladoMenor = Math.min(img.width, img.height);
-      const sx = (img.width - ladoMenor) / 2;
-      const sy = (img.height - ladoMenor) / 2;
-
-      ctx.drawImage(img, sx, sy, ladoMenor, ladoMenor, 0, 0, 500, 500);
-      fotoBase64 = canvas.toDataURL("image/jpeg", 0.6);
-
-      const preview = document.getElementById("previewFoto");
-      preview.src = fotoBase64;
-      preview.style.display = "block";
-
-      btnGuardar.disabled = false;
-    };
-    img.src = e.target.result;
-  };
-  lector.readAsDataURL(archivo);
-}
-
 function mostrarFormulario() {
   if (!esAdmin) return;
   if (listaCategorias.length === 0) {
@@ -1327,11 +1386,8 @@ function mostrarFormulario() {
   }
   
   idFundaEditando = null;
-  fotoBase64 = ""; 
-  fotoTransparenteBase64 = "";
-  urlTransparenteGuardada = "";
-  imagenOriginalTemporal = null;
-  imagenRecortadaTemporal = null;
+  galeriaTemporal = [];
+  indiceEdicionPro = null;
   
   document.getElementById("modalTitulo").innerText = "➕ Nuevo Artículo";
   document.getElementById("guardarFunda").innerText = "Guardar";
@@ -1342,45 +1398,41 @@ function mostrarFormulario() {
   
   esProductoSinModelo = false;
   document.getElementById('labelStock').textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
-  document.getElementById('stockPorModelo').style.display = 'block';
+  document.getElementById('stockPorModelo').style.display = 'block'; 
   document.getElementById('stockTotalSencillo').style.display = 'none';
-  document.getElementById('stockPorModelo').value = "";
+  document.getElementById('stockPorModelo').value = ""; 
   document.getElementById('stockTotalSencillo').value = "";
   
   const btnToggleModelo = document.getElementById('btnToggleModelo');
-  btnToggleModelo.textContent = "🚫 No Modelo";
+  btnToggleModelo.textContent = "🚫 No Modelo"; 
   btnToggleModelo.style.background = "#6e6e73";
   
-  document.getElementById("costo").value = "";
+  document.getElementById("costo").value = ""; 
   document.getElementById("venta").value = "";
   if(document.getElementById("mayorista")) document.getElementById("mayorista").value = "";
   document.getElementById("fotoInput").value = "";
   
-  document.getElementById("previewFoto").style.display = "none";
+  renderGaleriaFormulario();
   
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
   if(document.getElementById("textoCrudoStock")) document.getElementById("textoCrudoStock").value = "";
-  if(document.getElementById("btnReeditarMontaje")) document.getElementById("btnReeditarMontaje").style.display = "none";
 
   document.getElementById("agregar").style.display = "flex";
 }
 
 function ocultarFormulario() {
-  idFundaEditando = null;
-  fotoBase64 = "";
-  fotoTransparenteBase64 = "";
-  urlTransparenteGuardada = "";
-  imagenOriginalTemporal = null;
-  imagenRecortadaTemporal = null;
+  idFundaEditando = null; 
+  galeriaTemporal = []; 
+  indiceEdicionPro = null;
   document.getElementById("agregar").style.display = "none";
 }
 
 function mostrarAsistente() {
-  if (!esAdmin) return;
-  document.getElementById("asistenteProducto").value = "";
-  document.getElementById("asistenteModelo").value = "";
-  document.getElementById("asistenteUnidades").value = "1";
+  if (!esAdmin) return; 
+  document.getElementById("asistenteProducto").value = ""; 
+  document.getElementById("asistenteModelo").value = ""; 
+  document.getElementById("asistenteUnidades").value = "1"; 
   document.getElementById("modalAsistente").style.display = "flex";
 }
 function ocultarAsistente() { document.getElementById("modalAsistente").style.display = "none"; }
@@ -1392,10 +1444,10 @@ function actualizarDatalistBuscador() {
   const sugerencias = new Set();
   todasLasFundas.forEach(f => {
     if (f.nombre) sugerencias.add(f.nombre); 
-    if (Array.isArray(f.stockPorModelo)) {
-      f.stockPorModelo.forEach(m => {
+    if (Array.isArray(f.stockPorModelo)) { 
+      f.stockPorModelo.forEach(m => { 
         if (m.modelo) sugerencias.add(m.modelo.trim()); 
-      });
+      }); 
     }
   });
   
@@ -1418,19 +1470,18 @@ async function cargarFundas() {
     if (necesitaMigracion) {
       console.log("⚙️ Corrigiendo base de datos sin índices de orden...");
       const batch = writeBatch(db);
-      todasLasFundas.forEach((funda, index) => {
-        if (funda.orden === undefined) {
-          const docRef = doc(db, "fundas", funda.id);
-          batch.update(docRef, { orden: index });
+      todasLasFundas.forEach((funda, index) => { 
+        if (funda.orden === undefined) { 
+          const docRef = doc(db, "fundas", funda.id); 
+          batch.update(docRef, { orden: index }); 
           funda.orden = index; 
-        }
+        } 
       });
       await batch.commit();
     }
 
     todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    
-    actualizarDatalistAsistente();
+    actualizarDatalistAsistente(); 
     actualizarDatalistBuscador(); 
     filtrarFundas();
   } catch (error) { console.error("Error al cargar o migrar fundas:", error); }
@@ -1438,7 +1489,7 @@ async function cargarFundas() {
 
 function actualizarDatalistAsistente() {
   const datalist = document.getElementById("listaProductos");
-  if (!datalist) return;
+  if (!datalist) return; 
   const nombresUnicos = [...new Set(todasLasFundas.map(f => f.nombre).filter(Boolean))];
   datalist.innerHTML = nombresUnicos.map(nombre => `<option value="${nombre}"></option>`).join("");
 }
@@ -1451,35 +1502,50 @@ async function guardarFunda() {
   btnGuardar.disabled = true;
   btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
 
-  let urlImagenFinal = fotoBase64; 
-  let urlTransparenteFinal = urlTransparenteGuardada; 
-
   const subirAImgBB = async (base64) => {
     const base64Clean = base64.split(',')[1];
-    const formData = new FormData();
+    const formData = new FormData(); 
     formData.append("image", base64Clean);
-    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData
+    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { 
+      method: "POST", 
+      body: formData 
     });
     const resultado = await respuesta.json();
     if (!resultado.success) throw new Error("Error en ImgBB");
     return resultado.data.url;
   };
 
+  let urlsGaleriaFinal = [];
+  let urlPortada = "";
+  let urlPortadaTransparente = "";
+
   try {
-    if (fotoTransparenteBase64 && fotoTransparenteBase64.startsWith("data:image")) {
-      urlTransparenteFinal = await subirAImgBB(fotoTransparenteBase64);
+    for (let i = 0; i < galeriaTemporal.length; i++) {
+        let img = galeriaTemporal[i];
+        let urlFinal = img.url;
+        let urlTransFinal = img.urlTransparente;
+
+        if (img.base64 && img.base64.startsWith("data:image")) {
+            btnGuardar.innerText = `⏳ Subiendo img ${i+1}/${galeriaTemporal.length}...`;
+            urlFinal = await subirAImgBB(img.base64);
+        }
+        if (img.transparenteBase64 && img.transparenteBase64.startsWith("data:image")) {
+            urlTransFinal = await subirAImgBB(img.transparenteBase64);
+        }
+
+        urlsGaleriaFinal.push({ url: urlFinal, urlTransparente: urlTransFinal });
+        
+        if (i === 0) { 
+          urlPortada = urlFinal; 
+          urlPortadaTransparente = urlTransFinal;
+        }
     }
-    if (fotoBase64 && fotoBase64.startsWith("data:image")) {
-      urlImagenFinal = await subirAImgBB(fotoBase64);
-    }
-    btnGuardar.innerText = "💾 Guardando datos..."; 
+    btnGuardar.innerText = "💾 Guardando datos...";
   } catch (err) {
-    console.error(err);
-    alert("Error al subir la foto a ImgBB. Intenta de nuevo.");
+    console.error(err); 
+    alert("Error al subir a ImgBB. Intenta de nuevo.");
     btnGuardar.disabled = false;
-    btnGuardar.innerText = textoOriginal;
+    btnGuardar.innerText = textoOriginal; 
     return;
   }
 
@@ -1489,11 +1555,10 @@ async function guardarFunda() {
     stockPorModeloArray = [{ modelo: "Único", stock: unidadesTotales }];
   } else {
     const compatiblesInput = document.getElementById("stockPorModelo").value;
-    stockPorModeloArray = compatiblesInput.split(",")
-      .map(item => {
-        const [modelo, cantidad] = item.split(":");
-        return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 };
-      }).filter(item => item.modelo !== "");
+    stockPorModeloArray = compatiblesInput.split(",").map(item => { 
+      const [modelo, cantidad] = item.split(":"); 
+      return { modelo: modelo ? modelo.trim() : "", stock: cantidad ? Number(cantidad.trim()) : 0 }; 
+    }).filter(item => item.modelo !== "");
   }
 
   const datosFunda = {
@@ -1503,8 +1568,9 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     mayorista: Number(document.getElementById("mayorista").value), 
-    foto: urlImagenFinal, 
-    fotoTransparente: urlTransparenteFinal, 
+    fotos: urlsGaleriaFinal,          // Nueva Matriz de Imágenes
+    foto: urlPortada,                 // Respaldo de retrocompatibilidad
+    fotoTransparente: urlPortadaTransparente, 
     sinModelo: esProductoSinModelo 
   };
 
@@ -1512,14 +1578,6 @@ async function guardarFunda() {
 
   try {
     if (idFundaEditando) {
-      if (urlImagenFinal === "" && !fotoBase64) {
-         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.foto = vieja ? (vieja.foto || "") : "";
-      }
-      if (urlTransparenteFinal === "" && !fotoTransparenteBase64) {
-         const vieja = todasLasFundas.find(f => f.id === idFundaEditando);
-         datosFunda.fotoTransparente = vieja ? (vieja.fotoTransparente || "") : "";
-      }
       await updateDoc(doc(db, "fundas", idFundaEditando), datosFunda);
       alert("Artículo actualizado 🎉");
     } else {
@@ -1528,20 +1586,20 @@ async function guardarFunda() {
     }
     ocultarFormulario();
     cargarFundas();
-  } catch (error) {
-    console.error(error);
+  } catch (error) { 
+    console.error(error); 
     alert("Error al guardar en base de datos.");
-  } finally {
-    btnGuardar.disabled = false;
-    btnGuardar.innerText = textoOriginal;
+  } finally { 
+    btnGuardar.disabled = false; 
+    btnGuardar.innerText = textoOriginal; 
   }
 }
 
 async function eliminarFunda(id) {
   if (!esAdmin) return;
   if (confirm("¿Seguro que deseas eliminar este artículo?")) {
-    try {
-      await deleteDoc(doc(db, "fundas", id));
+    try { 
+      await deleteDoc(doc(db, "fundas", id)); 
       cargarFundas();
     } catch (error) { console.error(error); }
   }
@@ -1553,11 +1611,25 @@ function abrirEditarFunda(id) {
   if (!funda) return;
 
   idFundaEditando = id;
-  fotoBase64 = "";
-  fotoTransparenteBase64 = "";
-  urlTransparenteGuardada = funda.fotoTransparente || "";
-  imagenOriginalTemporal = null;
-  imagenRecortadaTemporal = null;
+  galeriaTemporal = [];
+  indiceEdicionPro = null;
+
+  // Cargar galería existente a estado temporal
+  if (funda.fotos && funda.fotos.length > 0) {
+      funda.fotos.forEach(f => {
+          galeriaTemporal.push({
+              idLocal: Date.now() + Math.random(),
+              base64: "", url: f.url || "",
+              transparenteBase64: "", urlTransparente: f.urlTransparente || ""
+          });
+       });
+  } else if (funda.foto) {
+      galeriaTemporal.push({
+          idLocal: Date.now() + Math.random(),
+          base64: "", url: funda.foto,
+          transparenteBase64: "", urlTransparente: funda.fotoTransparente || ""
+      });
+  }
 
   document.getElementById("modalTitulo").innerText = "✏️ Editar Artículo";
   document.getElementById("nombre").value = funda.nombre || "";
@@ -1567,72 +1639,33 @@ function abrirEditarFunda(id) {
   if(document.getElementById("mayorista")) document.getElementById("mayorista").value = funda.mayorista ?? 0;
 
   esProductoSinModelo = !!funda.sinModelo;
-  const labelStock = document.getElementById('labelStock');
-  const stockPorModelo = document.getElementById('stockPorModelo');
-  const stockTotalSencillo = document.getElementById('stockTotalSencillo');
-  const btnToggleModelo = document.getElementById('btnToggleModelo');
-
+  const labelStock = document.getElementById('labelStock'), 
+        stockPorModelo = document.getElementById('stockPorModelo'), 
+        stockTotalSencillo = document.getElementById('stockTotalSencillo'), 
+        btnToggleModelo = document.getElementById('btnToggleModelo');
+        
   if (esProductoSinModelo) {
-    labelStock.textContent = "Cantidad Total de Piezas en Stock";
-    stockPorModelo.style.display = 'none';
+    labelStock.textContent = "Cantidad Total de Piezas en Stock"; 
+    stockPorModelo.style.display = 'none'; 
     stockTotalSencillo.style.display = 'block';
-    btnToggleModelo.textContent = "✨ Usar Variantes";
+    btnToggleModelo.textContent = "✨ Usar Variantes"; 
     btnToggleModelo.style.background = "#0071e3";
-    
     const primerItem = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
-    stockTotalSencillo.value = primerItem;
+    stockTotalSencillo.value = primerItem; 
     stockPorModelo.value = "";
   } else {
     labelStock.textContent = "Modelos / Variantes y Stock (Formato: variante:cantidad)";
-    stockPorModelo.style.display = 'block';
+    stockPorModelo.style.display = 'block'; 
     stockTotalSencillo.style.display = 'none';
-    btnToggleModelo.textContent = "🚫 No Modelo";
-    btnToggleModelo.style.background = "#6e6e73";
+    btnToggleModelo.textContent = "🚫 No Modelo"; 
+    btnToggleModelo.style.background = "#6e6e73"; 
     stockTotalSencillo.value = "";
-
     if (Array.isArray(funda.stockPorModelo)) {
       document.getElementById("stockPorModelo").value = funda.stockPorModelo.map(m => `${m.modelo}:${m.stock}`).join(", ");
     }
   }
 
-  const preview = document.getElementById("previewFoto");
-  if (funda.foto) {
-    preview.src = funda.foto;
-    preview.style.display = "block";
-    
-    const imgOld = new Image();
-    imgOld.crossOrigin = "anonymous";
-    imgOld.onload = () => { imagenOriginalTemporal = imgOld; };
-    imgOld.src = funda.foto;
-    
-  } else {
-    preview.style.display = "none";
-  }
-
-  let btnReeditar = document.getElementById("btnReeditarMontaje");
-  if (!btnReeditar) {
-    btnReeditar = document.createElement("button");
-    btnReeditar.id = "btnReeditarMontaje";
-    btnReeditar.style.cssText = "width: 100%; background: #5856d6; margin-bottom: 15px; color: white; padding: 12px; border-radius: 12px; border:none; font-weight:bold; cursor:pointer;";
-    btnReeditar.innerText = "🖼️ Re-editar Montaje Guardado (No gasta API)";
-    preview.parentNode.insertBefore(btnReeditar, preview);
-  }
-
-  if (funda.fotoTransparente) {
-    btnReeditar.style.display = "block";
-    btnReeditar.onclick = (e) => {
-      e.preventDefault();
-      const imgRecorteViejo = new Image();
-      imgRecorteViejo.crossOrigin = "anonymous";
-      imgRecorteViejo.onload = () => {
-        imagenRecortadaTemporal = imgRecorteViejo;
-        abrirEditorFotoPro();
-      };
-      imgRecorteViejo.src = funda.fotoTransparente;
-    };
-  } else {
-    btnReeditar.style.display = "none";
-  }
+  renderGaleriaFormulario();
 
   if(document.getElementById("menuAccionesIA")) document.getElementById("menuAccionesIA").style.display = "none";
   if(document.getElementById("cajaFormateador")) document.getElementById("cajaFormateador").style.display = "none";
@@ -1647,24 +1680,26 @@ async function procesarVentaAsistente() {
   const prodBuscado = document.getElementById("asistenteProducto").value.trim().toLowerCase();
   const modeloBuscado = document.getElementById("asistenteModelo").value.trim().toLowerCase();
   const unidadesAVender = Number(document.getElementById("asistenteUnidades").value);
-
+  
   const fundaEncontrada = todasLasFundas.find(f => f.nombre && f.nombre.toLowerCase() === prodBuscado);
   if (!fundaEncontrada) return alert("Producto no encontrado.");
-
+  
   if (fundaEncontrada.sinModelo) {
     if (!fundaEncontrada.stockPorModelo || fundaEncontrada.stockPorModelo.length === 0) {
       fundaEncontrada.stockPorModelo = [{ modelo: "Único", stock: 0 }];
     }
     const modeloStock = fundaEncontrada.stockPorModelo[0];
     if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
-
     modeloStock.stock -= unidadesAVender;
-    try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
-      alert(`¡Venta registrada!`);
-      ocultarAsistente();
-      cargarFundas();
-    } catch (error) { console.error(error); }
+    
+    try { 
+      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo }); 
+      alert(`¡Venta registrada!`); 
+      ocultarAsistente(); 
+      cargarFundas(); 
+    } catch (error) { 
+      console.error(error);
+    }
     return;
   }
 
@@ -1672,14 +1707,17 @@ async function procesarVentaAsistente() {
     const modeloStock = fundaEncontrada.stockPorModelo.find(m => m.modelo.toLowerCase().trim() === modeloBuscado);
     if (!modeloStock) return alert("Variante/Modelo no encontrado.");
     if (modeloStock.stock < unidadesAVender) return alert("Stock insuficiente.");
-
+    
     modeloStock.stock -= unidadesAVender;
-    try {
-      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo });
-      alert(`¡Venta registrada!`);
-      ocultarAsistente();
-      cargarFundas();
-    } catch (error) { console.error(error); }
+    
+    try { 
+      await updateDoc(doc(db, "fundas", fundaEncontrada.id), { stockPorModelo: fundaEncontrada.stockPorModelo }); 
+      alert(`¡Venta registrada!`); 
+      ocultarAsistente(); 
+      cargarFundas(); 
+    } catch (error) { 
+      console.error(error);
+    }
   }
 }
 
@@ -1688,7 +1726,7 @@ window.eliminarFunda = eliminarFunda;
 window.abrirEditarFunda = abrirEditarFunda;
 window.ocultarFormulario = ocultarFormulario;
 window.ocultarAsistente = ocultarAsistente;
-window.eliminarItemCarrito = eliminarItemCarrito; 
+window.eliminarItemCarrito = eliminarItemCarrito;
 
 function abrirModalReservar(id) {
   const funda = todasLasFundas.find(f => f.id === id);
@@ -1698,57 +1736,54 @@ function abrirModalReservar(id) {
   document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
   
   let aplicaDescuento = false;
-  if (descuentoGlobal > 0) {
-      if (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(funda.id))) {
-          aplicaDescuento = true;
-      }
+  if (descuentoGlobal > 0 && (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(funda.id)))) {
+    aplicaDescuento = true;
   }
-
+  
   let precioOriginal = funda.venta || 0;
-  if (rolUsuario === "mayorista" && funda.mayorista > 0) {
-      precioOriginal = funda.mayorista;
-  }
-
+  if (rolUsuario === "mayorista" && funda.mayorista > 0) precioOriginal = funda.mayorista;
+  
   const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
   document.getElementById("reservaPrecio").innerText = `$${precioFinal}`;
-
+  
   const selectModelo = document.getElementById("reservaModelo");
   selectModelo.innerHTML = "";
 
   if (funda.sinModelo) {
     const totalStock = Array.isArray(funda.stockPorModelo) && funda.stockPorModelo[0] ? funda.stockPorModelo[0].stock : 0;
-    if (totalStock <= 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
+    if (totalStock <= 0) { 
+      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`; 
       document.getElementById("btnConfirmarWhatsApp").disabled = true;
-    } else {
-      document.getElementById("btnConfirmarWhatsApp").disabled = false;
+    } else { 
+      document.getElementById("btnConfirmarWhatsApp").disabled = false; 
       selectModelo.innerHTML = `<option value="Único">Estándar / Único</option>`;
     }
   } else if (Array.isArray(funda.stockPorModelo)) {
     const modelsDisponibles = funda.stockPorModelo.filter(m => m.stock > 0);
-    if (modelsDisponibles.length === 0) {
-      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`;
+    if (modelsDisponibles.length === 0) { 
+      selectModelo.innerHTML = `<option value="">⚠️ Sin stock disponible</option>`; 
       document.getElementById("btnConfirmarWhatsApp").disabled = true;
     } else {
       document.getElementById("btnConfirmarWhatsApp").disabled = false;
-      modelsDisponibles.forEach(m => {
-        const option = document.createElement("option");
-        option.value = m.modelo;
-        option.innerText = `${m.modelo} (${m.stock} u.)`;
-        selectModelo.appendChild(option);
+      modelsDisponibles.forEach(m => { 
+        const option = document.createElement("option"); 
+        option.value = m.modelo; 
+        option.innerText = `${m.modelo} (${m.stock} u.)`; 
+        selectModelo.appendChild(option); 
       });
     }
-  } else {
-    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`;
-    document.getElementById("btnConfirmarWhatsApp").disabled = false;
+  } else { 
+    selectModelo.innerHTML = `<option value="Estándar">Variante Única</option>`; 
+    document.getElementById("btnConfirmarWhatsApp").disabled = false; 
   }
+  
   document.getElementById("modalReservar").style.display = "flex";
 }
 window.abrirModalReservar = abrirModalReservar;
 
-function cerrarModalReservar() {
-  fundaReservando = null;
-  document.getElementById("modalReservar").style.display = "none";
+function cerrarModalReservar() { 
+  fundaReservando = null; 
+  document.getElementById("modalReservar").style.display = "none"; 
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
@@ -1760,97 +1795,90 @@ function controlarCargaDeImagenes() {
 
   if (totalImagenes === 0) {
     if (barraProgreso) barraProgreso.style.width = "100%";
-    setTimeout(() => {
-      if (loader) {
-        loader.style.opacity = "0";
-        setTimeout(() => { loader.style.display = "none"; }, 400);
-      }
+    setTimeout(() => { 
+      if (loader) { 
+        loader.style.opacity = "0"; 
+        setTimeout(() => { loader.style.display = "none"; }, 400); 
+      } 
     }, 300);
     return;
   }
-
+  
   let imagenesCargadas = 0;
 
   function verificarFin() {
     imagenesCargadas++;
-    
     const porcentajeBase = 92;
     const porcentajeRestante = 8;
     const porcentaje = porcentajeBase + ((imagenesCargadas / totalImagenes) * porcentajeRestante);
+    if (barraProgreso) barraProgreso.style.width = `${porcentaje}%`;
     
-    if (barraProgreso) {
-      barraProgreso.style.width = `${porcentaje}%`;
-    }
-
     if (imagenesCargadas === totalImagenes) {
-      setTimeout(() => {
-        if (loader) {
-          loader.style.opacity = "0";
-          loader.style.transition = "opacity 0.4s ease";
-          setTimeout(() => {
-            loader.style.display = "none";
-          }, 400);
-        }
+      setTimeout(() => { 
+        if (loader) { 
+          loader.style.opacity = "0"; 
+          loader.style.transition = "opacity 0.4s ease"; 
+          setTimeout(() => { loader.style.display = "none"; }, 400); 
+        } 
       }, 300);
     }
   }
-
-  imagenes.forEach((img) => {
+  
+  imagenes.forEach((img) => { 
     if (img.complete) {
-      verificarFin();
-    } else {
-      img.addEventListener("load", verificarFin);
-      img.addEventListener("error", verificarFin);
-    }
+      verificarFin(); 
+    } else { 
+      img.addEventListener("load", verificarFin); 
+      img.addEventListener("error", verificarFin); 
+    } 
   });
 }
 
 window.toggleStock = (btn, action) => {
-  const card = btn.closest('.card');
-  const stockDiv = card.querySelector('.stock-list');
+  const card = btn.closest('.card'); 
+  const stockDiv = card.querySelector('.stock-list'); 
   const btnVer = card.querySelector('.btn-ver-stock');
   const btnOcultar = card.querySelector('.btn-ocultar-stock');
-
-  if (action === 'show') {
-    stockDiv.style.setProperty('display', 'block', 'important');
-    btnVer.style.setProperty('display', 'none', 'important');
+  
+  if (action === 'show') { 
+    stockDiv.style.setProperty('display', 'block', 'important'); 
+    btnVer.style.setProperty('display', 'none', 'important'); 
     btnOcultar.style.setProperty('display', 'block', 'important');
-  } else {
-    stockDiv.style.setProperty('display', 'none', 'important');
-    btnVer.style.setProperty('display', 'block', 'important');
-    btnOcultar.style.setProperty('display', 'none', 'important');
+  } else { 
+    stockDiv.style.setProperty('display', 'none', 'important'); 
+    btnVer.style.setProperty('display', 'block', 'important'); 
+    btnOcultar.style.setProperty('display', 'none', 'important'); 
   }
 };
 
 function coincideModelo(modelo, textoBuscado) {
-  const mod = String(modelo).toLowerCase().trim();
+  const mod = String(modelo).toLowerCase().trim(); 
   const txt = textoBuscado.toLowerCase().trim();
   
   if (!mod.includes(txt)) return false;
-
-  if (/\d/.test(txt)) {
+  
+  if (/\d/.test(txt)) { 
     const variantes = ["pro", "max", "plus", "mini", "ultra", "fe", "lite", "5g"];
-    for (let variante of variantes) {
-      if (mod.includes(variante) && !txt.includes(variante)) return false;
-    }
+    for (let variante of variantes) { 
+      if (mod.includes(variante) && !txt.includes(variante)) return false; 
+    } 
   }
   return true;
 }
 
 function habilitarReordenamiento() {
     if (!esAdmin) return; 
-    const contenedor = document.getElementById('fundas');
+    const contenedor = document.getElementById('fundas'); 
     if (!contenedor) return;
-
+    
     if (sortableInstance) sortableInstance.destroy();
     
     sortableInstance = new Sortable(contenedor, {
-        animation: 150,
+        animation: 150, 
         handle: '.drag-handle', 
         ghostClass: 'sortable-ghost', 
         onEnd: async (evt) => {
             if (evt.oldIndex === evt.newIndex) return;
-            console.log("Sincronizando nuevo orden visual con Firebase...");
             await actualizarOrdenEnFirebase();
         }
     });
@@ -1858,32 +1886,32 @@ function habilitarReordenamiento() {
 
 async function actualizarOrdenEnFirebase() {
     const tarjetas = document.querySelectorAll('#fundas .card');
-    const batch = writeBatch(db); 
-
+    const batch = writeBatch(db);
+    
     tarjetas.forEach((tarjeta, index) => {
         const id = tarjeta.dataset.id;
-        if (id) {
+        if (id) { 
           const docRef = doc(db, "fundas", id); 
-          batch.update(docRef, { orden: index });
+          batch.update(docRef, { orden: index }); 
         }
     });
-
+    
     try {
         await batch.commit();
-        tarjetas.forEach((tarjeta, index) => {
-            const id = tarjeta.dataset.id;
-            const fundaLocal = todasLasFundas.find(f => f.id === id);
-            if (fundaLocal) fundaLocal.orden = index;
+        tarjetas.forEach((tarjeta, index) => { 
+          const id = tarjeta.dataset.id; 
+          const fundaLocal = todasLasFundas.find(f => f.id === id); 
+          if (fundaLocal) fundaLocal.orden = index; 
         });
         todasLasFundas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    } catch (error) {
+    } catch (error) { 
         console.error("Error guardando el ordenamiento:", error);
         alert("No se pudo persistir el orden en la base de datos.");
     }
 }
 
 // ==========================================================================
-// RENDERIZADO DE PRODUCTOS Y FILTROS (CORREGIDO)
+// RENDERIZADO DE PRODUCTOS Y FILTROS
 // ==========================================================================
 
 function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
@@ -1893,15 +1921,15 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
   let htmlTotal = "";
 
   fundasA_Mostrar.forEach((f) => {
-    // --- VISTA EXCLUSIVA PARA EL ADMINISTRADOR ---
+    // MÉTRICAS ADMIN
     let bloqueMétricasAdmin = "";
     if (esAdmin) {
-      const costo = f.costo || 0;
-      const venta = f.venta || 0;
-      const mayorista = f.mayorista || 0;
-      const gananciaPesos = venta - costo;
-      const porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
-      
+      const costo = f.costo || 0, 
+            venta = f.venta || 0, 
+            mayorista = f.mayorista || 0, 
+            gananciaPesos = venta - costo, 
+            porcentajeMargen = costo > 0 ? Math.round((gananciaPesos / costo) * 100) : 0;
+            
       bloqueMétricasAdmin = `
         <div style="margin: 5px 0 12px 0; order: 3;">
           <p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 0 0 2px 0 !important;">$${venta}</p>
@@ -1910,14 +1938,14 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
         </div>`;
     }
 
-    // --- CONTROL DE PRECIOS ADAPTATIVOS PARA CLIENTES ---
-    let bloquePrecioHTML = "";
+    // PRECIOS CLIENTE / MAYORISTA
+    let bloquePrecioHTML = ""; 
     let aplicaDescuento = false;
     
     if (descuentoGlobal > 0 && (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id)))) {
-        aplicaDescuento = true;
+      aplicaDescuento = true;
     }
-
+    
     if (!esAdmin) {
       if (rolUsuario === "mayorista") {
           let precioMayorista = (f.mayorista && f.mayorista > 0) ? f.mayorista : (f.venta || 0);
@@ -1953,52 +1981,69 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
       }
     }
 
-    // --- STOCK VISUAL ---
+    // STOCK VISUAL
     let bloqueStockHTML = "";
-    let stockDetalleHTML = "";
+    let stockDetalleHTML = ""; 
     let totalUnidades = 0;
     
     if (f.sinModelo) {
-        totalUnidades = Array.isArray(f.stockPorModelo) && f.stockPorModelo[0] ? f.stockPorModelo[0].stock : 0;
+      totalUnidades = Array.isArray(f.stockPorModelo) && f.stockPorModelo[0] ? f.stockPorModelo[0].stock : 0;
     } else if (Array.isArray(f.stockPorModelo)) {
-        totalUnidades = f.stockPorModelo.reduce((acc, curr) => acc + curr.stock, 0);
+      totalUnidades = f.stockPorModelo.reduce((acc, curr) => acc + curr.stock, 0);
     }
-
+    
     if (totalUnidades > 0) {
-        bloqueStockHTML = `<p style="color: #43a047 !important; font-weight: 600 !important;">Stock: ${totalUnidades} u.</p>`;
+      bloqueStockHTML = `<p style="color: #43a047 !important; font-weight: 600 !important;">Stock: ${totalUnidades} u.</p>`;
     } else {
-        bloqueStockHTML = `<p style="color: #ff3b30 !important; font-weight: 600 !important;">Sin Stock</p>`;
+      bloqueStockHTML = `<p style="color: #ff3b30 !important; font-weight: 600 !important;">Sin Stock</p>`;
     }
-
-    // SOLUCIÓN AL BOTÓN OCULTAR: Agregamos !important en el style inline
+    
     if (!f.sinModelo && Array.isArray(f.stockPorModelo)) {
         stockDetalleHTML = `<div class="stock-list" style="display: none !important; background: #f5f5f7; padding: 10px; border-radius: 8px;">`;
-        f.stockPorModelo.forEach(m => {
-            stockDetalleHTML += `<p style="font-size: 12px; margin: 2px 0;">${m.modelo}: <b>${m.stock} u.</b></p>`;
+        f.stockPorModelo.forEach(m => { 
+          stockDetalleHTML += `<p style="font-size: 12px; margin: 2px 0;">${m.modelo}: <b>${m.stock} u.</b></p>`; 
         });
         stockDetalleHTML += `</div>
         <button class="btn-ver-stock" style="display: block !important;" onclick="toggleStock(this, 'show')">Ver variantes</button>
         <button class="btn-ocultar-stock" style="display: none !important;" onclick="toggleStock(this, 'hide')">Ocultar variantes</button>`;
     }
 
-    // --- ACCIONES (EDITAR/ELIMINAR VS AÑADIR) ---
+    // ACCIONES
     let bloqueAcciones = esAdmin ? `
         <div style="margin-top: 15px; display: flex; gap: 5px; order: 10;">
           <button onclick="abrirEditarFunda('${f.id}')" style="flex:1;">✏️ Editar</button>
           <button onclick="eliminarFunda('${f.id}')" style="background:#ff3b30; flex:1;">🗑️ Eliminar</button>
         </div>` : `
         <div style="margin-top: 20px; order: 10;">
-          <button onclick="abrirModalReservar('${f.id}')" style="background: #000; color: #fff; width: 100%; padding: 12px; border-radius: 12px; border:none; cursor:pointer;" ${totalUnidades === 0 ? 'disabled style="background: #ccc; cursor: not-allowed;"' : ''}>+ Añadir</button>
+          <button onclick="abrirModalReservar('${f.id}')" style="background: #000; color: #fff; width: 100%; padding: 12px; border-radius: 12px; border:none; cursor:pointer;"
+          ${totalUnidades === 0 ? 'disabled style="background: #ccc; cursor: not-allowed;"' : ''}>+ Añadir</button>
         </div>`;
 
-    let imagenUrl = f.foto || f.imagen || "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60";
+    // 📸 GALERÍA CARRUSEL (Renderizado adaptativo)
+    let imagenesArray = [];
+    if (f.fotos && f.fotos.length > 0) {
+      imagenesArray = f.fotos.map(img => img.url);
+    } else if (f.foto) {
+      imagenesArray = [f.foto];
+    } else {
+      imagenesArray = ["https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60"];
+    }
 
-    // --- RENDERIZADO FINAL DE LA TARJETA ---
+    let carruselHtml = `<div style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; border-radius: var(--radius-md) var(--radius-md) 0 0; scrollbar-width: none;" class="galeria-hide-scrollbar">`;
+    imagenesArray.forEach(url => {
+        carruselHtml += `<img src="${url}" class="card-img" style="scroll-snap-align: center; flex: 0 0 100%; width: 100%; aspect-ratio: 1/1; object-fit: cover; background: var(--bg-app);">`;
+    });
+    carruselHtml += `</div>`;
+
+    let indicadorScroll = imagenesArray.length > 1 ? `<p style="text-align: center; font-size: 10px; color: #86868b; margin: 4px 0 0 0; background: var(--bg-surface); width: 100%;">⬅️ Deslizá ➡️</p>` : ``;
+
+    // TARJETA FINAL
     htmlTotal += `
       <div class="card" data-id="${f.id}" style="position: relative; display: flex; flex-direction: column;">
         ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
         <div class="badge-categoria">${f.categoria || "Varios"}</div>
-        <img src="${imagenUrl}" alt="${f.nombre}" class="card-img" style="width: 100%; border-radius: 8px;">
+        ${carruselHtml}
+        ${indicadorScroll}
         <div class="card-body">
           <h2 style="margin: 10px 0 5px 0; order: 1;">${f.nombre}</h2>
           ${bloqueStockHTML}
@@ -2023,17 +2068,19 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
 
 function filtrarFundas() {
   const textoBuscado = document.getElementById("buscar").value.toLowerCase().trim();
-
+  
   const fundasFiltradas = todasLasFundas.filter((f) => {
     if (categoriaSeleccionadaFiltro !== "Todas" && f.categoria !== categoriaSeleccionadaFiltro) return false;
+    
     const nombreFunda = f.nombre ? f.nombre.toLowerCase() : "";
     const nombreCoincide = nombreFunda.includes(textoBuscado);
     let compatibleCoincide = false;
+    
     if (Array.isArray(f.stockPorModelo)) {
       compatibleCoincide = f.stockPorModelo.some((m) => coincideModelo(m.modelo, textoBuscado));
     }
     return nombreCoincide || compatibleCoincide;
   });
-
+  
   renderizarFundas(fundasFiltradas, textoBuscado);
 }
