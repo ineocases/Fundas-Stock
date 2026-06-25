@@ -25,7 +25,10 @@ console.log("DB conectada con éxito:", db);
 // 🔑 CONFIGURACIÓN DE APIS Y CONTACTO
 const NUMERO_WHATSAPP = "5491170089123"; 
 const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
-const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94";
+
+// ☁️ CLOUDINARY - IMPORTANTE: Reemplazá el string de abajo con el nombre real de tu cuenta de Cloudinary.
+const CLOUDINARY_CLOUD_NAME = "TU_CLOUD_NAME_AQUI"; 
+const CLOUDINARY_UPLOAD_PRESET = "atalogo_ineo";
 
 // ==========================================================================
 // CONTROL DE SESIÓN, ROLES Y SEGURIDAD DUAL
@@ -39,7 +42,7 @@ let esAdmin = false;
 let fundaReservando = null; 
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
-let carruselTimer = null; // Variable global para el carrusel automático
+let carruselTimer = null; 
 
 // 📸 VARIABLES PARA GALERÍA Y FOTO PRO
 let galeriaTemporal = []; 
@@ -253,6 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  // --- GUARDADO DE BANNERS EN CLOUDINARY ---
   if (document.getElementById("btnGuardarBanner")) {
     document.getElementById("btnGuardarBanner").onclick = async () => {
       const modal = document.getElementById("modalBanner");
@@ -263,23 +267,28 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Por favor, seleccioná un archivo de imagen válido.");
         return;
       }
+
+      if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI") {
+        return alert("⚠️ Faltan datos: Por favor, colocá tu Cloud Name de Cloudinary en el archivo app.js.");
+      }
       
       const file = fileInput.files[0];
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
       
       const loader = document.getElementById("cargando");
       if (loader) loader.style.display = "flex";
       
       try {
-        const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        const respuesta = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
           method: "POST",
           body: formData
         });
-        const datosImgBB = await respuesta.json();
+        const datosCloudinary = await respuesta.json();
         
-        if (datosImgBB.success) {
-          const urlSubida = datosImgBB.data.url;
+        if (datosCloudinary.secure_url) {
+          const urlSubida = datosCloudinary.secure_url;
           const docRef = doc(db, "configuracion", "banners");
           
           if (tipoBanner === "mayorista") {
@@ -296,7 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
           modal.style.display = "none";
           fileInput.value = "";
         } else {
-          alert("Ocurrió un inconveniente al procesar la imagen en ImgBB.");
+          alert("Ocurrió un inconveniente al procesar la imagen en Cloudinary.");
         }
       } catch (error) {
         console.error("Error crítico al guardar la configuración del banner:", error);
@@ -336,6 +345,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if(document.getElementById("btnBorrarFondo")) {
     document.getElementById("btnBorrarFondo").onclick = ejecutarBorradoFondoIA;
+  }
+  if(document.getElementById("btnMejorarCalidad")) {
+    document.getElementById("btnMejorarCalidad").onclick = ejecutarMejoraIA;
   }
   if(document.getElementById("btnReEditar")) {
     document.getElementById("btnReEditar").onclick = reEditarMontaje;
@@ -971,7 +983,7 @@ function procesarImportacionExcel(evento) {
 }
 
 // ==========================================================================
-// 🚀 GESTIÓN DE GALERÍA Y FOTO PRO (NUEVO)
+// 🚀 GESTIÓN DE GALERÍA Y FOTO PRO
 // ==========================================================================
 
 async function procesarImagenesList(evento) {
@@ -1162,6 +1174,76 @@ async function ejecutarBorradoFondoIA() {
   } catch (err) { 
     console.error(err); 
     alert("Problemita con Remove.bg. Verifica API Key o conexión."); 
+    btn.innerText = textoOriginal; 
+    btn.disabled = false;
+  }
+}
+
+// ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY
+async function ejecutarMejoraIA() {
+  if (indiceEdicionPro === null) return alert("Error de selección de imagen.");
+  if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI") {
+      return alert("⚠️ Falta configurar: Colocá tu 'Cloud Name' de Cloudinary en la parte superior del archivo app.js para poder usar la mejora de IA.");
+  }
+
+  // Verificamos si estamos trabajando con la imagen recortada o la original
+  let imagenActualData = imagenRecortadaTemporal ? galeriaTemporal[indiceEdicionPro].transparenteBase64 : galeriaTemporal[indiceEdicionPro].base64;
+  let imgSrc = imagenActualData || galeriaTemporal[indiceEdicionPro].urlTransparente || galeriaTemporal[indiceEdicionPro].url;
+  
+  if (!imgSrc) return alert("No hay imagen para procesar.");
+
+  const btn = document.getElementById("btnMejorarCalidad");
+  const textoOriginal = btn.innerText;
+  btn.innerText = "🪄 Procesando..."; 
+  btn.disabled = true;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", imgSrc);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    
+    // Subimos a Cloudinary para aplicarle el filtro
+    const respuestaAPI = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { 
+      method: "POST", 
+      body: formData 
+    });
+
+    const resultado = await respuestaAPI.json();
+    if (resultado.error) throw new Error(resultado.error.message);
+
+    // Aplicamos transformaciones mágicas de Cloudinary (Mejora de foto y escalado)
+    const urlMejorada = resultado.secure_url.replace("/upload/", "/upload/e_improve,e_upscale/");
+    
+    // Volvemos a traer la imagen a formato base64 para seguir usando el editor de lienzo
+    const blobRes = await fetch(urlMejorada);
+    const blob = await blobRes.blob();
+    const reader = new FileReader();
+
+    reader.onloadend = function() {
+      const base64Mejorada = reader.result;
+      
+      if (imagenRecortadaTemporal) {
+          galeriaTemporal[indiceEdicionPro].transparenteBase64 = base64Mejorada;
+          imagenRecortadaTemporal = new Image();
+          imagenRecortadaTemporal.crossOrigin = "anonymous";
+          imagenRecortadaTemporal.onload = () => { dibujarCanvasGestos(); };
+          imagenRecortadaTemporal.src = base64Mejorada;
+      } else {
+          galeriaTemporal[indiceEdicionPro].base64 = base64Mejorada;
+          imagenOriginalTemporal = new Image();
+          imagenOriginalTemporal.crossOrigin = "anonymous";
+          imagenOriginalTemporal.onload = () => { dibujarCanvasGestos(); };
+          imagenOriginalTemporal.src = base64Mejorada;
+      }
+      
+      btn.innerText = textoOriginal; 
+      btn.disabled = false; 
+    };
+    reader.readAsDataURL(blob);
+
+  } catch (err) { 
+    console.error(err); 
+    alert("Hubo un error al mejorar la imagen. Revisa la conexión o verifica el Cloud Name."); 
     btn.innerText = textoOriginal; 
     btn.disabled = false;
   }
@@ -1488,20 +1570,27 @@ async function guardarFunda() {
   const btnGuardar = document.getElementById("guardarFunda");
   const textoOriginal = btnGuardar.innerText;
   
+  if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI" && galeriaTemporal.some(i => i.base64 || i.transparenteBase64)) {
+    return alert("⚠️ Falta configurar: Colocá tu 'Cloud Name' de Cloudinary en el archivo app.js para poder guardar las imágenes.");
+  }
+
   btnGuardar.disabled = true;
   btnGuardar.innerText = "⏳ Subiendo imágenes..."; 
 
-  const subirAImgBB = async (base64) => {
-    const base64Clean = base64.split(',')[1];
+  // MIGRACIÓN A CLOUDINARY PARA LAS FOTOS NUEVAS
+  const subirACloudinary = async (base64) => {
     const formData = new FormData(); 
-    formData.append("image", base64Clean);
-    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { 
+    formData.append("file", base64);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    
+    const respuesta = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { 
       method: "POST", 
       body: formData 
     });
+    
     const resultado = await respuesta.json();
-    if (!resultado.success) throw new Error("Error en ImgBB");
-    return resultado.data.url;
+    if (resultado.error) throw new Error(resultado.error.message);
+    return resultado.secure_url;
   };
 
   let urlsGaleriaFinal = [];
@@ -1511,15 +1600,18 @@ async function guardarFunda() {
   try {
     for (let i = 0; i < galeriaTemporal.length; i++) {
         let img = galeriaTemporal[i];
+        
+        // Mantiene la URL vieja (por ejemplo, de ImgBB) si no se editó la foto
         let urlFinal = img.url;
         let urlTransFinal = img.urlTransparente;
 
+        // Si es una imagen nueva o editada (Base64), la sube a Cloudinary
         if (img.base64 && img.base64.startsWith("data:image")) {
             btnGuardar.innerText = `⏳ Subiendo img ${i+1}/${galeriaTemporal.length}...`;
-            urlFinal = await subirAImgBB(img.base64);
+            urlFinal = await subirACloudinary(img.base64);
         }
         if (img.transparenteBase64 && img.transparenteBase64.startsWith("data:image")) {
-            urlTransFinal = await subirAImgBB(img.transparenteBase64);
+            urlTransFinal = await subirACloudinary(img.transparenteBase64);
         }
 
         urlsGaleriaFinal.push({ url: urlFinal, urlTransparente: urlTransFinal });
@@ -1532,7 +1624,7 @@ async function guardarFunda() {
     btnGuardar.innerText = "💾 Guardando datos...";
   } catch (err) {
     console.error(err); 
-    alert("Error al subir a ImgBB. Intenta de nuevo.");
+    alert("Error al subir fotos. Intenta de nuevo.");
     btnGuardar.disabled = false;
     btnGuardar.innerText = textoOriginal; 
     return;
@@ -2034,7 +2126,7 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
           ${totalUnidades === 0 ? 'disabled style="background: #ccc; cursor: not-allowed;"' : ''}>+ Añadir</button>
         </div>`;
 
-    // 📸 GALERÍA CARRUSEL (Renderizado adaptativo con animación)
+    // 📸 GALERÍA CARRUSEL
     let imagenesArray = [];
     if (f.fotos && f.fotos.length > 0) {
       imagenesArray = f.fotos.map(img => img.url);
@@ -2044,7 +2136,6 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
       imagenesArray = ["https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60"];
     }
 
-    // Añadimos la clase 'carrusel-auto' para que el intervalo lo detecte y eliminamos el texto de 'Deslizá'
     let carruselHtml = `<div style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; border-radius: var(--radius-md) var(--radius-md) 0 0; scrollbar-width: none;" class="galeria-hide-scrollbar carrusel-auto">`;
     imagenesArray.forEach(url => {
         carruselHtml += `<img src="${url}" class="card-img" style="scroll-snap-align: center; flex: 0 0 100%; width: 100%; aspect-ratio: 1/1; object-fit: cover; background: var(--bg-app);">`;
@@ -2078,7 +2169,6 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
     controlarCargaDeImagenes();
   }
   
-  // Ejecutamos el carrusel una vez que todo el HTML se inyectó en la pantalla
   iniciarCarruselAutomatico();
 }
 
