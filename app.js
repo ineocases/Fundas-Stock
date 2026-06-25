@@ -39,10 +39,11 @@ let esAdmin = false;
 let fundaReservando = null; 
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
+let carruselTimer = null; // Variable global para el carrusel automático
 
 // 📸 VARIABLES PARA GALERÍA Y FOTO PRO
-let galeriaTemporal = []; // Array que almacena objetos de imagen mientras editamos
-let indiceEdicionPro = null; // Saber qué índice de la galería estamos editando con la IA
+let galeriaTemporal = []; 
+let indiceEdicionPro = null; 
 let imagenOriginalTemporal = null; 
 let imagenRecortadaTemporal = null; 
 let opacidadSombra = 0.35;
@@ -57,13 +58,13 @@ imgFondoEstudio.src = "fondo-estudio.png";
 
 // Variables globales para Descuentos Avanzados
 let descuentoGlobal = 0;
-let tipoDescuento = "global"; // "global" o "especifico"
-let productosDescuento = []; // Array con IDs de productos si es específico
+let tipoDescuento = "global"; 
+let productosDescuento = []; 
 
 // Variables de control para Banners Duales y Seguridad
 let urlBannerGeneral = "";
 let urlBannerMayorista = "";
-const PASSWORD_MAYORISTA = "mayorista2024"; // Contraseña para tus clientes mayoristas
+const PASSWORD_MAYORISTA = "mayorista2024"; 
 
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
@@ -117,8 +118,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const barra = document.getElementById("loaderProgreso");
   if (barra) barra.style.width = "15%";
 
-  cargarConfiguracionTienda(); // Carga descuentos
-  cargarBanners(); // Carga imágenes de banner dual
+  cargarConfiguracionTienda(); 
+  cargarBanners(); 
 
   const inputBuscar = document.getElementById("buscar");
   if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
@@ -128,7 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
     inputBuscar.setAttribute("list", "sugerenciasBuscador");
   }
 
-  // Asignación de eventos de la interfaz principal
   if(document.getElementById("btnLogin")) document.getElementById("btnLogin").onclick = loginAdmin;
   
   function validarYEntrar() {
@@ -149,7 +149,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Manejo del evento de acceso a la sección Mayorista
   if (document.getElementById("btnMayorista")) {
     document.getElementById("btnMayorista").onclick = (e) => {
       e.preventDefault();
@@ -164,7 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Cerrar el panel de autenticación de mayoristas
   if (document.getElementById("btnCerrarPasswordMayorista")) {
     document.getElementById("btnCerrarPasswordMayorista").onclick = () => {
       document.getElementById("modalPasswordMayorista").style.display = "none";
@@ -172,7 +170,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Validación e inyección del estado mayorista
   if (document.getElementById("btnValidarMayorista")) {
     document.getElementById("btnValidarMayorista").onclick = () => {
       const inputPass = document.getElementById("passwordMayorista").value;
@@ -196,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if(document.getElementById("buscar")) document.getElementById("buscar").addEventListener("input", filtrarFundas);
   if(document.getElementById("btnAsistente")) document.getElementById("btnAsistente").onclick = mostrarAsistente;
   if(document.getElementById("btnRegistrarVenta")) document.getElementById("btnRegistrarVenta").onclick = procesarVentaAsistente;
-  if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagenesList; // Múltiples Fotos
+  if(document.getElementById("fotoInput")) document.getElementById("fotoInput").onchange = procesarImagenesList; 
   
   if(document.getElementById("btnConfirmarWhatsApp")) document.getElementById("btnConfirmarWhatsApp").onclick = agregarAlCarrito;
   if(document.getElementById("btnAbrirCarrito")) document.getElementById("btnAbrirCarrito").onclick = abrirCarrito;
@@ -256,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Subida de Banners Diferenciados a ImgBB
   if (document.getElementById("btnGuardarBanner")) {
     document.getElementById("btnGuardarBanner").onclick = async () => {
       const modal = document.getElementById("modalBanner");
@@ -395,7 +391,6 @@ async function cargarConfiguracionTienda() {
   }
 }
 
-// --- FUNCIONES EXCLUSIVAS PARA DESCUENTOS ESPECÍFICOS ---
 function toggleSeleccionProductosUI() {
   const tipo = document.getElementById("selectTipoDescuento").value;
   document.getElementById("contenedorListaProductos").style.display = tipo === "especifico" ? "block" : "none";
@@ -608,7 +603,6 @@ function solicitarDatosCliente() {
     signOut(auth);
     document.getElementById("login").style.display = "flex";
   } else {
-    // Solo si no fue validado como mayorista en esta sesión
     if (sessionStorage.getItem("mayoristaValidado") !== "true") {
       const datos = JSON.parse(datosClienteStr);
       rolUsuario = datos.rol || "cliente";
@@ -722,7 +716,6 @@ function agregarAlCarrito() {
 
   const precioFinal = aplicaDescuento ? Math.round(precioOriginal * (1 - (descuentoGlobal / 100))) : precioOriginal;
 
-  // Respaldo por si no tiene fotos
   let fotoPrincipal = "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=100&auto=format&fit=crop&q=60";
   if (fundaReservando.fotos && fundaReservando.fotos.length > 0) {
       fotoPrincipal = fundaReservando.fotos[0].url;
@@ -959,7 +952,7 @@ function procesarImportacionExcel(evento) {
             venta: Number(fila.Venta || 0),
             mayorista: Number(fila.Mayorista || 0),
             stockPorModelo: stockPorModeloArray,
-            fotos: [], // Lista vacía por defecto para las nuevas funciones
+            fotos: [],
             orden: todasLasFundas.length + importados 
           };
           await addDoc(collection(db, "fundas"), nuevoProducto);
@@ -1014,17 +1007,14 @@ function leerArchivoBase64(archivo) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement("canvas");
-            canvas.width = 800; // Resolución optimizada
+            canvas.width = 800;
             canvas.height = 800;
         
             const ctx = canvas.getContext("2d");
-            
-            // Fondo blanco para evitar fondos negros en PNGs transparentes al guardar en ImgBB
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, 800, 800);
 
             const ladoMenor = Math.min(img.width, img.height);
-           
             const sx = (img.width - ladoMenor) / 2;
             const sy = (img.height - ladoMenor) / 2;
 
@@ -1079,7 +1069,6 @@ window.iniciarEdicionPro = (index) => {
         imagenOriginalTemporal = imgOriginal;
 
         if (imgData.transparenteBase64 || imgData.urlTransparente) {
-      
             const imgRecortada = new Image();
             imgRecortada.crossOrigin = "anonymous";
             imgRecortada.onload = () => {
@@ -1305,7 +1294,7 @@ async function aplicarMontajeFinal() {
   const canvas = document.getElementById("canvasGestos");
   if (!canvas || indiceEdicionPro === null) return;
 
-  const fotoFinalBase64 = canvas.toDataURL("image/jpeg", 0.9); // Alta calidad
+  const fotoFinalBase64 = canvas.toDataURL("image/jpeg", 0.9); 
   galeriaTemporal[indiceEdicionPro].base64 = fotoFinalBase64; 
   
   renderGaleriaFormulario();
@@ -1568,8 +1557,8 @@ async function guardarFunda() {
     costo: Number(document.getElementById("costo").value),
     venta: Number(document.getElementById("venta").value),
     mayorista: Number(document.getElementById("mayorista").value), 
-    fotos: urlsGaleriaFinal,          // Nueva Matriz de Imágenes
-    foto: urlPortada,                 // Respaldo de retrocompatibilidad
+    fotos: urlsGaleriaFinal, 
+    foto: urlPortada, 
     fotoTransparente: urlPortadaTransparente, 
     sinModelo: esProductoSinModelo 
   };
@@ -1614,7 +1603,6 @@ function abrirEditarFunda(id) {
   galeriaTemporal = [];
   indiceEdicionPro = null;
 
-  // Cargar galería existente a estado temporal
   if (funda.fotos && funda.fotos.length > 0) {
       funda.fotos.forEach(f => {
           galeriaTemporal.push({
@@ -1911,6 +1899,33 @@ async function actualizarOrdenEnFirebase() {
 }
 
 // ==========================================================================
+// FUNCIÓN NUEVA: CARRUSEL AUTOMÁTICO DE IMÁGENES
+// ==========================================================================
+function iniciarCarruselAutomatico() {
+  if (carruselTimer) clearInterval(carruselTimer);
+  
+  carruselTimer = setInterval(() => {
+      const carruseles = document.querySelectorAll('.carrusel-auto');
+      
+      carruseles.forEach(carrusel => {
+          // Solo animamos si hay más de 1 imagen en el carrusel
+          if (carrusel.children.length > 1) {
+              const width = carrusel.clientWidth;
+              const maxScroll = carrusel.scrollWidth - width;
+              
+              // Si estamos al final del scroll, volvemos suavemente a la primera imagen
+              if (carrusel.scrollLeft >= maxScroll - 10) {
+                  carrusel.scrollTo({ left: 0, behavior: 'smooth' });
+              } else {
+                  // Si no, pasamos a la siguiente imagen
+                  carrusel.scrollBy({ left: width, behavior: 'smooth' });
+              }
+          }
+      });
+  }, 5000); // 5000 milisegundos = 5 segundos
+}
+
+// ==========================================================================
 // RENDERIZADO DE PRODUCTOS Y FILTROS
 // ==========================================================================
 
@@ -2019,7 +2034,7 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
           ${totalUnidades === 0 ? 'disabled style="background: #ccc; cursor: not-allowed;"' : ''}>+ Añadir</button>
         </div>`;
 
-    // 📸 GALERÍA CARRUSEL (Renderizado adaptativo)
+    // 📸 GALERÍA CARRUSEL (Renderizado adaptativo con animación)
     let imagenesArray = [];
     if (f.fotos && f.fotos.length > 0) {
       imagenesArray = f.fotos.map(img => img.url);
@@ -2029,13 +2044,12 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
       imagenesArray = ["https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&auto=format&fit=crop&q=60"];
     }
 
-    let carruselHtml = `<div style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; border-radius: var(--radius-md) var(--radius-md) 0 0; scrollbar-width: none;" class="galeria-hide-scrollbar">`;
+    // Añadimos la clase 'carrusel-auto' para que el intervalo lo detecte y eliminamos el texto de 'Deslizá'
+    let carruselHtml = `<div style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; border-radius: var(--radius-md) var(--radius-md) 0 0; scrollbar-width: none;" class="galeria-hide-scrollbar carrusel-auto">`;
     imagenesArray.forEach(url => {
         carruselHtml += `<img src="${url}" class="card-img" style="scroll-snap-align: center; flex: 0 0 100%; width: 100%; aspect-ratio: 1/1; object-fit: cover; background: var(--bg-app);">`;
     });
     carruselHtml += `</div>`;
-
-    let indicadorScroll = imagenesArray.length > 1 ? `<p style="text-align: center; font-size: 10px; color: #86868b; margin: 4px 0 0 0; background: var(--bg-surface); width: 100%;">⬅️ Deslizá ➡️</p>` : ``;
 
     // TARJETA FINAL
     htmlTotal += `
@@ -2043,7 +2057,6 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
         ${esAdmin ? `<div class="drag-handle" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; z-index: 10; font-size: 14px;">☰</div>` : ''}
         <div class="badge-categoria">${f.categoria || "Varios"}</div>
         ${carruselHtml}
-        ${indicadorScroll}
         <div class="card-body">
           <h2 style="margin: 10px 0 5px 0; order: 1;">${f.nombre}</h2>
           ${bloqueStockHTML}
@@ -2064,6 +2077,9 @@ function renderizarFundas(fundasA_Mostrar, textoBuscado = "") {
   if (loader && window.getComputedStyle(loader).display !== "none") {
     controlarCargaDeImagenes();
   }
+  
+  // Ejecutamos el carrusel una vez que todo el HTML se inyectó en la pantalla
+  iniciarCarruselAutomatico();
 }
 
 function filtrarFundas() {
