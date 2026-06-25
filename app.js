@@ -27,8 +27,10 @@ const NUMERO_WHATSAPP = "5491170089123";
 const REMOVE_BG_API_KEY = "zyLqt5m3r5FLcahT49QKDwK1"; 
 const IMGBB_API_KEY = "3c78e7313902208295c2b09b745a9b94";
 
-// Variables globales de control
-let rolUsuario = "cliente"; // Identifica si es "cliente" o "mayorista"
+// ==========================================================================
+// CONTROL DE SESIÓN, ROLES Y SEGURIDAD DUAL
+// ==========================================================================
+let rolUsuario = sessionStorage.getItem("mayoristaValidado") === "true" ? "mayorista" : "cliente";
 let todasLasFundas = [];
 let listaCategorias = []; 
 let categoriaSeleccionadaFiltro = "Todas"; 
@@ -39,11 +41,15 @@ let fundaReservando = null;
 let sortableInstance = null; 
 let esProductoSinModelo = false; 
 
-// Variables globales para Banner y Descuentos Avanzados
-let urlBannerActual = "";
+// Variables globales para Descuentos Avanzados
 let descuentoGlobal = 0;
 let tipoDescuento = "global"; // "global" o "especifico"
 let productosDescuento = []; // Array con IDs de productos si es específico
+
+// Variables de control para Banners Duales y Seguridad
+let urlBannerGeneral = "";
+let urlBannerMayorista = "";
+const PASSWORD_MAYORISTA = "mayorista2024"; // Contraseña para tus clientes mayoristas
 
 // 📸 VARIABLES PARA FOTO PRO INTERACTIVA (MODAL SEPARADO)
 let imagenOriginalTemporal = null; 
@@ -63,12 +69,57 @@ imgFondoEstudio.src = "fondo-estudio.png";
 // 🛒 Variables del Carrito de Compras
 let carritoDeCompras = JSON.parse(localStorage.getItem("carritoINeo")) || [];
 
+// --- FUNCIONES DE BANNER VISUAL ---
+function actualizarBannerVisual() {
+  const imgBanner = document.getElementById("imgBannerTienda");
+  const contenedorBanner = document.getElementById("contenedorBannerTienda");
+  
+  if (imgBanner && contenedorBanner) {
+    let bannerMostrar = "";
+    
+    if (rolUsuario === "mayorista" && urlBannerMayorista) {
+      bannerMostrar = urlBannerMayorista;
+    } else if (urlBannerGeneral) {
+      bannerMostrar = urlBannerGeneral;
+    }
+
+    if (bannerMostrar) {
+      imgBanner.src = bannerMostrar;
+      contenedorBanner.style.display = "block";
+      
+      const appDiv = document.getElementById("app");
+      const topBar = document.querySelector(".top-bar");
+      if (appDiv && topBar && contenedorBanner.parentNode !== appDiv) {
+        appDiv.insertBefore(contenedorBanner, topBar);
+      }
+    } else {
+      contenedorBanner.style.display = "none";
+    }
+  }
+}
+
+async function cargarBanners() {
+  try {
+    const docRef = doc(db, "configuracion", "banners");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      urlBannerGeneral = data.urlGeneral || "";
+      urlBannerMayorista = data.urlMayorista || "";
+    }
+    actualizarBannerVisual();
+  } catch (error) {
+    console.error("Error al sincronizar banners:", error);
+  }
+}
+
 // --- INICIALIZACIÓN DE EVENTOS Y PROTECCIÓN ---
 document.addEventListener("DOMContentLoaded", () => {
   const barra = document.getElementById("loaderProgreso");
   if (barra) barra.style.width = "15%";
 
-  cargarConfiguracionTienda(); // Carga el banner y los descuentos al iniciar
+  cargarConfiguracionTienda(); // Carga descuentos
+  cargarBanners(); // Carga imágenes de banner dual
 
   const inputBuscar = document.getElementById("buscar");
   if (inputBuscar && !document.getElementById("sugerenciasBuscador")) {
@@ -94,15 +145,50 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnCliente").onclick = (e) => {
       e.preventDefault();
       rolUsuario = "cliente";
+      actualizarBannerVisual();
       validarYEntrar();
     };
   }
 
-  if(document.getElementById("btnMayorista")) {
+  // Manejo del evento de acceso a la sección Mayorista
+  if (document.getElementById("btnMayorista")) {
     document.getElementById("btnMayorista").onclick = (e) => {
       e.preventDefault();
-      rolUsuario = "mayorista";
-      validarYEntrar();
+      if (sessionStorage.getItem("mayoristaValidado") === "true") {
+        rolUsuario = "mayorista";
+        actualizarBannerVisual();
+        validarYEntrar();
+      } else {
+        document.getElementById("modalPasswordMayorista").style.display = "flex";
+        document.getElementById("passwordMayorista").focus();
+      }
+    };
+  }
+
+  // Cerrar el panel de autenticación de mayoristas
+  if (document.getElementById("btnCerrarPasswordMayorista")) {
+    document.getElementById("btnCerrarPasswordMayorista").onclick = () => {
+      document.getElementById("modalPasswordMayorista").style.display = "none";
+      document.getElementById("passwordMayorista").value = "";
+    };
+  }
+
+  // Validación e inyección del estado mayorista
+  if (document.getElementById("btnValidarMayorista")) {
+    document.getElementById("btnValidarMayorista").onclick = () => {
+      const inputPass = document.getElementById("passwordMayorista").value;
+      
+      if (inputPass === PASSWORD_MAYORISTA) {
+        sessionStorage.setItem("mayoristaValidado", "true");
+        document.getElementById("modalPasswordMayorista").style.display = "none";
+        document.getElementById("passwordMayorista").value = "";
+        rolUsuario = "mayorista";
+        
+        actualizarBannerVisual();
+        validarYEntrar();
+      } else {
+        alert("Contraseña incorrecta. Validá los datos comerciales provistos.");
+      }
     };
   }
 
@@ -164,13 +250,66 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("modalBanner").style.display = "flex";
     };
   }
+  
   if(document.getElementById("btnCerrarBanner")) {
     document.getElementById("btnCerrarBanner").onclick = () => {
       document.getElementById("modalBanner").style.display = "none";
     };
   }
-  if(document.getElementById("btnGuardarBanner")) {
-    document.getElementById("btnGuardarBanner").onclick = subirYGuardarBanner;
+
+  // Subida de Banners Diferenciados a ImgBB
+  if (document.getElementById("btnGuardarBanner")) {
+    document.getElementById("btnGuardarBanner").onclick = async () => {
+      const modal = document.getElementById("modalBanner");
+      const fileInput = modal.querySelector("input[type='file']");
+      const tipoBanner = document.getElementById("selectTipoBanner").value;
+      
+      if (!fileInput || fileInput.files.length === 0) {
+        alert("Por favor, seleccioná un archivo de imagen válido.");
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("image", file);
+      
+      const loader = document.getElementById("cargando");
+      if (loader) loader.style.display = "flex";
+      
+      try {
+        const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          method: "POST",
+          body: formData
+        });
+        const datosImgBB = await respuesta.json();
+        
+        if (datosImgBB.success) {
+          const urlSubida = datosImgBB.data.url;
+          const docRef = doc(db, "configuracion", "banners");
+          
+          if (tipoBanner === "mayorista") {
+            urlBannerMayorista = urlSubida;
+            await setDoc(docRef, { urlMayorista: urlSubida }, { merge: true });
+            alert("¡Banner de la sección Mayorista actualizado con éxito!");
+          } else {
+            urlBannerGeneral = urlSubida;
+            await setDoc(docRef, { urlGeneral: urlSubida }, { merge: true });
+            alert("¡Banner de la sección Pública actualizado con éxito!");
+          }
+          
+          actualizarBannerVisual();
+          modal.style.display = "none";
+          fileInput.value = "";
+        } else {
+          alert("Ocurrió un inconveniente al procesar la imagen en ImgBB.");
+        }
+      } catch (error) {
+        console.error("Error crítico al guardar la configuración del banner:", error);
+        alert("Error de conexión al guardar los datos del banner.");
+      } finally {
+        if (loader) loader.style.display = "none";
+      }
+    };
   }
 
   // --- NUEVA LÓGICA DE UI PARA DESCUENTOS ---
@@ -247,92 +386,19 @@ document.addEventListener("DOMContentLoaded", () => {
   actualizarUI_Carrito();
 });
 
-// --- LÓGICA BANNER Y DESCUENTOS ---
+// --- LÓGICA DESCUENTOS ---
 async function cargarConfiguracionTienda() {
   try {
     const docRef = doc(db, "configuracion", "tienda");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      urlBannerActual = data.bannerUrl || "";
-      
-      // Cargar configuraciones de descuento avanzadas
       descuentoGlobal = data.descuento || 0;
       tipoDescuento = data.tipo || "global";
       productosDescuento = data.productosIds || [];
-      
-      const contenedorBanner = document.getElementById("contenedorBannerTienda");
-      const imgBanner = document.getElementById("imgBannerTienda");
-      
-      if (urlBannerActual && contenedorBanner && imgBanner) {
-        imgBanner.src = urlBannerActual;
-        
-        const appDiv = document.getElementById("app");
-        const topBar = document.querySelector(".top-bar");
-        if (appDiv && topBar) {
-          appDiv.insertBefore(contenedorBanner, topBar);
-        }
-        
-        contenedorBanner.style.display = "block";
-      }
     }
   } catch (error) {
-    console.error("Error cargando configuración:", error);
-  }
-}
-
-async function subirYGuardarBanner() {
-  const fileInput = document.getElementById("inputFotoBanner");
-  if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Seleccioná una imagen para el banner.");
-    return;
-  }
-
-  const btn = document.getElementById("btnGuardarBanner");
-  btn.disabled = true;
-  btn.innerText = "⏳ Subiendo...";
-
-  const archivo = fileInput.files[0];
-  const formData = new FormData();
-  formData.append("image", archivo);
-
-  try {
-    const respuesta = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData
-    });
-    const datosDeSubida = await respuesta.json();
-    
-    if (datosDeSubida.success) {
-      const nuevaUrlBanner = datosDeSubida.data.url;
-      await setDoc(doc(db, "configuracion", "tienda"), { bannerUrl: nuevaUrlBanner }, { merge: true });
-      
-      urlBannerActual = nuevaUrlBanner;
-      const imgBanner = document.getElementById("imgBannerTienda");
-      const contenedorBanner = document.getElementById("contenedorBannerTienda");
-      
-      if (imgBanner && contenedorBanner) {
-        imgBanner.src = nuevaUrlBanner;
-        contenedorBanner.style.display = "block";
-        
-        const appDiv = document.getElementById("app");
-        const topBar = document.querySelector(".top-bar");
-        if (appDiv && topBar && contenedorBanner.parentNode !== appDiv) {
-          appDiv.insertBefore(contenedorBanner, topBar);
-        }
-      }
-      
-      document.getElementById("modalBanner").style.display = "none";
-      alert("Banner actualizado correctamente.");
-    } else {
-      alert("Error al subir imagen.");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Error de conexión al guardar el banner.");
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Subir y Aplicar";
+    console.error("Error cargando configuración de descuentos:", error);
   }
 }
 
@@ -392,7 +458,6 @@ async function guardarDescuentoGlobal() {
       productosIds: seleccionados
     }, { merge: true });
     
-    // Actualizar variables globales al instante
     descuentoGlobal = valor;
     tipoDescuento = selectTipo;
     productosDescuento = seleccionados;
@@ -400,7 +465,7 @@ async function guardarDescuentoGlobal() {
     document.getElementById("modalDescuentos").style.display = "none";
     alert(`¡Configuración de descuentos actualizada con éxito!`);
     
-    renderizarFundas(todasLasFundas); // Re-renderiza para actualizar todos los precios
+    renderizarFundas(todasLasFundas);
   } catch (err) {
     console.error(err);
     alert("Error al guardar el descuento.");
@@ -500,6 +565,7 @@ onAuthStateChanged(auth, async (user) => {
       
       if (barra) barra.style.width = "92%"; 
       await cargarFundas(); 
+      actualizarBannerVisual();
       
     } else {
       if (barra) barra.style.width = "100%";
@@ -552,8 +618,11 @@ function solicitarDatosCliente() {
     signOut(auth);
     document.getElementById("login").style.display = "flex";
   } else {
-    const datos = JSON.parse(datosClienteStr);
-    rolUsuario = datos.rol || "cliente"; // Recupera el rol guardado
+    // Solo si no fue validado como mayorista en esta sesión
+    if (sessionStorage.getItem("mayoristaValidado") !== "true") {
+      const datos = JSON.parse(datosClienteStr);
+      rolUsuario = datos.rol || "cliente";
+    }
   }
 }
 
@@ -572,15 +641,11 @@ async function procesarRegistroCliente() {
   btn.disabled = true;
   btn.innerText = "⏳ Ingresando...";
 
-  // SOLUCIÓN: Guardamos el LocalStorage PRIMERO.
-  // También aprovechamos para incluir el rol (cliente o mayorista)
   localStorage.setItem("clienteINeoDatos", JSON.stringify({ nombre: nombre, telefono: telefono, rol: rolUsuario }));
 
   try {
-    // 1. Iniciamos sesión anónima (ahora no nos cerrará la sesión porque el LocalStorage ya existe)
     await signInAnonymously(auth);
 
-    // 2. Guardamos los datos en Firestore
     const docRef = doc(db, "clientes", telefono); 
     const docSnap = await getDoc(docRef);
 
@@ -599,7 +664,7 @@ async function procesarRegistroCliente() {
     }
 
     document.getElementById("modalRegistroCliente").style.display = "none";
-    
+    actualizarBannerVisual();
   } catch (error) {
     console.error("Error al registrar cliente:", error);
     alert("Hubo un error. Intentá de nuevo.");
@@ -653,17 +718,13 @@ function agregarAlCarrito() {
       return;
   }
 
-  // --- REVISIÓN SI APLICA DESCUENTO ANTES DE AGREGAR ---
   let aplicaDescuento = false;
   if (descuentoGlobal > 0) {
-      if (tipoDescuento === "global") {
-          aplicaDescuento = true;
-      } else if (tipoDescuento === "especifico" && productosDescuento.includes(fundaReservando.id)) {
+      if (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(fundaReservando.id))) {
           aplicaDescuento = true;
       }
   }
 
-  // Evaluamos qué precio usar dependiendo el rol
   let precioOriginal = fundaReservando.venta || 0;
   if (rolUsuario === "mayorista" && fundaReservando.mayorista > 0) {
       precioOriginal = fundaReservando.mayorista;
@@ -926,7 +987,6 @@ function abrirEditorFotoPro() {
   }
   document.getElementById("modalFotoPro").style.display = "flex";
   
-  // Reseteamos valores visuales del modal a su estado base
   document.getElementById("sliderSombra").value = 35;
   document.getElementById("valorSombra").innerText = "35%";
   document.getElementById("sliderRotacion").value = 0;
@@ -1002,7 +1062,7 @@ async function ejecutarBorradoFondoIA() {
 function reEditarMontaje() {
   porcentajeEscala = 0.72;
   rotacionGrados = 0;
-  nivelBrillo = 100; // Reset variable de brillo
+  nivelBrillo = 100; 
   canvasPosX = 500;
   canvasPosY = 500;
   
@@ -1096,13 +1156,11 @@ function dibujarCanvasGestos() {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   
-  // Usamos la imagen recortada si existe, de lo contrario la original base
   let imagenADibujar = imagenRecortadaTemporal || imagenOriginalTemporal;
   if (!imagenADibujar) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Lógica del selector de fondos
   if (tipoFondoElegido === "estudio") {
     if (imgFondoEstudio.complete && imgFondoEstudio.naturalWidth > 0) {
       ctx.drawImage(imgFondoEstudio, 0, 0, canvas.width, canvas.height);
@@ -1116,16 +1174,12 @@ function dibujarCanvasGestos() {
   } else if (tipoFondoElegido === "blanco") {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else if (tipoFondoElegido === "original") {
-    // Si elige original, idealmente renderizamos la foto sin transparencia al fondo
-    // o simplemente la dejamos sin fondo artificial para que quede como venía de fábrica.
   }
 
   ctx.save();
   ctx.translate(canvasPosX, canvasPosY); 
   ctx.rotate(rotacionGrados * Math.PI / 180); 
   
-  // La sombra solo se aplica si no elegimos el fondo "original"
   if (opacidadSombra > 0 && tipoFondoElegido !== "original") {
     ctx.shadowColor = `rgba(0, 0, 0, ${opacidadSombra})`;
     ctx.shadowBlur = 40;
@@ -1141,7 +1195,6 @@ function dibujarCanvasGestos() {
   ctx.filter = `brightness(${nivelBrillo}%)`;
   ctx.drawImage(imagenADibujar, -anchoFinal / 2, -altoFinal / 2, anchoFinal, altoFinal);
   
-  // El restore resetea todos los filtros, escalas y rotaciones para el próximo dibujo
   ctx.restore();
 }
 
@@ -1241,9 +1294,8 @@ function procesarImagen(evento) {
     img.crossOrigin = "anonymous";
     img.onload = function () {
       
-      // Guardamos la imagen original en memoria para el editor Pro
       imagenOriginalTemporal = img;
-      imagenRecortadaTemporal = null; // Reseteamos recorte anterior si sube una nueva
+      imagenRecortadaTemporal = null; 
       fotoTransparenteBase64 = "";
 
       const canvas = document.createElement("canvas");
@@ -1647,17 +1699,13 @@ function abrirModalReservar(id) {
   fundaReservando = funda;
   document.getElementById("reservaNombreFunda").innerText = funda.nombre || "Sin Nombre";
   
-  // --- REVISIÓN SI APLICA DESCUENTO EN VISTA PREVIA ---
   let aplicaDescuento = false;
   if (descuentoGlobal > 0) {
-      if (tipoDescuento === "global") {
-          aplicaDescuento = true;
-      } else if (tipoDescuento === "especifico" && productosDescuento.includes(funda.id)) {
+      if (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(funda.id))) {
           aplicaDescuento = true;
       }
   }
 
-  // Evaluamos qué precio usar dependiendo el rol
   let precioOriginal = funda.venta || 0;
   if (rolUsuario === "mayorista" && funda.mayorista > 0) {
       precioOriginal = funda.mayorista;
@@ -1706,7 +1754,6 @@ function cerrarModalReservar() {
 }
 window.cerrarModalReservar = cerrarModalReservar;
 
-// MÓDULO: Monitorea de manera fluida y adaptativa la carga de las fotos
 function controlarCargaDeImagenes() {
   const imagenes = document.querySelectorAll("#fundas .card-img");
   const totalImagenes = imagenes.length;
@@ -1887,34 +1934,49 @@ function renderizarFundas(arrayDeFundas, textoBuscado = "") {
           <button onclick="abrirModalReservar('${f.id}')" style="background: #ffffff; color: #000000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; padding: 12px; border-radius: 12px; border:none; cursor:pointer;">+ Añadir</button>
         </div>`;
 
-    // --- CÁLCULO E INYECCIÓN DE PRECIO ACTUALIZADA ---
+    // --- CONTROL DE PRECIOS ADAPTATIVOS POR ROL ---
     let bloquePrecioHTML = "";
-    
-    // Evaluamos qué precio mostrar dependiendo del rol:
-    let precioOriginal = f.venta ?? 0;
-    if (rolUsuario === "mayorista" && f.mayorista > 0) {
-        precioOriginal = f.mayorista;
-    }
-
     let aplicaDescuento = false;
+    
     if (descuentoGlobal > 0) {
-        if (tipoDescuento === "global") {
-            aplicaDescuento = true;
-        } else if (tipoDescuento === "especifico" && productosDescuento.includes(f.id)) {
+        if (tipoDescuento === "global" || (tipoDescuento === "especifico" && productosDescuento.includes(f.id))) {
             aplicaDescuento = true;
         }
     }
-    
-    if (aplicaDescuento) {
-      const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
-      bloquePrecioHTML = `
-        <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
-          <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
-          <p style="font-size: 14px !important; font-weight: 500 !important; color: #86868b !important; text-decoration: line-through !important; margin: 0 !important;">$${precioOriginal}</p>
-        </div>
-      `;
+
+    if (rolUsuario === "mayorista") {
+        let precioMayorista = (f.mayorista && f.mayorista > 0) ? f.mayorista : (f.venta || 0);
+        
+        if (aplicaDescuento) {
+            const precioDescuento = Math.round(precioMayorista * (1 - (descuentoGlobal / 100)));
+            bloquePrecioHTML = `
+              <div style="display: flex; flex-direction: column; gap: 4px; margin: 5px 0 15px 0; order: 3;">
+                <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase; letter-spacing: 0.5px;">📦 Tarifa Mayorista</span>
+                <div style="display: flex; align-items: baseline; gap: 8px;">
+                  <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
+                  <p style="font-size: 14px !important; font-weight: 500 !important; color: #86868b !important; text-decoration: line-through !important; margin: 0 !important;">$${precioMayorista}</p>
+                </div>
+              </div>`;
+        } else {
+            bloquePrecioHTML = `
+              <div style="display: flex; flex-direction: column; gap: 4px; margin: 5px 0 15px 0; order: 3;">
+                <span style="font-size: 11px; font-weight: 700; color: #ff9500; text-transform: uppercase; letter-spacing: 0.5px;">📦 Tarifa Mayorista</span>
+                <p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 0 !important;">$${precioMayorista}</p>
+              </div>`;
+        }
     } else {
-      bloquePrecioHTML = `<p style="font-size: 18px !important; font-weight: 800 !important; color: #000000 !important; margin: 5px 0 15px 0 !important; order: 3;">$${precioOriginal}</p>`;
+        let precioOriginal = f.venta || 0;
+        
+        if (aplicaDescuento) {
+            const precioDescuento = Math.round(precioOriginal * (1 - (descuentoGlobal / 100)));
+            bloquePrecioHTML = `
+              <div style="display: flex; align-items: baseline; gap: 8px; margin: 5px 0 15px 0; order: 3;">
+                <p style="font-size: 19px !important; font-weight: 800 !important; color: #ff3b30 !important; margin: 0 !important;">$${precioDescuento}</p>
+                <p style="font-size: 14px !important; font-weight: 500 !important; color: #86868b !important; text-decoration: line-through !important; margin: 0 !important;">$${precioOriginal}</p>
+              </div>`;
+        } else {
+            bloquePrecioHTML = `<p style="font-size: 18px !important; font-weight: 800 !important; color: #1d1d1f !important; margin: 5px 0 15px 0 !important; order: 3;">$${precioOriginal}</p>`;
+        }
     }
 
     html += `
