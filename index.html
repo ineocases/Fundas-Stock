@@ -80,6 +80,7 @@
       </div>
     </div>
   </div>
+
   <div id="app" style="display:none;">
     <div class="header-logo">
       <div class="header-logo-left">
@@ -149,9 +150,6 @@
             </button>
             
             <div id="menuAccionesIA" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #d2d2d7; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; width: 200px; margin-top: 8px; overflow: hidden;">
-              <button id="btnCrearFoto" type="button" style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: white; color: #1d1d1f; border-radius: 0; border-bottom: 1px solid #eee; font-size: 14px; transition: background 0.2s;">
-                📷 Crear Foto Pro
-              </button>
               <button id="btnMenuFormatear" type="button" style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: white; color: #1d1d1f; border-radius: 0; font-size: 14px; transition: background 0.2s;">
                 📦 Formatear Stock
               </button>
@@ -188,10 +186,10 @@
         <label>Precio Mayorista ($)</label>
         <input id="mayorista" type="number" placeholder="0">
 
-        <label>Foto del producto</label>
-        <input id="fotoInput" type="file" accept="image/*" style="padding: 8px;">
+        <label>Fotos del producto (Podés seleccionar varias)</label>
+        <input id="fotoInput" type="file" accept="image/*" multiple style="padding: 8px; margin-bottom: 10px;">
         
-        <img id="previewFoto" alt="Vista previa" style="display:none; width: 150px; height: 150px; object-fit: contain; border-radius: 10px; margin-bottom: 15px; border: 1px solid #d2d2d7;">
+        <div id="contenedorGaleria" style="display: flex; gap: 10px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px;" class="galeria-hide-scrollbar"></div>
         
         <div class="modal-buttons">
           <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
