@@ -1217,10 +1217,11 @@ async function ejecutarMejoraIA() {
     // 💡 SOLUCIÓN A LA TRANSPARENCIA:
     // Si la foto está recortada (transparente), NO usamos e_improve porque elimina el fondo. 
     // Usamos Upscale (escala la IA), Sharpen (enfoque) y forzamos el formato a PNG (f_png).
+// Usamos auto-contraste, auto-color, escalado por IA y enfoque para mejorar la calidad sin romper el PNG
     let parametrosCloudinary = esTransparente 
-        ? "e_upscale,e_sharpen:50,f_png" 
-        : "e_improve,e_upscale,f_png"; 
-
+        ? "e_auto_contrast,e_auto_color,e_upscale,e_sharpen:30,f_png" 
+        : "e_improve,e_upscale,f_png";
+    
     // Aplicamos los parámetros a la URL
     const urlMejorada = resultado.secure_url.replace("/upload/", `/upload/${parametrosCloudinary}/`);
     
