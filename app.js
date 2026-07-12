@@ -604,7 +604,28 @@ async function loginCliente() {
     console.error(error);
   }
 }
+// Asegúrate de que el botón exista y tenga este evento
+document.getElementById('btnExportarExcel').addEventListener('click', () => {
+    // 1. Obtener los datos actuales (ajusta 'productos' al nombre de tu array de datos)
+    const datosParaExportar = productos.map(p => ({
+        Nombre: p.nombre,
+        Categoría: p.categoria,
+        Costo: p.costo,
+        Venta: p.venta,
+        Mayorista: p.mayorista,
+        Stock: typeof p.stock === 'object' ? JSON.stringify(p.stock) : p.stock
+    }));
 
+    // 2. Crear la hoja de cálculo
+    const ws = XLSX.utils.json_to_sheet(datosParaExportar);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock iNeo");
+
+    // 3. Generar el archivo y descargar
+    XLSX.writeFile(wb, "Stock_iNeo_Cases.xlsx");
+    
+    console.log("Exportación exitosa");
+});
 // --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
 function solicitarDatosCliente() {
   const datosClienteStr = localStorage.getItem("clienteINeoDatos");
