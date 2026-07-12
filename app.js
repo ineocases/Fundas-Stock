@@ -12,6 +12,8 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  query,      
+  orderBy,    
   writeBatch,
   setDoc,      
   getDoc,      
@@ -604,28 +606,7 @@ async function loginCliente() {
     console.error(error);
   }
 }
-// Asegúrate de que el botón exista y tenga este evento
-document.getElementById('btnExportarExcel').addEventListener('click', () => {
-    // 1. Obtener los datos actuales (ajusta 'productos' al nombre de tu array de datos)
-    const datosParaExportar = productos.map(p => ({
-        Nombre: p.nombre,
-        Categoría: p.categoria,
-        Costo: p.costo,
-        Venta: p.venta,
-        Mayorista: p.mayorista,
-        Stock: typeof p.stock === 'object' ? JSON.stringify(p.stock) : p.stock
-    }));
 
-    // 2. Crear la hoja de cálculo
-    const ws = XLSX.utils.json_to_sheet(datosParaExportar);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Stock iNeo");
-
-    // 3. Generar el archivo y descargar
-    XLSX.writeFile(wb, "Stock_iNeo_Cases.xlsx");
-    
-    console.log("Exportación exitosa");
-});
 // --- LÓGICA DE BASE DE DATOS DE CLIENTES ---
 function solicitarDatosCliente() {
   const datosClienteStr = localStorage.getItem("clienteINeoDatos");
@@ -1199,6 +1180,7 @@ async function ejecutarBorradoFondoIA() {
 }
 
 // ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY
+// ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY (CORREGIDA PARA PNG)
 async function ejecutarMejoraIA() {
   if (indiceEdicionPro === null) return alert("Error de selección de imagen.");
   if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI") {
@@ -1232,7 +1214,10 @@ async function ejecutarMejoraIA() {
     const resultado = await respuestaAPI.json();
     if (resultado.error) throw new Error(resultado.error.message);
 
-    // Usamos auto-contraste, auto-color, escalado por IA y enfoque para mejorar la calidad sin romper el PNG
+    // 💡 SOLUCIÓN A LA TRANSPARENCIA:
+    // Si la foto está recortada (transparente), NO usamos e_improve porque elimina el fondo. 
+    // Usamos Upscale (escala la IA), Sharpen (enfoque) y forzamos el formato a PNG (f_png).
+// Usamos auto-contraste, auto-color, escalado por IA y enfoque para mejorar la calidad sin romper el PNG
     let parametrosCloudinary = esTransparente 
         ? "e_auto_contrast,e_auto_color,e_upscale,e_sharpen:30,f_png" 
         : "e_improve,e_upscale,f_png";
