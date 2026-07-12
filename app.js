@@ -12,8 +12,6 @@ import {
   doc,
   deleteDoc,
   updateDoc,
-  query,      
-  orderBy,    
   writeBatch,
   setDoc,      
   getDoc,      
@@ -1180,7 +1178,6 @@ async function ejecutarBorradoFondoIA() {
 }
 
 // ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY
-// ✨ NUEVA FUNCIONALIDAD: MEJORAR CALIDAD CON CLOUDINARY (CORREGIDA PARA PNG)
 async function ejecutarMejoraIA() {
   if (indiceEdicionPro === null) return alert("Error de selección de imagen.");
   if (CLOUDINARY_CLOUD_NAME === "TU_CLOUD_NAME_AQUI") {
@@ -1214,10 +1211,7 @@ async function ejecutarMejoraIA() {
     const resultado = await respuestaAPI.json();
     if (resultado.error) throw new Error(resultado.error.message);
 
-    // 💡 SOLUCIÓN A LA TRANSPARENCIA:
-    // Si la foto está recortada (transparente), NO usamos e_improve porque elimina el fondo. 
-    // Usamos Upscale (escala la IA), Sharpen (enfoque) y forzamos el formato a PNG (f_png).
-// Usamos auto-contraste, auto-color, escalado por IA y enfoque para mejorar la calidad sin romper el PNG
+    // Usamos auto-contraste, auto-color, escalado por IA y enfoque para mejorar la calidad sin romper el PNG
     let parametrosCloudinary = esTransparente 
         ? "e_auto_contrast,e_auto_color,e_upscale,e_sharpen:30,f_png" 
         : "e_improve,e_upscale,f_png";
