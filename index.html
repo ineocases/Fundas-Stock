@@ -107,11 +107,16 @@
       <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
       
       <!-- BOTONES DE EXCEL: IMPORTAR Y EXPORTAR -->
-      <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar</button>
-      <button id="btnExportarExcel" style="background: #17a2b8; white-space: nowrap; display: none; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">📤 Exportar</button>
-      
-      <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-    </div>
+<div class="top-bar">
+  <input id="buscar" placeholder="Buscar producto o modelo...">
+  <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
+  
+  <!-- BOTONES DE EXCEL -->
+  <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar</button>
+  <button id="btnExportarExcel" style="background: #17a2b8; white-space: nowrap; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">📤 Exportar</button>
+  
+  <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+</div>
 
     <div id="filtrosCategorias" class="categorias-container"></div>
 
