@@ -1,402 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iNeo Cases - Stock</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  
-  <link rel="icon" type="image/png" href="Icono.png">
-  <link rel="apple-touch-icon" href="Icono.png">
+<head><meta name="ineo-build" content="32"><link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>iNeo Gestión</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="toast" class="toast"></div>
 
-  <div id="cargando">
-    <div class="loader-container">
-      <img src="logo.svg" alt="iNeo Cases" class="loader-logo">
-      <div class="progress-bar-container">
-        <div id="loaderProgreso" class="progress-bar-fill"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="login" style="display:none;">
-    <div class="login-container">
-      <div class="login-welcome">
-        <div class="header-logo-welcome">
-          <img src="logo.svg" alt="Logo" class="app-logo-welcome">
-          <h1>iNeo Cases</h1>
-          <p class="subtitle">Descubrí los mejores accesorios premium para tu dispositivo</p>
-        </div>
-        
-        <button id="btnCliente" class="btn-principal-welcome">Entrar a ver Catálogo 📱</button>
-        <button id="btnMayorista" class="btn-secundario" style="width: 100%; padding: 14px; font-size: 16px; border-radius: 14px; margin-top: 5px; margin-bottom: 15px;">Entrar como Mayorista 📦</button>
-      </div>
-      
-      <div class="admin-trigger-zone">
-        <button type="button" id="btnAbrirAdminModal" class="btn-link-admin">🔒 Acceso Personal de Trabajo</button>
-      </div>
-    </div>
-
-    <div id="modalAdminLogin" class="modal-admin-overlay" style="display: none;">
-      <div class="modal-admin-content">
-        <div class="modal-admin-header">
-          <h3>Panel de Administración</h3>
-          <p>Ingresá tus credenciales autorizadas</p>
-        </div>
-        
-        <div class="modal-admin-body">
-          <label for="email">Correo Electrónico</label>
-          <input id="email" type="email" placeholder="ejemplo@ineocases.com" autocomplete="email">
-          
-          <label for="password">Contraseña de Seguridad</label>
-          <input id="password" type="password" placeholder="••••••••">
-          
-          <div class="modal-admin-buttons">
-            <button id="btnLogin" class="btn-admin-submit">Ingresar al Sistema 🔐</button>
-            <button type="button" id="btnCerrarAdminModal" class="btn-secundario" style="width: 100%; margin-top: 8px;">Volver atrás</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalPasswordMayorista" style="display:none;" class="modal-admin-overlay">
-    <div class="modal-admin-content">
-      <div class="modal-admin-header">
-        <h3>Acceso Mayorista 📦</h3>
-        <p>Ingresá la contraseña comercial para acceder a los precios exclusivos.</p>
-      </div>
-      <div class="modal-admin-body">
-        <label for="passwordMayorista">Contraseña</label>
-        <input id="passwordMayorista" type="password" placeholder="••••••••">
-        <div class="modal-admin-buttons">
-          <button id="btnValidarMayorista" class="btn-admin-submit">Ingresar</button>
-          <button type="button" id="btnCerrarPasswordMayorista" class="btn-secundario" style="width: 100%; margin-top: 8px;">Cancelar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="app" style="display:none;">
-    <div class="header-logo">
-      <div class="header-logo-left">
-        <img src="logo.svg" alt="Logo" class="app-logo">
-        <h1>iNeo Cases</h1>
-      </div>
-      
-      <button id="btnMenuHamburguesa" class="menu-hamburguesa" aria-label="Menú">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-    
-    <div id="banner-tienda" class="banner-container-view hidden">
-      <img id="imgBannerActual" src="" alt="Banner Promocional iNeo Cases">
-    </div>
-    
-    <div class="top-bar">
-      <input id="buscar" placeholder="Buscar producto o modelo...">
-      <button id="btnNuevaFunda" style="white-space: nowrap;">➕ Nuevo Item</button>
-      
-      <button id="btnImportarExcel" style="background: #28a745; white-space: nowrap; display: none;">📥 Importar Excel</button>
-      <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-    </div>
-
-    <div id="filtrosCategorias" class="categorias-container"></div>
-
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-    <div id="sidebarMenu" class="sidebar">
-      <button id="btnCambiarRol" class="sidebar-btn sidebar-btn-top">🔄 Cambiar de modo</button>
-      <button id="btnGestorCategorias" class="sidebar-btn" style="display: none;">📁 Administrar Categorías</button>
-      <button id="btnVerClientes" class="sidebar-btn" style="display: none;">👥 Ver Clientes Registrados</button>
-      <button id="btnAbrirBanner" class="sidebar-btn" style="display: none;">Cambiar Banner Principal</button>
-      <button id="btnAbrirDescuentos" class="sidebar-btn" style="display: none;">Configurar Descuentos</button>
-    </div>
-
-    <div id="modalCategorias" style="display:none;">
-      <div class="modal-content">
-        <h3>📁 Administrar Mis Categorías</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Creá o eliminá las categorías de tu negocio:</p>
-        
-        <label>Nombre de la nueva categoría</label>
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-          <input id="nuevoNombreCategoria" placeholder="Ej: Corte, Auriculares, Fundas..." style="margin-bottom:0;">
-          <button id="btnGuardarCategoria" style="white-space: nowrap;">Añadir ➕</button>
-        </div>
-
-        <label>Categorías existentes</label>
-        <div id="listaCategoriasCrud" style="max-height: 250px; overflow-y: auto; border: 1px solid #d2d2d7; border-radius: 12px; background: #f5f5f7; padding: 10px;"></div>
-
-        <div class="modal-buttons" style="margin-top: 20px;">
-          <button type="button" id="btnCerrarCategorias" class="btn-secundario" style="width: 100%;">Cerrar Ventana</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="agregar" style="display:none">
-      <div class="modal-content">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: relative;">
-          <h3 id="modalTitulo" style="margin: 0;">Nuevo Artículo</h3>
-          
-          <div style="position: relative; display: inline-block;">
-            <button id="btnAccionesIA" type="button" style="background: linear-gradient(135deg, #5856d6, #ff2d55); color: white; padding: 8px 14px; font-size: 13px; font-weight: bold;">
-              ✨ Acciones IA
-            </button>
-            
-            <div id="menuAccionesIA" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #d2d2d7; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; width: 200px; margin-top: 8px; overflow: hidden;">
-              <button id="btnMenuFormatear" type="button" style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: white; color: #1d1d1f; border-radius: 0; font-size: 14px; transition: background 0.2s;">
-                📦 Formatear Stock
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <label>Nombre del producto</label>
-        <input id="nombre" placeholder="Ej: Auriculares Bluetooth Pro">
-
-        <label>Categoría</label>
-        <select id="categoriaSelect"></select>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <label id="labelStock" style="margin-bottom: 0;">Modelos / Variantes y Stock (Formato: variante:cantidad)</label>
-          <button type="button" id="btnToggleModelo" style="padding: 6px 12px; font-size: 12px; background: #6e6e73; color: white; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer;">🚫 No Modelo</button>
-        </div>
-        
-        <div id="cajaFormateador" style="display: none; margin-bottom: 15px; background: #f5f5f7; padding: 12px; border-radius: 12px; border: 1px dashed #d2d2d7;">
-           <p style="font-size: 13px; color: #6e6e73; margin-top: 0; margin-bottom: 8px;">Pegá tu lista de stock cruda acá (Ej: Iph 11 Pro x2):</p>
-           <textarea id="textoCrudoStock" rows="6" style="width: 100%; border-radius: 8px; border: 1px solid #d2d2d7; padding: 8px; font-family: monospace; resize: none; margin-bottom: 8px; box-sizing: border-box"></textarea>
-           <button type="button" id="btnProcesarStock" style="width: 100%; background: #34c759; color: white;">Convertir a Formato Automático 🚀</button>
-        </div>
-
-        <input id="stockPorModelo" placeholder="Ej: 13 Pro:5, Blanco:3, Único:10">
-        <input id="stockTotalSencillo" type="number" placeholder="Ej: 45 (Total de piezas en stock)" style="display: none; margin-bottom: 15px;">
-        
-        <label>Costo de lista ($)</label>
-        <input id="costo" type="number" placeholder="0">
-        
-        <label>Precio de venta ($)</label>
-        <input id="venta" type="number" placeholder="0">
-
-        <label>Precio Mayorista ($)</label>
-        <input id="mayorista" type="number" placeholder="0">
-
-        <label>Fotos del producto (Podés seleccionar varias)</label>
-        <input id="fotoInput" type="file" accept="image/*" multiple style="padding: 8px; margin-bottom: 10px;">
-        
-        <div id="contenedorGaleria" style="display: flex; gap: 10px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px;" class="galeria-hide-scrollbar"></div>
-        
-        <div class="modal-buttons">
-          <button type="button" onclick="ocultarFormulario()" class="btn-secundario">Cancelar</button>
-          <button id="guardarFunda">Guardar</button>
-        </div>
-      </div>
-    </div>  
-
-    <div id="modalAsistente" style="display:none;">
-      <div class="modal-content">
-        <h3>🤖 Asistente Virtual de Ventas</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Registra una venta rápidamente:</p>
-        
-        <label>Nombre del producto</label>
-        <input id="asistenteProducto" list="listaProductos" placeholder="Escribe para buscar...">
-        <datalist id="listaProductos"></datalist>
-
-        <label>Modelo / Variante vendida</label>
-        <input id="asistenteModelo" placeholder="Ej: 12, Blanco, Único">
-
-        <label>Unidades vendidas</label>
-        <input id="asistenteUnidades" type="number" value="1" min="1">
-
-        <div class="modal-buttons">
-          <button type="button" onclick="ocultarAsistente()" class="btn-secundario">Cerrar</button>
-          <button id="btnRegistrarVenta">Confirmar Venta 🛒</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalReservar" style="display:none;">
-      <div class="modal-content">
-        <h3>🛒 Añadir al Carrito</h3>
-        <p id="reservaNombreFunda" style="font-weight: 700; font-size: 18px; margin-bottom: 15px; color: #1d1d1f;"></p>
-        
-        <label>Seleccioná tu variante / modelo</label>
-        <select id="reservaModelo" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 20px; font-size: 15px; background: white;"></select>
-        
-        <p style="font-size: 17px; color:#0071e3; font-weight:700; margin-bottom: 20px;">Precio: <span id="reservaPrecio"></span></p>
-        
-        <div class="modal-buttons">
-          <button type="button" onclick="cerrarModalReservar()" class="btn-secundario">Volver</button>
-          <button id="btnConfirmarWhatsApp" style="background: #0071e3; color: white; font-weight: 600;">Añadir al Carrito 🛒</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalFotoPro" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 10000; padding: 20px; box-sizing: border-box;">
-      <div class="modal-content" style="max-width: 550px; width: 100%; max-height: 90vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-        <h3>📸 Editor Inteligente de Foto Pro</h3>
-        <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Remové el fondo de tu producto y colocale un fondo de estudio premium.</p>
-        
-        <div style="border: 1px solid #d2d2d7; border-radius: 12px; overflow: hidden; background: #f5f5f7; position: relative;">
-          <canvas id="canvasGestos" width="1000" height="1000" style="width: 100%; max-width: 500px; height: auto; display: block; margin: auto; touch-action: none; cursor: grab;"></canvas>
-        </div>
-        <p style="text-align:center; font-size: 12px; color: #6e6e73; margin-top: 8px; margin-bottom: 15px;">
-          👆 Arrastrá para rotar/mover. Pellizcá (o usá la rueda del mouse) para controlar el zoom.
-        </p>
-
-        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-          <button type="button" id="btnBorrarFondo" style="flex: 1; min-width: 130px; background: linear-gradient(135deg, #ff2d55, #ff9500); color: white; font-weight: bold; padding: 12px; border-radius: 12px; border: none; cursor: pointer;">✨ Borrar Fondo</button>
-          <button type="button" id="btnMejorarCalidad" style="flex: 1; min-width: 130px; background: linear-gradient(135deg, #0071e3, #34c759); color: white; font-weight: bold; padding: 12px; border-radius: 12px; border: none; cursor: pointer;">🪄 Mejorar Calidad IA</button>
-          <button type="button" id="btnReEditar" style="flex: 1; min-width: 130px; background: #6e6e73; color: white; padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600;">🔄 Re-editar Foto</button>
-        </div>
-
-        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estilo de Fondo</label>
-        <select id="selectFondoPro" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; margin-bottom: 15px; font-size: 15px; background: white;">
-          <option value="estudio">Fondo Blanco de Estudio (fondo-estudio.png)</option>
-          <option value="blanco">Blanco Liso</option>
-          <option value="original">Original (Dejar como está)</option>
-        </select>
-
-        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="sliderBrillo" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-              Brillo de la Foto: <span id="valorBrillo">100%</span>
-            </label>
-            <input type="range" id="sliderBrillo" min="50" max="200" value="100" style="width: 100%; accent-color: #1d1d1f;">
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="sliderSombra" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-              Opacidad de la Sombra: <span id="valorSombra">35%</span>
-            </label>
-            <input type="range" id="sliderSombra" min="0" max="100" value="35" style="width: 100%; accent-color: #1d1d1f;">
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label for="sliderRotacion" style="font-weight: 600; font-size: 14px; color: #1d1d1f;">
-              Rotación Fina: <span id="valorRotacion">0°</span>
-            </label>
-            <input type="range" id="sliderRotacion" min="-180" max="180" value="0" style="width: 100%; accent-color: #1d1d1f;">
-          </div>
-        </div>
-
-        <div class="modal-buttons" style="display: flex; gap: 10px;">
-          <button type="button" id="btnCerrarFotoPro" class="btn-secundario" style="flex: 1;">Cancelar</button>
-          <button type="button" id="btnGuardarFotoPro" style="flex: 1; background: #0071e3; color: white; font-weight: bold;">Listo ✅</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="pantallaClientes" style="display:none; padding: 20px 0;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0;">👥 Clientes Registrados</h2>
-        <button id="btnCerrarClientes" class="btn-secundario" style="width: max-content; padding: 8px 16px;">⬅️ Volver</button>
-      </div>
-      <div id="listaClientesRender"></div>
-    </div>
-
-    <div id="fundas"></div>
-
-    <button id="btnAsistente" class="fab-asistente">💬 Asistente de Ventas</button>
-
-    <button id="btnAbrirCarrito" style="position: fixed; bottom: 80px; right: 20px; background: #1d1d1f; color: white; border: none; border-radius: 50px; padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 998; display: none;">
-      🛒 Mi Pedido <span id="contadorCarrito" style="background: #ff2d55; border-radius: 50%; padding: 2px 6px; font-size: 12px; margin-left: 5px;">0</span>
-    </button>
-
-    <div id="modalCarrito" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); justify-content: flex-end; z-index: 9999;">
-      <div class="modal-carrito-content" style="background: white; width: 100%; max-width: 400px; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column;">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d2d2d7; padding-bottom: 15px; margin-bottom: 15px;">
-          <h2 style="margin: 0; font-size: 20px;">🛒 Resumen de Compra</h2>
-          <button id="btnCerrarCarrito" style="background: none; border: none; font-size: 18px; cursor: pointer;">❌</button>
-        </div>
-        
-        <div id="listaItemsCarrito" style="flex-grow: 1; overflow-y: auto;">
-          </div>
-        
-        <div style="border-top: 1px solid #d2d2d7; padding-top: 15px; margin-top: auto;">
-          <h3 style="display: flex; justify-content: space-between; font-size: 18px;">Total: <span id="totalCarrito">$0</span></h3>
-          <button id="btnComprarWhatsAppCarrito" style="width: 100%; background: #25D366; color: white; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">
-            Enviar Pedido a WhatsApp 💬
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <div id="modalRegistroCliente" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); justify-content: center; align-items: center; z-index: 9999; padding: 20px; box-sizing: border-box;">
-    <div class="modal-content">
-      <h3>👋 ¡Bienvenido a iNeo Cases!</h3>
-      <p style="color:#6e6e73; font-size:14px; margin-bottom:15px;">Para ver el catálogo y hacer reservas, dejanos tus datos:</p>
-      
-      <label>Nombre y Apellido</label>
-      <input id="registroNombre" type="text" placeholder="Ej: Juan Pérez">
-      
-      <label>WhatsApp (Sin 0 ni 15)</label>
-      <input id="registroTelefono" type="number" placeholder="Ej: 1145678901">
-      
-      <div class="modal-buttons" style="margin-top: 15px;">
-        <button id="btnRegistrarCliente" style="width: 100%;">Entrar al Catálogo 🚀</button>
-      </div>
-    </div>
-  </div>
-
-<div id="contenedorBannerTienda" style="display: none; width: 100%; margin-bottom: 20px; border-radius: 12px; overflow: hidden;">
-  <img id="imgBannerTienda" src="" style="width: 100%; height: auto; display: block; object-fit: cover;">
-</div>
-
-<div id="modalBanner" style="display:none;" class="modal-admin-overlay">
-  <div class="modal-content">
-    <h3 style="margin-top:0;">Banner de la Tienda</h3>
-    <p style="color:#6e6e73; font-size:14px;">Subí una imagen horizontal para la cabecera.</p>
-    
-    <label>Destino del Banner:</label>
-    <select id="selectTipoBanner" style="margin-bottom: 15px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d2d2d7;">
-      <option value="general">Catálogo Público (General)</option>
-      <option value="mayorista">Catálogo Mayorista (Exclusivo)</option>
-    </select>
-
-    <input type="file" id="inputFotoBanner" accept="image/*" style="padding: 8px;">
-    
-    <div class="modal-buttons">
-      <button type="button" class="btn-secundario" id="btnCerrarBanner">Cancelar</button>
-      <button type="button" id="btnGuardarBanner">Subir y Aplicar</button>
-    </div>
+<div id="loginScreen" class="login-screen" aria-hidden="false">
+  <div class="login-bg login-bg-one"></div><div class="login-bg login-bg-two"></div>
+  <div class="login-card-v21">
+    <div class="login-logo-row"><div class="login-logo-v21"><span></span><i></i></div><div><div class="login-brand-v21">iNeo <b>Gestión</b></div><div class="login-brand-sub-v21">GESTIÓN COMERCIAL</div></div></div>
+    <div class="login-title-v21"><span>ACCESO SEGURO</span><h1>Bienvenido</h1><p>Ingresá a tu negocio para continuar.</p></div>
+    <form id="loginForm" autocomplete="on">
+      <label for="email">Correo electrónico</label>
+      <div class="login-input-v21"><svg><use href="#i-mail"/></svg><input id="email" name="email" type="email" autocomplete="username" placeholder="vos@negocio.com" required></div>
+      <label for="password">Contraseña</label>
+      <div class="login-input-v21"><svg><use href="#i-lock"/></svg><input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required><button type="button" id="togglePassword">◉</button></div>
+      <div class="login-actions-v21"><label><input type="checkbox" id="rememberMe"> Recordarme</label><button type="button" id="forgotPassword">¿Olvidaste tu contraseña?</button></div>
+      <button class="login-btn-v21" id="loginSubmit" type="submit">Ingresar a iNeo <svg><use href="#i-arrow"/></svg></button>
+    </form>
+    <div id="loginMessage" class="login-message-v21"></div>
+    <button id="registerBtn" class="login-register-v21" type="button"><span>¿Todavía no tenés cuenta?</span><b>Crear una cuenta gratis</b></button>
+    <div class="login-foot-v21"><span></span> Protegido con Firebase Authentication</div>
   </div>
 </div>
-<div id="modalDescuentos" style="display:none;" class="modal-admin-overlay">
-  <div class="modal-content">
-    <h3 style="margin-top:0;">Configurar Descuentos</h3>
-    <p style="color:#6e6e73; font-size:14px;">Aplicá promociones a toda la tienda o a ítems específicos.</p>
-    
-    <label>Alcance de la Promoción</label>
-    <select id="selectTipoDescuento" style="margin-bottom: 15px;">
-      <option value="global">Toda la tienda (Global)</option>
-      <option value="especifico">Solo productos seleccionados</option>
-    </select>
-
-    <div id="contenedorListaProductos" style="display:none; max-height: 250px; overflow-y: auto; background: #f5f5f7; border: 1px solid #d2d2d7; border-radius: 12px; padding: 12px; margin-bottom: 15px;">
-       <p style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-top: 0; margin-bottom: 10px;">Elegí los productos en oferta:</p>
-       <div id="listaProductosCheck"></div>
-    </div>
-
-    <label>Porcentaje a Descontar (%)</label>
-    <input type="number" id="inputPorcentajeDescuento" min="0" max="100" placeholder="Ej: 15 (0 para quitar promociones)">
-    
-    <div class="modal-buttons">
-      <button type="button" class="btn-secundario" id="btnCerrarDescuentos">Cancelar</button>
-      <button type="button" id="btnGuardarDescuentos">Aplicar Cambios</button>
-    </div>
+<div id="registerScreen" class="login-screen hidden" aria-hidden="true" style="display:none!important">
+  <div class="login-card-v21 register-card-v21">
+    <div class="login-logo-row"><div class="login-logo-v21"><span></span><i></i></div><div><div class="login-brand-v21">iNeo <b>Gestión</b></div><div class="login-brand-sub-v21">GESTIÓN COMERCIAL</div></div></div>
+    <div class="login-title-v21"><span>EMPEZÁ GRATIS</span><h1>Creá tu cuenta</h1><p>Comenzá a administrar tu negocio.</p></div>
+    <form id="registerForm">
+      <label>Nombre del negocio</label><div class="login-input-v21"><svg><use href="#i-store"/></svg><input name="businessName" placeholder="Mi negocio" required></div>
+      <label>Correo electrónico</label><div class="login-input-v21"><svg><use href="#i-mail"/></svg><input name="email" type="email" placeholder="vos@negocio.com" required></div>
+      <label>Contraseña</label><div class="login-input-v21"><svg><use href="#i-lock"/></svg><input name="password" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></div>
+      <button class="login-btn-v21" type="submit">Crear mi cuenta <svg><use href="#i-arrow"/></svg></button>
+    </form>
+    <div id="registerMessage" class="login-message-v21"></div>
+    <button id="backToLogin" class="login-register-v21 back" type="button"><b>← Volver al acceso</b></button>
   </div>
 </div>
+<div id="appShell" class="app-shell hidden">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-icon"><span></span></div><div><strong>iNeo</strong><small>GESTIÓN</small></div></div>
+  <div class="workspace"><div class="workspace-avatar">iN</div><div><small>NEGOCIO</small><strong id="workspaceName">Mi negocio</strong></div><svg><use href="#i-chevron"/></svg></div>
+  <div id="businessSwitcher"></div><nav>
+    <div class="nav-label">PRINCIPAL</div>
+    <button class="nav-item active" data-view="dashboard"><svg><use href="#i-home"/></svg><span>Resumen</span></button>
+    <button class="nav-item" data-view="sales"><svg><use href="#i-cart"/></svg><span>Ventas</span><b>+</b></button>
+    <button class="nav-item" data-view="salesHistory"><svg><use href="#i-chart"/></svg><span>Historial de ventas</span></button>
+    <button class="nav-item" data-view="inventory"><svg><use href="#i-box"/></svg><span>Inventario</span></button>
+    <button class="nav-item" data-view="customers"><svg><use href="#i-users"/></svg><span>Clientes</span></button>
+    <button class="nav-item" data-view="debts"><svg><use href="#i-credit"/></svg><span>Fiados / Deudas</span><span id="debtBadge" class="badge hidden">0</span></button>
+    <div class="nav-label space">GESTIÓN</div>
+    <button class="nav-item" data-view="cash"><svg><use href="#i-wallet"/></svg><span>Caja</span></button>
+    <button class="nav-item" data-view="reports"><svg><use href="#i-chart"/></svg><span>Reportes</span></button>
+    <button class="nav-item" data-view="purchases"><svg><use href="#i-box"/></svg><span>Compras</span></button>
+    <button class="nav-item" data-view="suppliers"><svg><use href="#i-users"/></svg><span>Proveedores</span></button>
+    <button class="nav-item" data-view="stockhistory"><svg><use href="#i-refresh"/></svg><span>Historial de stock</span></button>
+    <button class="nav-item" data-view="settings"><svg><use href="#i-settings"/></svg><span>Configuración</span></button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="upgrade-card"><div class="upgrade-orb"></div><strong>iNeo Gestión</strong><small>Tu negocio, más simple, más visual.</small></div>
+    <button id="logoutBtn" class="logout"><svg><use href="#i-logout"/></svg>Cerrar sesión</button>
+  </div>
+</aside>
 
-  <script type="module" src="app.js"></script>
+<main class="main">
+<header class="topbar">
+  <button id="mobileMenu" class="icon-btn"><svg><use href="#i-menu"/></svg></button>
+  <div><div class="eyebrow" id="dateLabel">HOY</div><h2 id="pageTitle">Resumen</h2></div>
+  <div class="top-actions"><button id="globalSearchBtn" class="icon-btn" title="Buscar"><svg><use href="#i-search"/></svg></button><button id="notificationBtn" class="icon-btn notification" title="Notificaciones"><svg><use href="#i-bell"/></svg><i></i></button><div class="profile"><div class="profile-avatar">iN</div><div><strong id="userName">Usuario</strong><small>Administrador</small></div></div></div>
+</header>
+<section id="content" class="content"></section>
+</main>
+</div>
 
+<div id="modal" class="modal hidden"><div class="modal-backdrop"></div><div class="modal-card"><div class="modal-head"><div><div class="eyebrow" id="modalEyebrow">NUEVO</div><h3 id="modalTitle">Producto</h3></div><button id="closeModal" class="icon-btn">×</button></div><div id="modalBody"></div></div></div>
+
+<svg class="svg-sprite" aria-hidden="true">
+<symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 7h16M6 4h12v16H6z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path d="M4 7h16M6 4h12v16H6z"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M4 7h16M6 4h12v16H6z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.1 11.2A2 2 0 0 0 9.1 17H18a2 2 0 0 0 2-1.5L22 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9 5-9-5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 5a4 4 0 0 1 0 7M18 14a6 6 0 0 1 4 7"/></symbol>
+<symbol id="i-credit" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v12H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14"/><path d="M22 9h-7a2 2 0 0 0 0 4h7"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-5 3 3 6-7"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1 1.2 1.2-2.2 2.2-1.2-1.2-.1-.1a7.9 7.9 0 0 1-2.2.9v.2V20h-3v-1.7-.2a7.9 7.9 0 0 1-2.2-.9l-.1.1-1.2 1.2-2.2-2.2 1.2-1.2.1-.1a7.9 7.9 0 0 1-.9-2.2H6.3V11h.2a7.9 7.9 0 0 1 .9-2.2l-.1-.1-1.2-1.2 2.2-2.2 1.2 1.2.1.1a7.9 7.9 0 0 1 2.2-.9v-.2V4h3v1.7a7.9 7.9 0 0 1 2.2.9l.1-.1 1.2-1.2 2.2 2.2-1.2 1.2-.1.1a7.9 7.9 0 0 1 .9 2.2h.2v3h-.2a7.9 7.9 0 0 1-.9 2.2Z"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16a1 1 0 0 1-1 1h-6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 20 4-.8L19 8.2a2 2 0 0 0-3-3L5 16.2zM14.5 6.5l3 3"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.9-4L3 9"/><path d="M3 4v5h5M4 13a8 8 0 0 0 14.9 4L21 15"/><path d="M21 20v-5h-5"/></symbol>
+<symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9h.01M17 15h.01"/></symbol>
+</svg>
+
+
+
+
+<script type="module">
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const CONFIG={apiKey:"AIzaSyByWuZprkQCL5unyJQqffrlIj-7XgXej64",authDomain:"mi-sistema-gestion-d147f.firebaseapp.com",projectId:"mi-sistema-gestion-d147f",storageBucket:"mi-sistema-gestion-d147f.firebasestorage.app",messagingSenderId:"235461592723",appId:"1:235461592723:web:2408aec815840e3cd42f66",measurementId:"G-6QLEJVP5L0"};
+const app=getApps().length?getApp():initializeApp(CONFIG);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const $=s=>document.querySelector(s);
+const showLogin=()=>{const l=$("#loginScreen"),r=$("#registerScreen"),a=$("#appShell");if(l){l.classList.remove("hidden");l.style.display="grid"}if(r){r.classList.add("hidden");r.style.display="none"}if(a){a.classList.add("hidden");a.style.display="none"}};
+const showRegister=()=>{const l=$("#loginScreen"),r=$("#registerScreen"),a=$("#appShell");if(l){l.classList.add("hidden");l.style.display="none"}if(r){r.classList.remove("hidden");r.style.display="grid"}if(a){a.classList.add("hidden");a.style.display="none"}};
+const showApp=()=>{const l=$("#loginScreen"),r=$("#registerScreen"),a=$("#appShell");if(l){l.classList.add("hidden");l.style.display="none"}if(r){r.classList.add("hidden");r.style.display="none"}if(a){a.classList.remove("hidden");a.style.display=""}};
+const message=t=>{const m=$("#loginMessage");if(m)m.textContent=t};
+try{history.replaceState({},document.title,location.pathname+location.hash)}catch(_){}
+
+function bindLogin(){
+ const form=$("#loginForm"),btn=$("#loginSubmit"),msg=$("#loginMessage");
+ if(!form){console.error("[iNeo V40] loginForm missing");return;}
+ form.onsubmit=async e=>{
+   e.preventDefault();e.stopPropagation();
+   const email=String($("#email")?.value||"").trim(),password=String($("#password")?.value||"");
+   if(!email||!password){if(msg)msg.textContent="Completá correo y contraseña.";return;}
+   if(btn){btn.disabled=true;btn.dataset.old=btn.innerHTML;btn.textContent="Ingresando…";}
+   if(msg)msg.textContent="";
+   try{await signInWithEmailAndPassword(auth,email,password);console.info("[iNeo V40] LOGIN_OK");}
+   catch(err){console.error("[iNeo V40] LOGIN_ERROR",err);const map={"auth/invalid-credential":"Correo o contraseña incorrectos.","auth/user-not-found":"No encontramos una cuenta con ese correo.","auth/wrong-password":"La contraseña es incorrecta.","auth/invalid-email":"El correo no es válido.","auth/too-many-requests":"Demasiados intentos. Esperá un momento.","auth/network-request-failed":"No se pudo conectar con Firebase.","auth/operation-not-allowed":"En Firebase no está habilitado el acceso con correo y contraseña."};if(msg)msg.textContent=map[err.code]||("No pudimos iniciar sesión ("+(err.code||"error")+").")}
+   finally{if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.old||'Ingresar a iNeo <svg><use href="#i-arrow"/></svg>'}}
+ };
+ $("#registerBtn")?.addEventListener("click",showRegister);
+ $("#backToLogin")?.addEventListener("click",showLogin);
+ $("#togglePassword")?.addEventListener("click",()=>{const p=$("#password");if(p)p.type=p.type==="password"?"text":"password"});
+ $("#forgotPassword")?.addEventListener("click",async()=>{const email=String($("#email")?.value||"").trim();if(!email){message("Escribí tu correo para recuperar la contraseña.");return}try{await sendPasswordResetEmail(auth,email);message("Te enviamos un correo para restablecer la contraseña.")}catch(e){console.error(e);message("No pudimos enviar el correo de recuperación.")}});
+ $("#registerForm")?.addEventListener("submit",async e=>{e.preventDefault();const fd=new FormData(e.currentTarget),email=String(fd.get("email")||"").trim(),password=String(fd.get("password")||""),businessName=String(fd.get("businessName")||"").trim()||"Mi negocio",m=$("#registerMessage");try{const cred=await createUserWithEmailAndPassword(auth,email,password);await setDoc(doc(db,`usuarios/${cred.user.uid}/config/general`),{businessName,notifications:true,lowStockDefault:2},{merge:true});if(m)m.textContent="Cuenta creada. Entrando…"}catch(err){console.error(err);if(m)m.textContent=err.code==="auth/email-already-in-use"?"Ese correo ya está registrado.":err.code==="auth/weak-password"?"La contraseña debe tener al menos 6 caracteres.":"No pudimos crear la cuenta."}});
+}
+
+onAuthStateChanged(auth,async user=>{
+ if(!user){showLogin();return}
+ showApp();
+ // Import the core only after Firebase auth is definitely signed in.
+ try{
+   await import("./js/ineo-core-v40.js?v=40");
+   window.dispatchEvent(new CustomEvent("ineo-auth-ready",{detail:{user}}));
+ }catch(err){
+   console.error("[iNeo V40] CORE_ERROR",err);
+   message("La sesión se inició, pero iNeo no pudo cargar.");
+ }
+});
+
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{showLogin();bindLogin()},{once:true});
+else {showLogin();bindLogin();}
+console.info("[iNeo V40] AUTH_BOOT_READY");
+</script>
 </body>
 </html>
